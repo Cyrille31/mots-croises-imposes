@@ -135,9 +135,14 @@ function lancer(affiner) {
   $('#etat').textContent = affiner ? 'Affinage en cours…' : 'Recherche en cours…';
   if (worker) worker.terminate();
   worker = new Worker('./worker.js');
+  worker.onerror = (ev) => {
+    $('#go').disabled = false;
+    $('#etat').textContent = 'Erreur de chargement du worker : '
+      + (ev.message || 'voir la console') + ' (' + (ev.filename || '') + ':' + (ev.lineno || '') + ')';
+  };
   worker.onmessage = (e) => {
     const m = e.data;
-    if (m.type === 'pret') { $('#etat').textContent = 'Lexique : ' + m.nbMots + ' mots. Recherche…'; return; }
+    if (m.type === 'info') { $('#etat').textContent = m.texte; return; }
     $('#go').disabled = false;
     if (m.type === 'grille') {
       derniere = Int8Array.from(m.grille);

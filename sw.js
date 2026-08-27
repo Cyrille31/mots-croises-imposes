@@ -1,6 +1,6 @@
-const CACHE = 'mc-cgexcel-v1';
+const CACHE = 'mc-cgexcel-v2';
 const FICHIERS = ['./', './index.html', './moteur.js', './worker.js',
-                  './lexique.txt.gz', './manifest.webmanifest'];
+                  './lexique.txt', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FICHIERS)));

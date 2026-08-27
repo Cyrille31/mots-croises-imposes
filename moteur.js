@@ -636,4 +636,8 @@ function afficher(r, nc) {
 
 const API = { Index, Generateur, afficher, normaliser, NOIR, maxRepet };
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
-if (typeof window !== 'undefined') window.MotsCroises = API;
+// page, worker ou Node : on expose dans tous les cas
+if (typeof globalThis !== 'undefined') {
+  globalThis.MotsCroises = API;
+  Object.assign(globalThis, API);
+}
