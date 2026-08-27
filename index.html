@@ -11,8 +11,17 @@
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { margin:0; padding:12px; font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;
          background:var(--fond); color:#14202e; }
-  h1 { font-size:17px; margin:0 0 10px; color:var(--bleu); letter-spacing:.02em; }
+  header { display:flex; align-items:center; gap:10px; margin:0 0 10px; }
+  .logo { flex:none; border-radius:6px; }
+  h1 { font-size:17px; margin:0; color:var(--bleu); letter-spacing:.02em; }
   h1 small { font-weight:400; color:#6b7887; }
+  .sous { margin:2px 0 0; font-size:11.5px; color:#8a96a4; }
+  details { background:#fff; border:1px solid #d7dce3; border-radius:10px;
+            padding:8px 12px; margin:0 0 12px; }
+  summary { cursor:pointer; font-size:14px; color:var(--bleu); font-weight:600; }
+  details p { font-size:13.5px; margin:9px 0; }
+  .note { color:#6b7887; font-style:italic; }
+  footer { margin:16px 0 4px; font-size:11.5px; color:#8a96a4; text-align:center; line-height:1.5; }
   fieldset { border:1px solid #d7dce3; border-radius:10px; margin:0 0 12px; padding:10px 12px;
              background:#fff; }
   legend { font-size:13px; color:#6b7887; padding:0 4px; }
@@ -33,11 +42,72 @@
        border:1px solid #b9c2ce; background:#fff; user-select:none; }
   .c.noir { background:var(--trait); } .c.hors { background:#fff; border-color:transparent; }
   .c.impose { background:#cfe4f7; }
-  @media print { fieldset,button,#etat,h1 { display:none; } .c.impose { background:#fff; } }
+  @media print { fieldset,button,#etat,details,footer { display:none; }
+                 header { margin-bottom:8px; } .c.impose { background:#fff; } }
 </style>
 </head>
 <body>
-<h1>Mots croisés <small>— CGExcel</small></h1>
+<header>
+    <defs>
+    <radialGradient id="s" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#8fc4f0"/><stop offset="55%" stop-color="#2f6fb5"/>
+      <stop offset="100%" stop-color="#13345e"/>
+    </radialGradient>
+  </defs>
+  <rect width="38" height="38" fill="#fff"/>
+  <g stroke="#dfe5ec" stroke-width="1">
+    <path d="M0 20h120M0 40h120M0 60h120M0 80h120M0 100h120"/>
+    <path d="M20 0v120M40 0v120M60 0v120M80 0v120M100 0v120"/>
+  </g>
+  <g stroke="#4a6a8f" stroke-width="4" stroke-linecap="round" opacity=".85">
+    <path d="M34 76 L60 40 M60 40 L88 62 M34 76 L88 62 M60 40 L58 84 M34 76 L58 84 M88 62 L58 84"/>
+  </g>
+  <g fill="url(#s)">
+    <circle cx="60" cy="40" r="15"/><circle cx="34" cy="76" r="13"/>
+    <circle cx="88" cy="62" r="12"/><circle cx="58" cy="84" r="10"/>
+  </g>
+  <rect x="1.5" y="1.5" width="117" height="117" fill="none" stroke="#c8d0da" stroke-width="2"/>
+</svg>
+
+  <div>
+    <h1>Mots croisés <small>CGExcel</small></h1>
+    <p class="sous">version 1.1 — © 2026 Cyrille Gindre</p>
+  </div>
+</header>
+
+<details id="aide">
+  <summary>Mode d'emploi</summary>
+  <p><b>1. La grille.</b> Choisissez les dimensions. Le format confortable est
+  12×12 à 15×15 ; en deçà de 11×11 les mots imposés manquent de place.</p>
+  <p><b>2. La densité de cases noires.</b> C'est le réglage le plus sensible.
+  Autour de 30 % la grille sort presque toujours du premier coup ; vers 20 %
+  elle devient belle mais lente à trouver et le vocabulaire se fait rare.
+  Les mots croisés français du commerce tournent autour de 19 %.</p>
+  <p><b>3. Le niveau de vocabulaire.</b> Il tronque le lexique aux mots les plus
+  courants. Attention, il s'oppose à la densité : une grille blanche réclame des
+  mots rares. Si rien ne sort, élargissez le vocabulaire ou remontez la densité.</p>
+  <p><b>4. Les mots de deux lettres.</b> Ils sont indispensables au bouclage —
+  les interdire rend la grille introuvable. Laissez « sans limite » par défaut ;
+  ne posez un plafond que si vous savez qu'il est atteignable.</p>
+  <p><b>5. Les mots imposés.</b> Un par ligne. Ils seront tous présents ou la
+  grille ne sortira pas. Ils n'ont pas besoin de se croiser entre eux : le
+  programme les disperse et les relie par les mots ordinaires. Ils apparaissent
+  en bleu à l'écran et en blanc à l'impression.</p>
+  <p><b>6. Les mots du thème.</b> Simple préférence, sans obligation : à qualité
+  égale le programme les choisit d'abord.</p>
+  <p><b>7. Affiner la densité.</b> Relance la recherche par paliers décroissants
+  et remplace la grille dès qu'il fait mieux. Comptez trente secondes pour
+  gagner cinq à six points.</p>
+  <p><b>8. Mode silhouette.</b> Activez-le puis touchez les cases à exclure pour
+  dessiner une forme libre — un animal, une lettre. Les cases exclues ne
+  comptent pas dans la densité.</p>
+  <p><b>9. Si rien ne sort.</b> Le message indique le nombre de tentatives et
+  la cause dominante. Dans l'ordre : remontez la densité, élargissez le
+  vocabulaire, agrandissez la grille, retirez un mot imposé.</p>
+  <p class="note">Les définitions restent à votre charge : aucun lexique libre
+  français n'en fournit.</p>
+</details>
+
 
 <fieldset>
   <legend>Grille</legend>
@@ -49,8 +119,8 @@
   <input type="range" id="densite" min="10" max="45" value="30">
   <label>Niveau de vocabulaire : <b id="vv">courant</b></label>
   <input type="range" id="niveau" min="1" max="5" value="3">
-  <label>Mots de 2 lettres au maximum : <b id="v2">6</b></label>
-  <input type="range" id="max2" min="0" max="20" value="6">
+  <label>Mots de 2 lettres au maximum : <b id="v2">sans limite</b></label>
+  <input type="range" id="max2" min="0" max="60" value="0">
 </fieldset>
 
 <fieldset>
@@ -67,6 +137,12 @@
 <button id="imprimer" class="secondaire" disabled>Imprimer</button>
 <div id="etat">Prêt.</div>
 <div id="grille"></div>
+<footer>
+  Mots croisés CGExcel — version 1.1<br>
+  © 2026 Cyrille Gindre. Tous droits réservés.<br>
+  Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
+  Lexique dérivé de ressources libres — définitions non fournies.
+</footer>
 
 <script>
 'use strict';
@@ -80,7 +156,7 @@ function lignes(id){ return $(id).value.split('\n').map(norm).filter(m=>/^[A-Z]{
 
 $('#densite').oninput = e => $('#vd').textContent = e.target.value;
 $('#niveau').oninput  = e => $('#vv').textContent = NIVEAUX[e.target.value-1][0];
-$('#max2').oninput    = e => $('#v2').textContent = e.target.value;
+$('#max2').oninput    = e => $('#v2').textContent = +e.target.value ? e.target.value : 'sans limite';
 
 $('#silhouette').onclick = () => {
   modeSil = !modeSil;
@@ -151,7 +227,11 @@ function lancer(affiner) {
       $('#etat').textContent = `Grille trouvée — ${(100*m.densite).toFixed(1)} % de cases noires, `
         + `${m.poses}/${imposesNorm.length} mots imposés placés.`;
     } else if (m.type === 'echec') {
-      $('#etat').textContent = 'Aucune grille trouvée. Augmentez la densité ou agrandissez la grille.';
+      const d = m.diag || {};
+      let cause = 'Augmentez la densité, élargissez le vocabulaire ou agrandissez la grille.';
+      if (d.plafondCourt > 0)
+        cause = `Le plafond de mots de 2 lettres bloque : les motifs en comptent jusqu'à ${d.vuCourt}. Relevez-le ou choisissez « sans limite ».`;
+      $('#etat').textContent = `Aucune grille trouvée (${d.resolution || 0} tentatives). ` + cause;
     } else {
       $('#etat').textContent = 'Erreur : ' + m.message;
     }
@@ -163,7 +243,7 @@ function lancer(affiner) {
     masque: masque ? Array.from(masque) : null,
     densite: +$('#densite').value / 100,
     niveau: NIVEAUX[$('#niveau').value-1][1],
-    maxMots: { 2: +$('#max2').value },
+    maxMots: +$('#max2').value ? { 2: +$('#max2').value } : {},
     affiner, cycles: 5, palier: 2500, duree: 8000
   });
 }

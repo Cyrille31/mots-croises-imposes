@@ -73,6 +73,7 @@ class Generateur {
     this.maxVoisinsNoirs = opts.maxVoisinsNoirs ?? 2;
     this.patience = opts.patience ?? 8;
     this.relache = opts.relache ?? 4;
+    this.diag = { squelette: 0, motif: 0, plafondCourt: 0, vuCourt: 0, resolution: 0 };
     this.masque = opts.masque || null;        // 1 = case hors silhouette
     this.angles = opts.anglesBlancs ?? true;  // pas de noir dans les angles
     this.maxMots = opts.maxMots || {};        // ex. {2: 4, 3: 10}
@@ -299,11 +300,15 @@ class Generateur {
     for (let i = ordre.length - 1; i > 0; i--) {
       const j = Math.floor(this.rnd() * (i + 1));[ordre[i], ordre[j]] = [ordre[j], ordre[i]];
     }
-    for (const idx of ordre) {
+    for (const mini of [2, 1]) {          // 1re passe : eviter les mots de 2 lettres
+      for (const idx of ordre) {
+        if (poses >= cible) break;
+        if (g[idx] === NOIR) continue;
+        const r = (idx / nc) | 0, c = idx % nc;
+        g[idx] = NOIR;
+        if (this.okLocal(g, r, c, mini)) poses++; else g[idx] = VIDE;
+      }
       if (poses >= cible) break;
-      const r = (idx / nc) | 0, c = idx % nc;
-      g[idx] = NOIR;
-      if (this.okLocal(g, r, c)) poses++; else g[idx] = VIDE;
     }
     for (let passe = 0; passe < 80; passe++) {
       const longs = this.segments(g).filter(s => s.length > this.lmax);
@@ -333,7 +338,11 @@ class Generateur {
       if (s.length >= 2) cpt.set(s.length, (cpt.get(s.length) || 0) + 1);
     }
     for (const [L, k] of cpt) if (k > this.ix.nb(L) * maxRepet(L)) return null;
-    for (const L in this.maxMots) if ((cpt.get(+L) || 0) > this.maxMots[L]) return null;
+    for (const L in this.maxMots) if ((cpt.get(+L) || 0) > this.maxMots[L]) {
+      this.diag.plafondCourt++;
+      this.diag.vuCourt = Math.max(this.diag.vuCourt, cpt.get(+L) || 0);
+      return null;
+    }
     const bes = new Map();
     for (const m of this.imposes) bes.set(m.length, (bes.get(m.length) || 0) + 1);
     for (const [L, k] of bes) if ((cpt.get(L) || 0) < k) return null;
@@ -581,12 +590,14 @@ class Generateur {
     for (let it = 0; it < essais; it++) {
       if (limiteMs && (it & 15) === 0 && Date.now() - t0 > limiteMs) break;
       if (!res) {
+        this.diag.squelette++;
         res = this.imposes.length ? this.squelette()
           : { fixe: new Uint8Array(this.nl * this.nc), lettres: null, liste: [] };
         if (!res) continue;
         motif = null;
       }
       if (!motif) {
+        this.diag.motif++;
         motif = this.motif(res.fixe);
         if (!motif) { res = null; continue; }
         etat = null; sansGain = 0;
@@ -598,6 +609,7 @@ class Generateur {
         for (let i = 0; i < init.length; i++)
           if (res.lettres[i] >= 0) init[i] = res.lettres[i];
       }
+      this.diag.resolution++;
       const r = this.resoudre(motif, { n: budgetParEssai }, init);
       if (r.grille) {
         if (r.poses > score) { meilleur = r; score = r.poses; }

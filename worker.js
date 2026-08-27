@@ -55,7 +55,7 @@ self.onmessage = async (e) => {
       ? G.optimiserDensite({ cycles: p.cycles || 4, dureePalier: p.palier || 2500 })
       : G.generer(1e9, 20000, p.duree || 8000);
 
-    if (!r) { self.postMessage({ type: 'echec' }); return; }
+    if (!r) { self.postMessage({ type: 'echec', diag: G.diag }); return; }
     const noirs = Array.from(r.grille).filter(x => x === -2).length;
     self.postMessage({
       type: 'grille',
@@ -64,6 +64,9 @@ self.onmessage = async (e) => {
       densite: noirs / G.dedans.length
     });
   } catch (err) {
-    self.postMessage({ type: 'erreur', message: String((err && err.message) || err) });
+    let msg = 'anomalie interne';
+    if (err) msg = err.message || err.name || String(err);
+    if (err && err.stack) msg += ' — ' + String(err.stack).split('\n')[1] || '';
+    self.postMessage({ type: 'erreur', message: msg });
   }
 };
