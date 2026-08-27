@@ -86,6 +86,7 @@ class Generateur {
     this.relache = opts.relache ?? 4;
     this.seuilGroupe = opts.seuilGroupe ?? 30;
     this.primeCroix = opts.primeCroix ?? 6;
+    this.croixMin = opts.croisementsMin ?? 5;
     this.diag = { squelette: 0, motif: 0, plafondCourt: 0, vuCourt: 0, resolution: 0 };
     this.masque = opts.masque || null;        // 1 = case hors silhouette
     this.angles = opts.anglesBlancs ?? true;  // pas de noir dans les angles
@@ -230,10 +231,10 @@ class Generateur {
     const lettres = new Int8Array(N).fill(VIDE);
     const fixe = new Uint8Array(N);
     const idMot = new Int8Array(N).fill(-1);   // quel mot impose occupe la case
-    let reste = budget;
+    let reste = budget, croixTotal = 0;
     const rec = (i) => {
       if (--reste <= 0) return false;
-      if (i === mots.length) return true;
+      if (i === mots.length) return croixTotal >= this.croixMin;
       const mot = mots[i], L = mot.length;
       const cands = [];
       for (const p of this._pl[i]) {
@@ -297,14 +298,17 @@ class Generateur {
       cands.sort((a, b) => b[0] - a[0]);
       for (const [, p] of cands) {
         const sv = [], sb = [];
+        let nCroix = 0;
         for (let j = 0; j < L; j++) {
           const idx = p.cells[j];
           if (lettres[idx] === VIDE) {
             lettres[idx] = mot.charCodeAt(j) - 65; fixe[idx] = 2; idMot[idx] = i; sv.push(idx);
-          }
+          } else nCroix++;
         }
+        croixTotal += nCroix;
         for (const x of p.bords) if (!fixe[x]) { fixe[x] = 1; sb.push(x); }
         if (rec(i + 1)) return true;
+        croixTotal -= nCroix;
         for (const x of sv) { lettres[x] = VIDE; fixe[x] = 0; idMot[x] = -1; }
         for (const x of sb) fixe[x] = 0;
       }
