@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mots croisés — CGExcel</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#1a3a6b">
+<style>
+  :root { --bleu:#1a3a6b; --trait:#243447; --fond:#f7f8fa; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; padding:12px; font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;
+         background:var(--fond); color:#14202e; }
+  h1 { font-size:17px; margin:0 0 10px; color:var(--bleu); letter-spacing:.02em; }
+  h1 small { font-weight:400; color:#6b7887; }
+  fieldset { border:1px solid #d7dce3; border-radius:10px; margin:0 0 12px; padding:10px 12px;
+             background:#fff; }
+  legend { font-size:13px; color:#6b7887; padding:0 4px; }
+  label { display:block; font-size:14px; margin:8px 0 2px; }
+  input[type=number], textarea, select { width:100%; padding:7px 8px; font:inherit;
+             border:1px solid #ccd3dc; border-radius:7px; background:#fff; }
+  textarea { min-height:58px; resize:vertical; }
+  input[type=range] { width:100%; }
+  .duo { display:flex; gap:10px; } .duo > * { flex:1; }
+  button { font:inherit; padding:11px 14px; border:0; border-radius:9px; background:var(--bleu);
+           color:#fff; width:100%; margin-top:10px; }
+  button.secondaire { background:#fff; color:var(--bleu); border:1px solid var(--bleu); }
+  button:disabled { opacity:.5; }
+  #etat { font-size:13px; color:#6b7887; margin:8px 0; min-height:19px; }
+  #grille { display:grid; gap:0; margin:10px auto; touch-action:manipulation;
+            border:2px solid var(--trait); width:max-content; max-width:100%; }
+  .c { display:flex; align-items:center; justify-content:center; font-weight:600;
+       border:1px solid #b9c2ce; background:#fff; user-select:none; }
+  .c.noir { background:var(--trait); } .c.hors { background:#fff; border-color:transparent; }
+  .c.impose { background:#cfe4f7; }
+  @media print { fieldset,button,#etat,h1 { display:none; } .c.impose { background:#fff; } }
+</style>
+</head>
+<body>
+<h1>Mots croisés <small>— CGExcel</small></h1>
+
+<fieldset>
+  <legend>Grille</legend>
+  <div class="duo">
+    <div><label>Lignes</label><input type="number" id="nl" value="12" min="5" max="25"></div>
+    <div><label>Colonnes</label><input type="number" id="nc" value="12" min="5" max="25"></div>
+  </div>
+  <label>Densité de cases noires : <b id="vd">30</b> %</label>
+  <input type="range" id="densite" min="10" max="45" value="30">
+  <label>Niveau de vocabulaire : <b id="vv">courant</b></label>
+  <input type="range" id="niveau" min="1" max="5" value="3">
+  <label>Mots de 2 lettres au maximum : <b id="v2">6</b></label>
+  <input type="range" id="max2" min="0" max="20" value="6">
+</fieldset>
+
+<fieldset>
+  <legend>Mots</legend>
+  <label>Mots imposés (un par ligne)</label>
+  <textarea id="imposes" placeholder="TOULOUSE&#10;ECLIPSE"></textarea>
+  <label>Mots du thème, simple préférence (un par ligne)</label>
+  <textarea id="theme" placeholder="VOILE&#10;MAREE&#10;PORT"></textarea>
+</fieldset>
+
+<button id="go">Générer</button>
+<button id="affiner" class="secondaire" disabled>Affiner la densité</button>
+<button id="silhouette" class="secondaire">Mode silhouette : désactivé</button>
+<button id="imprimer" class="secondaire" disabled>Imprimer</button>
+<div id="etat">Prêt.</div>
+<div id="grille"></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const NIVEAUX = [['très courant',3000],['courant',8000],['courant',20000],['étendu',60000],['complet',999999]];
+let nl=12, nc=12, masque=null, derniere=null, imposesNorm=[], worker=null, modeSil=false;
+
+function norm(s){ return s.replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD')
+  .replace(/[\u0300-\u036f]/g,'').toUpperCase().trim(); }
+function lignes(id){ return $(id).value.split('\n').map(norm).filter(m=>/^[A-Z]{2,}$/.test(m)); }
+
+$('#densite').oninput = e => $('#vd').textContent = e.target.value;
+$('#niveau').oninput  = e => $('#vv').textContent = NIVEAUX[e.target.value-1][0];
+$('#max2').oninput    = e => $('#v2').textContent = e.target.value;
+
+$('#silhouette').onclick = () => {
+  modeSil = !modeSil;
+  $('#silhouette').textContent = 'Mode silhouette : ' + (modeSil ? 'activé' : 'désactivé');
+  if (modeSil && !masque) { masque = new Uint8Array(nl*nc); dessiner(null); }
+};
+
+function dessiner(g) {
+  nl = +$('#nl').value; nc = +$('#nc').value;
+  const boite = $('#grille');
+  const taille = Math.min(34, Math.floor((Math.min(window.innerWidth-32, 560)) / nc));
+  boite.style.gridTemplateColumns = `repeat(${nc}, ${taille}px)`;
+  boite.innerHTML = '';
+  const imp = new Set(imposesNorm);
+  const cellulesImposees = g ? reperer(g, imp) : new Set();
+  for (let i = 0; i < nl*nc; i++) {
+    const d = document.createElement('div');
+    d.className = 'c';
+    d.style.width = d.style.height = taille + 'px';
+    d.style.fontSize = Math.round(taille*0.55) + 'px';
+    if (masque && masque[i]) d.classList.add('hors');
+    else if (g) {
+      const v = g[i];
+      if (v === -2) d.classList.add('noir');
+      else { d.textContent = String.fromCharCode(65+v);
+             if (cellulesImposees.has(i)) d.classList.add('impose'); }
+    }
+    d.onclick = () => { if (!modeSil) return;
+      if (!masque) masque = new Uint8Array(nl*nc);
+      masque[i] ^= 1; d.classList.toggle('hors'); };
+    boite.appendChild(d);
+  }
+}
+
+function reperer(g, imp) {
+  const dedans = new Set();
+  const test = (cells) => {
+    const mot = cells.map(i => String.fromCharCode(65+g[i])).join('');
+    if (imp.has(mot)) cells.forEach(i => dedans.add(i));
+  };
+  for (let r=0;r<nl;r++){ let s=[]; for(let c=0;c<nc;c++){ const i=r*nc+c;
+    if (g[i]<0){ if(s.length>1) test(s); s=[]; } else s.push(i);} if(s.length>1) test(s); }
+  for (let c=0;c<nc;c++){ let s=[]; for(let r=0;r<nl;r++){ const i=r*nc+c;
+    if (g[i]<0){ if(s.length>1) test(s); s=[]; } else s.push(i);} if(s.length>1) test(s); }
+  return dedans;
+}
+
+function lancer(affiner) {
+  nl = +$('#nl').value; nc = +$('#nc').value;
+  imposesNorm = lignes('#imposes');
+  $('#go').disabled = $('#affiner').disabled = true;
+  $('#etat').textContent = affiner ? 'Affinage en cours…' : 'Recherche en cours…';
+  if (worker) worker.terminate();
+  worker = new Worker('./worker.js');
+  worker.onmessage = (e) => {
+    const m = e.data;
+    if (m.type === 'pret') { $('#etat').textContent = 'Lexique : ' + m.nbMots + ' mots. Recherche…'; return; }
+    $('#go').disabled = false;
+    if (m.type === 'grille') {
+      derniere = Int8Array.from(m.grille);
+      dessiner(derniere);
+      $('#affiner').disabled = false; $('#imprimer').disabled = false;
+      $('#etat').textContent = `Grille trouvée — ${(100*m.densite).toFixed(1)} % de cases noires, `
+        + `${m.poses}/${imposesNorm.length} mots imposés placés.`;
+    } else if (m.type === 'echec') {
+      $('#etat').textContent = 'Aucune grille trouvée. Augmentez la densité ou agrandissez la grille.';
+    } else {
+      $('#etat').textContent = 'Erreur : ' + m.message;
+    }
+  };
+  worker.postMessage({
+    nl, nc,
+    imposes: imposesNorm,
+    theme: lignes('#theme'),
+    masque: masque ? Array.from(masque) : null,
+    densite: +$('#densite').value / 100,
+    niveau: NIVEAUX[$('#niveau').value-1][1],
+    maxMots: { 2: +$('#max2').value },
+    affiner, cycles: 5, palier: 2500, duree: 8000
+  });
+}
+
+$('#go').onclick = () => lancer(false);
+$('#affiner').onclick = () => lancer(true);
+$('#imprimer').onclick = () => window.print();
+$('#nl').onchange = $('#nc').onchange = () => { masque = null; derniere = null; dessiner(null); };
+
+dessiner(null);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+</script>
+</body>
+</html>
