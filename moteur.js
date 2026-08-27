@@ -27,6 +27,17 @@ class Index {
       if (!parL.has(m.length)) parL.set(m.length, []);
       parL.get(m.length).push([f, m]);
     }
+    // groupes de lettres reellement attestes dans le lexique
+    this.bi = new Int32Array(26 * 26);
+    this.tri = new Int32Array(26 * 26 * 26);
+    for (const m of vus.keys()) {
+      for (let p = 0; p + 1 < m.length; p++) {
+        const a = m.charCodeAt(p) - 65, b = m.charCodeAt(p + 1) - 65;
+        this.bi[a * 26 + b]++;
+        if (p + 2 < m.length) this.tri[(a * 26 + b) * 26 + (m.charCodeAt(p + 2) - 65)]++;
+      }
+    }
+
     this.mots = new Map();   // L -> [mots tries par frequence decroissante]
     this.rang = new Map();   // L -> Map(mot -> indice)
     this.n32 = new Map();    // L -> nombre de mots de 32 bits
@@ -73,6 +84,7 @@ class Generateur {
     this.maxVoisinsNoirs = opts.maxVoisinsNoirs ?? 2;
     this.patience = opts.patience ?? 8;
     this.relache = opts.relache ?? 4;
+    this.seuilGroupe = opts.seuilGroupe ?? 30;
     this.diag = { squelette: 0, motif: 0, plafondCourt: 0, vuCourt: 0, resolution: 0 };
     this.masque = opts.masque || null;        // 1 = case hors silhouette
     this.angles = opts.anglesBlancs ?? true;  // pas de noir dans les angles
@@ -233,15 +245,37 @@ class Generateur {
         }
         if (!ok) continue;   // les mots imposes n'ont PAS a se croiser
         if (p.bords.some(x => lettres[x] !== VIDE)) continue;
-        // interdiction dure : deux mots imposes ne se touchent qu'en se croisant
-        let para = 0;
-        for (const idx of p.cells) {
+        // mots colles autorises, a condition que les groupes de lettres
+        // perpendiculaires soient attestes et courants en francais
+        let para = 0, groupesOk = true;
+        for (let j = 0; j < L && groupesOk; j++) {
+          const idx = p.cells[j];
+          // case deja occupee = croisement : le mot perpendiculaire est
+          // deja un mot valide, il n'y a rien a verifier ici
+          if (lettres[idx] !== VIDE) continue;
           const rr = (idx / nc) | 0, cc = idx % nc;
-          const vs = p.h ? [[rr - 1, cc], [rr + 1, cc]] : [[rr, cc - 1], [rr, cc + 1]];
-          for (const [a, b] of vs)
-            if (a >= 0 && a < nl && b >= 0 && b < nc && lettres[a * nc + b] !== VIDE) para++;
+          // suite perpendiculaire contigue passant par cette case
+          const suite = [];
+          const pas = p.h ? nc : 1;
+          const dansGrille = (k) => p.h ? (k >= 0 && k < nl * nc)
+                                        : (((k / nc) | 0) === rr && k >= 0 && k < nl * nc);
+          let k = idx - pas;
+          while (dansGrille(k) && lettres[k] !== VIDE) { suite.unshift(lettres[k]); k -= pas; }
+          suite.push(mot.charCodeAt(j) - 65);
+          k = idx + pas;
+          while (dansGrille(k) && lettres[k] !== VIDE) { suite.push(lettres[k]); k += pas; }
+          if (suite.length < 2) continue;
+          para += suite.length - 1;
+          for (let q = 0; q + 1 < suite.length; q++) {
+            if (this.ix.bi[suite[q] * 26 + suite[q + 1]] < this.seuilGroupe) { groupesOk = false; break; }
+            if (q + 2 < suite.length &&
+                this.ix.tri[(suite[q] * 26 + suite[q + 1]) * 26 + suite[q + 2]] < this.seuilGroupe) {
+              groupesOk = false; break;
+            }
+          }
+          if (suite.length > 4) groupesOk = false;   // pas plus de 4 mots colles
         }
-        if (para > 0) continue;
+        if (!groupesOk) continue;
         // on les eparpille plutot que de les entrelacer
         let proche = 0;
         for (const idx of p.cells) {
@@ -249,7 +283,7 @@ class Generateur {
           for (let a = rr - 2; a <= rr + 2; a++) for (let b = cc - 2; b <= cc + 2; b++)
             if (a >= 0 && a < nl && b >= 0 && b < nc && lettres[a * nc + b] !== VIDE) proche++;
         }
-        cands.push([2 * croix - proche + 2 * p.cen + this.rnd() * 10, p]);
+        cands.push([2 * croix - proche - 1.5 * para + 2 * p.cen + this.rnd() * 10, p]);
       }
       cands.sort((a, b) => b[0] - a[0]);
       for (const [, p] of cands) {
