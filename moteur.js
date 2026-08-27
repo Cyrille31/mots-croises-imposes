@@ -1,6 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
+const VERSION = '1.2';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -695,7 +696,7 @@ function afficher(r, nc) {
   return out.join('\n');
 }
 
-const API = { Index, Generateur, afficher, normaliser, NOIR, maxRepet };
+const API = { VERSION, Index, Generateur, afficher, normaliser, NOIR, maxRepet };
 if (typeof module !== 'undefined' && module.exports) module.exports = API;
 // page, worker ou Node : on expose dans tous les cas
 if (typeof globalThis !== 'undefined') {

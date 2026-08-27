@@ -22,10 +22,38 @@ async function chargerLexique() {
   return lexique;
 }
 
+// cases appartenant a la fois a un mot impose horizontal et a un vertical
+function compterCroisements(g, nl, nc, imposes) {
+  const set = new Set(imposes), H = new Map(), V = new Map();
+  const noter = (mot, cells, carte) => { if (set.has(mot)) cells.forEach(k => carte.set(k, mot)); };
+  for (let r = 0; r < nl; r++) {
+    let w = '', cs = [];
+    for (let c = 0; c < nc; c++) {
+      const v = g[r * nc + c];
+      if (v < 0) { noter(w, cs, H); w = ''; cs = []; }
+      else { w += String.fromCharCode(65 + v); cs.push(r * nc + c); }
+    }
+    noter(w, cs, H);
+  }
+  for (let c = 0; c < nc; c++) {
+    let w = '', cs = [];
+    for (let r = 0; r < nl; r++) {
+      const v = g[r * nc + c];
+      if (v < 0) { noter(w, cs, V); w = ''; cs = []; }
+      else { w += String.fromCharCode(65 + v); cs.push(r * nc + c); }
+    }
+    noter(w, cs, V);
+  }
+  const out = [];
+  for (const k of H.keys()) if (V.has(k)) out.push(H.get(k) + ' × ' + V.get(k));
+  return out;
+}
+
 self.onmessage = async (e) => {
   const p = e.data;
   try {
     if (!pret) throw new Error('moteur non charge');
+    self.postMessage({ type: 'version', v: M.VERSION || '?' });
     self.postMessage({ type: 'info', texte: 'Chargement du lexique…' });
     const mots = await chargerLexique();
 
@@ -61,7 +89,9 @@ self.onmessage = async (e) => {
       type: 'grille',
       grille: Array.from(r.grille),
       poses: r.poses,
-      densite: noirs / G.dedans.length
+      densite: noirs / G.dedans.length,
+      croisements: compterCroisements(r.grille, p.nl, p.nc, imposes),
+      version: M.VERSION || '?'
     });
   } catch (err) {
     let msg = 'anomalie interne';
