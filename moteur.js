@@ -85,6 +85,7 @@ class Generateur {
     this.patience = opts.patience ?? 8;
     this.relache = opts.relache ?? 4;
     this.seuilGroupe = opts.seuilGroupe ?? 30;
+    this.primeCroix = opts.primeCroix ?? 6;
     this.diag = { squelette: 0, motif: 0, plafondCourt: 0, vuCourt: 0, resolution: 0 };
     this.masque = opts.masque || null;        // 1 = case hors silhouette
     this.angles = opts.anglesBlancs ?? true;  // pas de noir dans les angles
@@ -228,6 +229,7 @@ class Generateur {
     if (!this._pl) this._pl = mots.map(m => this.placementsPossibles(m));
     const lettres = new Int8Array(N).fill(VIDE);
     const fixe = new Uint8Array(N);
+    const idMot = new Int8Array(N).fill(-1);   // quel mot impose occupe la case
     let reste = budget;
     const rec = (i) => {
       if (--reste <= 0) return false;
@@ -243,7 +245,12 @@ class Generateur {
           if (v !== mot.charCodeAt(j) - 65) { ok = false; break; }
           croix++;
         }
-        if (!ok) continue;   // les mots imposes n'ont PAS a se croiser
+        if (!ok) continue;
+        // identifiants des mots que ce placement croise : leurs cases ne
+        // doivent pas etre comptees comme un encombrement du voisinage
+        const croises = new Set();
+        for (let j = 0; j < L; j++)
+          if (lettres[p.cells[j]] !== VIDE) croises.add(idMot[p.cells[j]]);
         if (p.bords.some(x => lettres[x] !== VIDE)) continue;
         // mots colles autorises, a condition que les groupes de lettres
         // perpendiculaires soient attestes et courants en francais
@@ -281,20 +288,24 @@ class Generateur {
         for (const idx of p.cells) {
           const rr = (idx / nc) | 0, cc = idx % nc;
           for (let a = rr - 2; a <= rr + 2; a++) for (let b = cc - 2; b <= cc + 2; b++)
-            if (a >= 0 && a < nl && b >= 0 && b < nc && lettres[a * nc + b] !== VIDE) proche++;
+            if (a >= 0 && a < nl && b >= 0 && b < nc && lettres[a * nc + b] !== VIDE
+                && !croises.has(idMot[a * nc + b])) proche++;
         }
-        cands.push([2 * croix - proche - 1.5 * para + 2 * p.cen + this.rnd() * 10, p]);
+        cands.push([this.primeCroix * croix - proche - 1.5 * para
+                    + 2 * p.cen + this.rnd() * 10, p]);
       }
       cands.sort((a, b) => b[0] - a[0]);
       for (const [, p] of cands) {
         const sv = [], sb = [];
         for (let j = 0; j < L; j++) {
           const idx = p.cells[j];
-          if (lettres[idx] === VIDE) { lettres[idx] = mot.charCodeAt(j) - 65; fixe[idx] = 2; sv.push(idx); }
+          if (lettres[idx] === VIDE) {
+            lettres[idx] = mot.charCodeAt(j) - 65; fixe[idx] = 2; idMot[idx] = i; sv.push(idx);
+          }
         }
         for (const x of p.bords) if (!fixe[x]) { fixe[x] = 1; sb.push(x); }
         if (rec(i + 1)) return true;
-        for (const x of sv) { lettres[x] = VIDE; fixe[x] = 0; }
+        for (const x of sv) { lettres[x] = VIDE; fixe[x] = 0; idMot[x] = -1; }
         for (const x of sb) fixe[x] = 0;
       }
       return false;
