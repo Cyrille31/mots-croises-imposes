@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '1.2';
+const VERSION = '1.3';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -88,6 +88,9 @@ class Generateur {
     this.seuilGroupe = opts.seuilGroupe ?? 30;
     this.primeCroix = opts.primeCroix ?? 6;
     this.croixMin = opts.croisementsMin ?? 5;
+    this.noirsImposes = opts.noirsImposes || null;   // 1 = case noire voulue
+    this.nbNoirsImposes = this.noirsImposes
+      ? this.noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
     this.diag = { squelette: 0, motif: 0, plafondCourt: 0, vuCourt: 0, resolution: 0 };
     this.masque = opts.masque || null;        // 1 = case hors silhouette
     this.angles = opts.anglesBlancs ?? true;  // pas de noir dans les angles
@@ -232,6 +235,7 @@ class Generateur {
     const lettres = new Int8Array(N).fill(VIDE);
     const fixe = new Uint8Array(N);
     const idMot = new Int8Array(N).fill(-1);   // quel mot impose occupe la case
+    if (this.noirsImposes) for (let i = 0; i < N; i++) if (this.noirsImposes[i]) fixe[i] = 1;
     let reste = budget, croixTotal = 0;
     const rec = (i) => {
       if (--reste <= 0) return false;
@@ -341,6 +345,7 @@ class Generateur {
     const { nl, nc } = this, N = nl * nc, M = this.masque;
     if (!fixe) fixe = new Uint8Array(N);
     const g = new Int8Array(N).fill(VIDE);
+    if (this.noirsImposes) for (let i = 0; i < N; i++) if (this.noirsImposes[i]) fixe[i] = 1;
     for (let i = 0; i < N; i++) if (fixe[i] === 1 || (M && M[i])) g[i] = NOIR;
     const cible = Math.round(this.pNoir * this.dedans.length);
     let poses = 0;

@@ -69,19 +69,40 @@ self.onmessage = async (e) => {
     if (absents.length) throw new Error('mots absents du lexique : ' + absents.join(', '));
 
     self.postMessage({ type: 'info', texte: 'Recherche…' });
-    const G = new M.Generateur(index, p.nl, p.nc, {
+    const masque = p.masque ? Uint8Array.from(p.masque) : null;
+    const noirsImposes = p.noirsImposes ? Uint8Array.from(p.noirsImposes) : null;
+    const faire = (densite, duree) => new M.Generateur(index, p.nl, p.nc, {
       motsImposes: imposes,
       motsThemes: p.theme || [],
-      masque: p.masque ? Uint8Array.from(p.masque) : null,
-      densiteNoirs: p.densite,
+      masque, noirsImposes,
+      densiteNoirs: densite,
       maxMots: p.maxMots || {},
       graine: p.graine ?? (Date.now() & 0x7fffffff),
       patience: 15, relache: 4
     });
 
-    const r = p.affiner
-      ? G.optimiserDensite({ cycles: p.cycles || 4, dureePalier: p.palier || 2500 })
-      : G.generer(1e9, 20000, p.duree || 8000);
+    let G, r = null;
+    if (p.affiner) {
+      G = faire(p.densite, 0);
+      r = G.optimiserDensite({ cycles: p.cycles || 4, dureePalier: p.palier || 2500 });
+    } else if (noirsImposes) {
+      // on tente d'abord SANS aucune case noire ajoutee, puis on en concede
+      const dedans = masque ? masque.reduce((a, x) => a + (x ? 0 : 1), 0) : p.nl * p.nc;
+      const nImp = noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0);
+      const base = nImp / dedans, plafond = Math.max(base, p.densite);
+      const duree = p.duree || 8000;
+      for (let d = base; d <= plafond + 1e-9; d += 0.03) {
+        self.postMessage({ type: 'info',
+          texte: `Essai avec ${(100 * d).toFixed(0)} % de cases noires…` });
+        G = faire(d, 0);
+        r = G.generer(1e9, 20000, Math.max(2000, duree / 4));
+        if (r) { if (d > base + 1e-9) self.postMessage({ type: 'info',
+          texte: `Cases noires ajoutées pour boucler (${(100 * d).toFixed(0)} %).` }); break; }
+      }
+    } else {
+      G = faire(p.densite, 0);
+      r = G.generer(1e9, 20000, p.duree || 8000);
+    }
 
     if (!r) { self.postMessage({ type: 'echec', diag: G.diag }); return; }
     const noirs = Array.from(r.grille).filter(x => x === -2).length;

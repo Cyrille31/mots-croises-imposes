@@ -40,7 +40,9 @@
             border:2px solid var(--trait); width:max-content; max-width:100%; }
   .c { display:flex; align-items:center; justify-content:center; font-weight:600;
        border:1px solid #b9c2ce; background:#fff; user-select:none; }
-  .c.noir { background:var(--trait); } .c.hors { background:#fff; border-color:transparent; }
+  .c.noir { background:var(--trait); }
+  .c.hors { background:#e9edf2; border-color:#dfe4ea; }
+  .c.noirimp { background:var(--trait); box-shadow:inset 0 0 0 2px #6b8bb5; }
   .c.impose { background:#cfe4f7; }
   @media print { fieldset,button,#etat,details,footer { display:none; }
                  header { margin-bottom:8px; } .c.impose { background:#fff; } }
@@ -71,7 +73,7 @@
 
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">1.2</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">1.3</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -98,9 +100,13 @@
   <p><b>7. Affiner la densité.</b> Relance la recherche par paliers décroissants
   et remplace la grille dès qu'il fait mieux. Comptez trente secondes pour
   gagner cinq à six points.</p>
-  <p><b>8. Mode silhouette.</b> Activez-le puis touchez les cases à exclure pour
-  dessiner une forme libre — un animal, une lettre. Les cases exclues ne
-  comptent pas dans la densité.</p>
+  <p><b>8. Mode silhouette et cases noires imposées.</b> Activez le mode, puis
+  touchez une case : un premier appui la sort de la grille (gris clair), un
+  deuxième en fait une case noire imposée (noir cerclé de bleu), un troisième
+  la remet normale. Les cases hors grille ne comptent pas dans la densité.
+  Si vous imposez des cases noires, le programme cherche d'abord une solution
+  n'utilisant <i>que</i> celles-là, puis en concède d'autres par paliers de
+  3 % s'il n'y arrive pas — et il vous dit combien il a dû en ajouter.</p>
   <p><b>9. Si rien ne sort.</b> Le message indique le nombre de tentatives et
   la cause dominante. Dans l'ordre : remontez la densité, élargissez le
   vocabulaire, agrandissez la grille, retirez un mot imposé.</p>
@@ -138,7 +144,7 @@
 <div id="etat">Prêt.</div>
 <div id="grille"></div>
 <footer>
-  Mots croisés CGExcel — interface 1.2, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 1.3, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -148,7 +154,7 @@
 'use strict';
 const $ = s => document.querySelector(s);
 const NIVEAUX = [['très courant',3000],['courant',8000],['courant',20000],['étendu',60000],['complet',999999]];
-let nl=12, nc=12, masque=null, derniere=null, imposesNorm=[], worker=null, modeSil=false;
+let nl=12, nc=12, etat=null, derniere=null, imposesNorm=[], worker=null, modeSil=false;
 
 function norm(s){ return s.replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD')
   .replace(/[\u0300-\u036f]/g,'').toUpperCase().trim(); }
@@ -161,7 +167,8 @@ $('#max2').oninput    = e => $('#v2').textContent = +e.target.value ? e.target.v
 $('#silhouette').onclick = () => {
   modeSil = !modeSil;
   $('#silhouette').textContent = 'Mode silhouette : ' + (modeSil ? 'activé' : 'désactivé');
-  if (modeSil && !masque) { masque = new Uint8Array(nl*nc); dessiner(null); }
+  if (modeSil && !etat) { etat = new Uint8Array(nl*nc); }
+  dessiner(derniere);
 };
 
 function dessiner(g) {
@@ -177,16 +184,21 @@ function dessiner(g) {
     d.className = 'c';
     d.style.width = d.style.height = taille + 'px';
     d.style.fontSize = Math.round(taille*0.55) + 'px';
-    if (masque && masque[i]) d.classList.add('hors');
+    if (etat && etat[i] === 1) d.classList.add('hors');
+    else if (etat && etat[i] === 2 && !g) d.classList.add('noirimp');
     else if (g) {
       const v = g[i];
       if (v === -2) d.classList.add('noir');
       else { d.textContent = String.fromCharCode(65+v);
              if (cellulesImposees.has(i)) d.classList.add('impose'); }
     }
-    d.onclick = () => { if (!modeSil) return;
-      if (!masque) masque = new Uint8Array(nl*nc);
-      masque[i] ^= 1; d.classList.toggle('hors'); };
+    d.onclick = () => {
+      if (!modeSil) return;
+      if (!etat) etat = new Uint8Array(nl*nc);
+      etat[i] = (etat[i] + 1) % 3;   // normal -> hors grille -> case noire -> normal
+      d.className = 'c' + (etat[i] === 1 ? ' hors' : etat[i] === 2 ? ' noirimp' : '');
+      d.textContent = '';
+    };
     boite.appendChild(d);
   }
 }
@@ -244,7 +256,9 @@ function lancer(affiner) {
     nl, nc,
     imposes: imposesNorm,
     theme: lignes('#theme'),
-    masque: masque ? Array.from(masque) : null,
+    masque: etat ? Array.from(etat, v => v === 1 ? 1 : 0) : null,
+    noirsImposes: etat && etat.some(v => v === 2)
+      ? Array.from(etat, v => v === 2 ? 1 : 0) : null,
     densite: +$('#densite').value / 100,
     niveau: NIVEAUX[$('#niveau').value-1][1],
     maxMots: +$('#max2').value ? { 2: +$('#max2').value } : {},
@@ -255,7 +269,7 @@ function lancer(affiner) {
 $('#go').onclick = () => lancer(false);
 $('#affiner').onclick = () => lancer(true);
 $('#imprimer').onclick = () => window.print();
-$('#nl').onchange = $('#nc').onchange = () => { masque = null; derniere = null; dessiner(null); };
+$('#nl').onchange = $('#nc').onchange = () => { etat = null; derniere = null; dessiner(null); };
 
 dessiner(null);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
