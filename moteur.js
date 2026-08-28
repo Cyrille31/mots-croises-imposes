@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '1.3';
+const VERSION = '1.4';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -228,7 +228,19 @@ class Generateur {
     return out;
   }
 
+  // On vise croixMin croisements, mais on redescend le seuil si aucun
+  // squelette n'existe a ce niveau : avec un ou deux mots imposes,
+  // il ne peut pas y en avoir cinq.
   squelette(budget = 200000) {
+    const plafond = Math.min(this.croixMin, Math.max(0, this.imposes.length - 1) * 2);
+    for (let seuil = plafond; seuil >= 0; seuil--) {
+      const s = this.squeletteAuSeuil(budget, seuil);
+      if (s) return s;
+    }
+    return null;
+  }
+
+  squeletteAuSeuil(budget, seuil) {
     const { nl, nc } = this, N = nl * nc;
     const mots = [...this.imposes].sort((a, b) => b.length - a.length);
     if (!this._pl) this._pl = mots.map(m => this.placementsPossibles(m));
@@ -239,7 +251,7 @@ class Generateur {
     let reste = budget, croixTotal = 0;
     const rec = (i) => {
       if (--reste <= 0) return false;
-      if (i === mots.length) return croixTotal >= this.croixMin;
+      if (i === mots.length) return croixTotal >= seuil;
       const mot = mots[i], L = mot.length;
       const cands = [];
       for (const p of this._pl[i]) {
