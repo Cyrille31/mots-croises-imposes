@@ -6,6 +6,18 @@ Application web installable, fonctionnant hors ligne.
 
 © 2026 Cyrille Gindre — marque CGExcel
 
+## Application en ligne
+
+https://cyrille31.github.io/mots-croises-imposes
+
+Ouvrir ce lien dans un navigateur. Sur Android, menu ⋮ → « Ajouter à l'écran
+d'accueil » ; sur PC, icône d'installation dans la barre d'adresse.
+L'application fonctionne ensuite hors ligne.
+
+La page ne peut pas être ouverte en `file://` : les navigateurs y interdisent
+les workers. Pour un essai local, lancer `python -m http.server 8000` dans le
+dossier puis ouvrir http://localhost:8000
+
 ## Mise en route
 
 1. Récupérer le lexique Grammalecte (formes fléchies, licence MPL 2.0).

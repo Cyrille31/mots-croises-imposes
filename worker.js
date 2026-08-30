@@ -84,28 +84,48 @@ self.onmessage = async (e) => {
     let G, r = null;
     if (p.affiner) {
       G = faire(p.densite, 0);
-      r = G.optimiserDensite({ cycles: p.cycles || 4, dureePalier: p.palier || 2500 });
-    } else if (noirsImposes) {
-      // on tente d'abord SANS aucune case noire ajoutee, puis on en concede
+      r = G.optimiserDensite({ cycles: p.cycles || 4, dureePalier: p.palier || 2500,
+                               dMax: Math.max(0.40, p.densite) });
+    } else {
+      // La densite demandee est un MINIMUM. Montee rapide par paliers de 5
+      // points pour trouver un niveau qui boucle, puis deux dichotomies pour
+      // redescendre au plus juste. Sans cela, une montee de 2 en 2 depuis 0 %
+      // demandait une trentaine d'essais avant de sortir quoi que ce soit.
       const dedans = masque ? masque.reduce((a, x) => a + (x ? 0 : 1), 0) : p.nl * p.nc;
-      const nImp = noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0);
-      const base = nImp / dedans, plafond = Math.max(base, p.densite);
-      const duree = p.duree || 8000;
-      for (let d = base; d <= plafond + 1e-9; d += 0.03) {
+      const nImp = noirsImposes ? noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
+      const base = Math.max(p.densite, nImp / dedans);
+      const court = Math.max(1500, (p.duree || 8000) / 5);
+      const essai = (d) => {
         self.postMessage({ type: 'info',
           texte: `Essai avec ${(100 * d).toFixed(0)} % de cases noires…` });
-        G = faire(d, 0);
-        r = G.generer(1e9, 20000, Math.max(2000, duree / 4));
-        if (r) { if (d > base + 1e-9) self.postMessage({ type: 'info',
-          texte: `Cases noires ajoutées pour boucler (${(100 * d).toFixed(0)} %).` }); break; }
+        const g = faire(d, 0);
+        const res = g.generer(1e9, 20000, court);
+        if (res) G = g;
+        return res;
+      };
+      let echec = null, trouve = null, dTrouve = base;
+      for (let d = base; d <= 0.501; d += 0.05) {
+        const res = essai(d);
+        if (res) { trouve = res; dTrouve = d; break; }
+        echec = d;
       }
-    } else {
-      G = faire(p.densite, 0);
-      r = G.generer(1e9, 20000, p.duree || 8000);
+      if (trouve && echec !== null) {                 // on resserre par dichotomie
+        let bas = echec, haut = dTrouve;
+        for (let k = 0; k < 2 && haut - bas > 0.015; k++) {
+          const m = (bas + haut) / 2;
+          const res = essai(m);
+          if (res) { trouve = res; dTrouve = m; haut = m; } else bas = m;
+        }
+      }
+      r = trouve;
+      if (r && dTrouve > base + 0.005) self.postMessage({ type: 'info',
+        texte: `Il a fallu monter à ${(100 * dTrouve).toFixed(0)} % de cases noires.` });
     }
 
     if (!r) { self.postMessage({ type: 'echec', diag: G.diag }); return; }
-    const noirs = Array.from(r.grille).filter(x => x === -2).length;
+    let noirs = 0;
+    for (let i = 0; i < r.grille.length; i++)
+      if (r.grille[i] === -2 && !(masque && masque[i])) noirs++;
     self.postMessage({
       type: 'grille',
       grille: Array.from(r.grille),
