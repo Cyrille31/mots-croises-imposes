@@ -9,34 +9,32 @@
 <style>
   :root { --bleu:#1a3a6b; --trait:#243447; --fond:#f7f8fa; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { margin:0; padding:12px; font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;
+  body { margin:0; padding:7px 9px; font:13px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;
          background:var(--fond); color:#14202e; }
-  header { display:flex; align-items:center; gap:10px; margin:0 0 10px; }
-  .logo { flex:none; border-radius:6px; }
-  h1 { font-size:17px; margin:0; color:var(--bleu); letter-spacing:.02em; }
+  header { display:flex; align-items:center; gap:8px; margin:0 0 6px; }
+  .logo { flex:none; border-radius:5px; }
+  h1 { font-size:14px; margin:0; color:var(--bleu); }
   h1 small { font-weight:400; color:#6b7887; }
-  .sous { margin:2px 0 0; font-size:11.5px; color:#8a96a4; }
-  details { background:#fff; border:1px solid #d7dce3; border-radius:10px;
-            padding:8px 12px; margin:0 0 12px; }
-  summary { cursor:pointer; font-size:14px; color:var(--bleu); font-weight:600; }
-  details p { font-size:13.5px; margin:9px 0; }
-  .note { color:#6b7887; font-style:italic; }
-  footer { margin:16px 0 4px; font-size:11.5px; color:#8a96a4; text-align:center; line-height:1.5; }
-  fieldset { border:1px solid #d7dce3; border-radius:10px; margin:0 0 12px; padding:10px 12px;
-             background:#fff; }
-  legend { font-size:13px; color:#6b7887; padding:0 4px; }
-  label { display:block; font-size:14px; margin:8px 0 2px; }
-  input[type=number], textarea, select { width:100%; padding:7px 8px; font:inherit;
-             border:1px solid #ccd3dc; border-radius:7px; background:#fff; }
-  textarea { min-height:58px; resize:vertical; }
-  input[type=range] { width:100%; }
-  .duo { display:flex; gap:10px; } .duo > * { flex:1; }
-  button { font:inherit; padding:11px 14px; border:0; border-radius:9px; background:var(--bleu);
-           color:#fff; width:100%; margin-top:10px; }
-  button.secondaire { background:#fff; color:var(--bleu); border:1px solid var(--bleu); }
-  button:disabled { opacity:.5; }
-  #etat { font-size:13px; color:#6b7887; margin:8px 0; min-height:19px; }
-  #grille { display:grid; gap:0; margin:10px auto; touch-action:manipulation;
+  .sous { margin:1px 0 0; font-size:10.5px; color:#8a96a4; }
+
+  .mots { display:flex; gap:7px; margin-bottom:6px; }
+  .mots > div { flex:1; }
+  label { display:block; font-size:11px; color:#54616f; margin:0 0 2px; }
+  textarea { width:100%; min-height:74px; padding:4px 6px; font:12.5px/1.3 inherit;
+             border:1px solid #ccd3dc; border-radius:6px; background:#fff; resize:vertical; }
+  .params { display:flex; flex-wrap:wrap; gap:5px 9px; background:#fff; border:1px solid #d7dce3;
+            border-radius:7px; padding:6px 8px; margin-bottom:6px; }
+  .p { display:flex; align-items:center; gap:4px; font-size:11.5px; color:#54616f; }
+  select, input[type=number] { padding:2px 4px; font:12px inherit; border:1px solid #ccd3dc;
+            border-radius:5px; background:#fff; }
+  input[type=number] { width:46px; }
+  .barre { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:5px; }
+  button { font:12.5px/1.1 inherit; padding:6px 10px; border:0; border-radius:6px;
+           background:var(--bleu); color:#fff; width:auto; }
+  button.sec { background:#fff; color:var(--bleu); border:1px solid #b9c6d8; }
+  button:disabled { opacity:.45; }
+  #etat { font-size:11.5px; color:#6b7887; margin:5px 0; min-height:15px; }
+  #grille { display:grid; gap:0; margin:6px auto; touch-action:manipulation;
             border:2px solid var(--trait); width:max-content; max-width:100%; }
   .c { display:flex; align-items:center; justify-content:center; font-weight:600;
        border:1px solid #b9c2ce; background:#fff; user-select:none; }
@@ -44,107 +42,114 @@
   .c.hors { background:#e9edf2; border-color:#dfe4ea; }
   .c.noirimp { background:var(--trait); box-shadow:inset 0 0 0 2px #6b8bb5; }
   .c.impose { background:#cfe4f7; }
-  @media print { fieldset,button,#etat,details,footer { display:none; }
-                 header { margin-bottom:8px; } .c.impose { background:#fff; } }
+  details { background:#fff; border:1px solid #d7dce3; border-radius:7px; padding:6px 9px; margin:6px 0; }
+  summary { cursor:pointer; font-size:12px; color:var(--bleu); font-weight:600; }
+  details p { font-size:12px; margin:6px 0; }
+  .note { color:#6b7887; font-style:italic; }
+  footer { margin:12px 0 4px; font-size:10.5px; color:#8a96a4; text-align:center; line-height:1.5; }
+  @media print { .mots,.params,.barre,#etat,details,footer { display:none; }
+                 .c.impose { background:#fff; } }
 </style>
 </head>
 <body>
 <header>
+  <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="30" height="30">
     <defs>
-    <radialGradient id="s" cx="35%" cy="30%" r="70%">
-      <stop offset="0%" stop-color="#8fc4f0"/><stop offset="55%" stop-color="#2f6fb5"/>
-      <stop offset="100%" stop-color="#13345e"/>
-    </radialGradient>
-  </defs>
-  <rect width="38" height="38" fill="#fff"/>
-  <g stroke="#dfe5ec" stroke-width="1">
-    <path d="M0 20h120M0 40h120M0 60h120M0 80h120M0 100h120"/>
-    <path d="M20 0v120M40 0v120M60 0v120M80 0v120M100 0v120"/>
-  </g>
-  <g stroke="#4a6a8f" stroke-width="4" stroke-linecap="round" opacity=".85">
-    <path d="M34 76 L60 40 M60 40 L88 62 M34 76 L88 62 M60 40 L58 84 M34 76 L58 84 M88 62 L58 84"/>
-  </g>
-  <g fill="url(#s)">
-    <circle cx="60" cy="40" r="15"/><circle cx="34" cy="76" r="13"/>
-    <circle cx="88" cy="62" r="12"/><circle cx="58" cy="84" r="10"/>
-  </g>
-  <rect x="1.5" y="1.5" width="117" height="117" fill="none" stroke="#c8d0da" stroke-width="2"/>
-</svg>
-
+      <radialGradient id="s" cx="35%" cy="30%" r="70%">
+        <stop offset="0%" stop-color="#8fc4f0"/><stop offset="55%" stop-color="#2f6fb5"/>
+        <stop offset="100%" stop-color="#13345e"/>
+      </radialGradient>
+    </defs>
+    <rect width="120" height="120" fill="#fff"/>
+    <g stroke="#dfe5ec" stroke-width="1">
+      <path d="M0 20h120M0 40h120M0 60h120M0 80h120M0 100h120"/>
+      <path d="M20 0v120M40 0v120M60 0v120M80 0v120M100 0v120"/>
+    </g>
+    <g stroke="#4a6a8f" stroke-width="4" stroke-linecap="round" opacity=".85">
+      <path d="M34 76 L60 40 M60 40 L88 62 M34 76 L88 62 M60 40 L58 84 M34 76 L58 84 M88 62 L58 84"/>
+    </g>
+    <g fill="url(#s)">
+      <circle cx="60" cy="40" r="15"/><circle cx="34" cy="76" r="13"/>
+      <circle cx="88" cy="62" r="12"/><circle cx="58" cy="84" r="10"/>
+    </g>
+    <rect x="1.5" y="1.5" width="117" height="117" fill="none" stroke="#c8d0da" stroke-width="2"/>
+  </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">1.4</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">1.7</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
-<details id="aide">
+<div class="mots">
+  <div><label>Mots imposés (un par ligne)</label><textarea id="imposes"></textarea></div>
+  <div><label>Thème — simple préférence</label><textarea id="theme"></textarea></div>
+</div>
+
+<div class="params">
+  <span class="p">Grille
+    <input type="number" id="nl" value="12" min="5" max="25"> ×
+    <input type="number" id="nc" value="12" min="5" max="25"></span>
+  <span class="p">Noires ≥
+    <select id="densite"></select></span>
+  <span class="p">Vocabulaire
+    <select id="niveau">
+      <option value="3000">très courant</option>
+      <option value="8000">courant</option>
+      <option value="20000" selected>étendu</option>
+      <option value="60000">large</option>
+      <option value="999999">complet</option>
+    </select></span>
+  <span class="p">Mots de 2 lettres
+    <select id="max2">
+      <option value="0" selected>sans limite</option>
+      <option value="5">5</option><option value="10">10</option>
+      <option value="15">15</option><option value="20">20</option>
+      <option value="30">30</option><option value="40">40</option>
+    </select></span>
+</div>
+
+<div class="barre">
+  <button id="go">Générer</button>
+  <button id="affiner" class="sec" disabled>Affiner</button>
+  <button id="silhouette" class="sec">Dessin : off</button>
+  <button id="razgrille" class="sec">RAZ grille</button>
+  <button id="razforme" class="sec">Effacer le dessin</button>
+  <button id="imprimer" class="sec" disabled>Imprimer</button>
+</div>
+
+<div id="etat">Prêt.</div>
+<div id="grille"></div>
+
+<details>
   <summary>Mode d'emploi</summary>
-  <p><b>1. La grille.</b> Choisissez les dimensions. Le format confortable est
-  12×12 à 15×15 ; en deçà de 11×11 les mots imposés manquent de place.</p>
-  <p><b>2. La densité de cases noires.</b> C'est le réglage le plus sensible.
-  Autour de 30 % la grille sort presque toujours du premier coup ; vers 20 %
-  elle devient belle mais lente à trouver et le vocabulaire se fait rare.
-  Les mots croisés français du commerce tournent autour de 19 %.</p>
-  <p><b>3. Le niveau de vocabulaire.</b> Il tronque le lexique aux mots les plus
-  courants. Attention, il s'oppose à la densité : une grille blanche réclame des
-  mots rares. Si rien ne sort, élargissez le vocabulaire ou remontez la densité.</p>
-  <p><b>4. Les mots de deux lettres.</b> Ils sont indispensables au bouclage —
-  les interdire rend la grille introuvable. Laissez « sans limite » par défaut ;
-  ne posez un plafond que si vous savez qu'il est atteignable.</p>
-  <p><b>5. Les mots imposés.</b> Un par ligne. Ils seront tous présents ou la
-  grille ne sortira pas. Ils n'ont pas besoin de se croiser entre eux : le
-  programme les disperse et les relie par les mots ordinaires. Ils apparaissent
-  en bleu à l'écran et en blanc à l'impression.</p>
-  <p><b>6. Les mots du thème.</b> Simple préférence, sans obligation : à qualité
-  égale le programme les choisit d'abord.</p>
-  <p><b>7. Affiner la densité.</b> Relance la recherche par paliers décroissants
-  et remplace la grille dès qu'il fait mieux. Comptez trente secondes pour
-  gagner cinq à six points.</p>
-  <p><b>8. Mode silhouette et cases noires imposées.</b> Activez le mode, puis
-  touchez une case : un premier appui la sort de la grille (gris clair), un
-  deuxième en fait une case noire imposée (noir cerclé de bleu), un troisième
-  la remet normale. Les cases hors grille ne comptent pas dans la densité.
-  Si vous imposez des cases noires, le programme cherche d'abord une solution
-  n'utilisant <i>que</i> celles-là, puis en concède d'autres par paliers de
-  3 % s'il n'y arrive pas — et il vous dit combien il a dû en ajouter.</p>
-  <p><b>9. Si rien ne sort.</b> Le message indique le nombre de tentatives et
-  la cause dominante. Dans l'ordre : remontez la densité, élargissez le
-  vocabulaire, agrandissez la grille, retirez un mot imposé.</p>
+  <p><b>Mots imposés</b> — un par ligne, tous seront présents ou la grille ne
+  sortira pas. Ils n'ont pas besoin de se croiser entre eux, mais le programme
+  cherche à les croiser quand c'est possible. Ils s'affichent en bleu à l'écran,
+  en blanc à l'impression. La colonne de droite n'est qu'une préférence : à
+  qualité égale ces mots passent devant.</p>
+  <p><b>Noires ≥</b> — un <i>minimum</i> visé. Si la grille ne boucle pas, le
+  programme monte par paliers de 3 % en annonçant chaque essai. Laissez 0 % pour
+  qu'il cherche le plancher lui-même. Les mots croisés français du commerce
+  tournent autour de 19 %.</p>
+  <p><b>Vocabulaire</b> — tronque le lexique aux mots les plus courants. Il
+  s'oppose à la densité : une grille blanche réclame des mots rares.</p>
+  <p><b>Mots de 2 lettres</b> — indispensables au bouclage ; les brider rend la
+  grille difficile à trouver. Laissez « sans limite » sauf besoin précis.</p>
+  <p><b>Dessin</b> — activez, puis touchez une case : un appui la sort de la
+  grille (gris), deux en font une case noire imposée (noir cerclé), trois la
+  remettent normale. Le programme cherche d'abord une solution n'utilisant que
+  vos cases noires, puis en concède d'autres si nécessaire.</p>
+  <p><b>RAZ grille</b> efface la grille produite ; <b>Effacer le dessin</b>
+  efface la silhouette et les cases noires imposées.</p>
+  <p><b>Changement de taille</b> — votre dessin est reporté par homothétie sur
+  la nouvelle grille, à partir du dessin d'origine, tant que vous n'y avez pas
+  touché à la main entre-temps.</p>
   <p class="note">Les définitions restent à votre charge : aucun lexique libre
   français n'en fournit.</p>
 </details>
 
-
-<fieldset>
-  <legend>Grille</legend>
-  <div class="duo">
-    <div><label>Lignes</label><input type="number" id="nl" value="12" min="5" max="25"></div>
-    <div><label>Colonnes</label><input type="number" id="nc" value="12" min="5" max="25"></div>
-  </div>
-  <label>Densité de cases noires : <b id="vd">30</b> %</label>
-  <input type="range" id="densite" min="10" max="45" value="30">
-  <label>Niveau de vocabulaire : <b id="vv">courant</b></label>
-  <input type="range" id="niveau" min="1" max="5" value="3">
-  <label>Mots de 2 lettres au maximum : <b id="v2">sans limite</b></label>
-  <input type="range" id="max2" min="0" max="60" value="0">
-</fieldset>
-
-<fieldset>
-  <legend>Mots</legend>
-  <label>Mots imposés (un par ligne)</label>
-  <textarea id="imposes" placeholder="TOULOUSE&#10;ECLIPSE"></textarea>
-  <label>Mots du thème, simple préférence (un par ligne)</label>
-  <textarea id="theme" placeholder="VOILE&#10;MAREE&#10;PORT"></textarea>
-</fieldset>
-
-<button id="go">Générer</button>
-<button id="affiner" class="secondaire" disabled>Affiner la densité</button>
-<button id="silhouette" class="secondaire">Mode silhouette : désactivé</button>
-<button id="imprimer" class="secondaire" disabled>Imprimer</button>
-<div id="etat">Prêt.</div>
-<div id="grille"></div>
 <footer>
-  Mots croisés CGExcel — interface 1.4, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 1.7, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -152,52 +157,68 @@
 
 <script>
 'use strict';
-const $ = s => document.querySelector(s);
-const NIVEAUX = [['très courant',3000],['courant',8000],['courant',20000],['étendu',60000],['complet',999999]];
-let nl=12, nc=12, etat=null, derniere=null, imposesNorm=[], worker=null, modeSil=false;
-
-function norm(s){ return s.replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD')
-  .replace(/[\u0300-\u036f]/g,'').toUpperCase().trim(); }
-function lignes(id){ return $(id).value.split('\n').map(norm).filter(m=>/^[A-Z]{2,}$/.test(m)); }
-
-$('#densite').oninput = e => $('#vd').textContent = e.target.value;
-$('#niveau').oninput  = e => $('#vv').textContent = NIVEAUX[e.target.value-1][0];
-$('#max2').oninput    = e => $('#v2').textContent = +e.target.value ? e.target.value : 'sans limite';
-
-$('#silhouette').onclick = () => {
-  modeSil = !modeSil;
-  $('#silhouette').textContent = 'Mode silhouette : ' + (modeSil ? 'activé' : 'désactivé');
-  if (modeSil && !etat) { etat = new Uint8Array(nl*nc); }
-  dessiner(derniere);
+window.onerror = (msg, src, l, c) => {
+  const e = document.getElementById('etat');
+  if (e) e.textContent = 'Erreur page : ' + msg + ' (ligne ' + l + ')';
 };
+const $ = s => document.querySelector(s);
+let nl = 12, nc = 12, etat = null, ref = null, derniere = null,
+    imposesNorm = [], worker = null, modeSil = false;
+
+for (let d = 0; d <= 45; d += 5) {
+  const o = document.createElement('option');
+  o.value = d / 100; o.textContent = d + ' %'; if (d === 30) o.selected = true;
+  $('#densite').appendChild(o);
+}
+
+function norm(s) {
+  return s.replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+}
+function lignes(id) {
+  return $(id).value.split('\n').map(norm).filter(m => /^[A-Z]{2,}$/.test(m));
+}
+function memoriser() { ref = { nl, nc, data: etat ? Uint8Array.from(etat) : null }; }
+
+// report homothetique du dessin lors d'un changement de taille
+function reporter(nnl, nnc) {
+  if (!ref || !ref.data) { etat = null; return; }
+  const neuf = new Uint8Array(nnl * nnc);
+  for (let r = 0; r < nnl; r++) for (let c = 0; c < nnc; c++) {
+    const sr = Math.min(ref.nl - 1, Math.floor(r * ref.nl / nnl));
+    const sc = Math.min(ref.nc - 1, Math.floor(c * ref.nc / nnc));
+    neuf[r * nnc + c] = ref.data[sr * ref.nc + sc];
+  }
+  etat = neuf;
+}
 
 function dessiner(g) {
-  nl = +$('#nl').value; nc = +$('#nc').value;
   const boite = $('#grille');
-  const taille = Math.min(34, Math.floor((Math.min(window.innerWidth-32, 560)) / nc));
+  const taille = Math.min(30, Math.floor(Math.min(window.innerWidth - 24, 560) / nc));
   boite.style.gridTemplateColumns = `repeat(${nc}, ${taille}px)`;
   boite.innerHTML = '';
   const imp = new Set(imposesNorm);
   const cellulesImposees = g ? reperer(g, imp) : new Set();
-  for (let i = 0; i < nl*nc; i++) {
+  for (let i = 0; i < nl * nc; i++) {
     const d = document.createElement('div');
     d.className = 'c';
     d.style.width = d.style.height = taille + 'px';
-    d.style.fontSize = Math.round(taille*0.55) + 'px';
+    d.style.fontSize = Math.round(taille * 0.55) + 'px';
     if (etat && etat[i] === 1) d.classList.add('hors');
     else if (etat && etat[i] === 2 && !g) d.classList.add('noirimp');
     else if (g) {
       const v = g[i];
       if (v === -2) d.classList.add('noir');
-      else { d.textContent = String.fromCharCode(65+v);
+      else { d.textContent = String.fromCharCode(65 + v);
              if (cellulesImposees.has(i)) d.classList.add('impose'); }
     }
     d.onclick = () => {
       if (!modeSil) return;
-      if (!etat) etat = new Uint8Array(nl*nc);
-      etat[i] = (etat[i] + 1) % 3;   // normal -> hors grille -> case noire -> normal
+      if (!etat) etat = new Uint8Array(nl * nc);
+      etat[i] = (etat[i] + 1) % 3;
       d.className = 'c' + (etat[i] === 1 ? ' hors' : etat[i] === 2 ? ' noirimp' : '');
       d.textContent = '';
+      memoriser();                     // modification manuelle : nouvelle reference
     };
     boite.appendChild(d);
   }
@@ -205,30 +226,30 @@ function dessiner(g) {
 
 function reperer(g, imp) {
   const dedans = new Set();
-  const test = (cells) => {
-    const mot = cells.map(i => String.fromCharCode(65+g[i])).join('');
+  const test = cells => {
+    const mot = cells.map(i => String.fromCharCode(65 + g[i])).join('');
     if (imp.has(mot)) cells.forEach(i => dedans.add(i));
   };
-  for (let r=0;r<nl;r++){ let s=[]; for(let c=0;c<nc;c++){ const i=r*nc+c;
-    if (g[i]<0){ if(s.length>1) test(s); s=[]; } else s.push(i);} if(s.length>1) test(s); }
-  for (let c=0;c<nc;c++){ let s=[]; for(let r=0;r<nl;r++){ const i=r*nc+c;
-    if (g[i]<0){ if(s.length>1) test(s); s=[]; } else s.push(i);} if(s.length>1) test(s); }
+  for (let r = 0; r < nl; r++) { let s = []; for (let c = 0; c < nc; c++) {
+    const i = r * nc + c; if (g[i] < 0) { if (s.length > 1) test(s); s = []; } else s.push(i); }
+    if (s.length > 1) test(s); }
+  for (let c = 0; c < nc; c++) { let s = []; for (let r = 0; r < nl; r++) {
+    const i = r * nc + c; if (g[i] < 0) { if (s.length > 1) test(s); s = []; } else s.push(i); }
+    if (s.length > 1) test(s); }
   return dedans;
 }
 
 function lancer(affiner) {
-  nl = +$('#nl').value; nc = +$('#nc').value;
   imposesNorm = lignes('#imposes');
   $('#go').disabled = $('#affiner').disabled = true;
-  $('#etat').textContent = affiner ? 'Affinage en cours…' : 'Recherche en cours…';
+  $('#etat').textContent = affiner ? 'Affinage…' : 'Recherche…';
   if (worker) worker.terminate();
   worker = new Worker('./worker.js');
-  worker.onerror = (ev) => {
+  worker.onerror = ev => {
     $('#go').disabled = false;
-    $('#etat').textContent = 'Erreur de chargement du worker : '
-      + (ev.message || 'voir la console') + ' (' + (ev.filename || '') + ':' + (ev.lineno || '') + ')';
+    $('#etat').textContent = 'Erreur worker : ' + (ev.message || 'voir la console');
   };
-  worker.onmessage = (e) => {
+  worker.onmessage = e => {
     const m = e.data;
     if (m.type === 'version') { $('#vmot').textContent = m.v; return; }
     if (m.type === 'info') { $('#etat').textContent = m.texte; return; }
@@ -239,15 +260,15 @@ function lancer(affiner) {
       $('#affiner').disabled = false; $('#imprimer').disabled = false;
       $('#vmot').textContent = m.version || '?';
       const cx = m.croisements || [];
-      $('#etat').textContent = `Grille trouvée — ${(100*m.densite).toFixed(1)} % de cases noires, `
-        + `${m.poses}/${imposesNorm.length} mots imposés placés, `
+      $('#etat').textContent = `${(100 * m.densite).toFixed(1)} % de noires, `
+        + `${m.poses}/${imposesNorm.length} mots imposés, `
         + (cx.length ? `${cx.length} croisement(s) : ${cx.join(', ')}.` : 'aucun croisement.');
     } else if (m.type === 'echec') {
       const d = m.diag || {};
-      let cause = 'Augmentez la densité, élargissez le vocabulaire ou agrandissez la grille.';
-      if (d.plafondCourt > 0)
-        cause = `Le plafond de mots de 2 lettres bloque : les motifs en comptent jusqu'à ${d.vuCourt}. Relevez-le ou choisissez « sans limite ».`;
-      $('#etat').textContent = `Aucune grille trouvée (${d.resolution || 0} tentatives). ` + cause;
+      $('#etat').textContent = `Aucune grille trouvée (${d.resolution || 0} tentatives). `
+        + (d.plafondCourt > 0
+           ? `Le plafond de mots de 2 lettres bloque : jusqu'à ${d.vuCourt} nécessaires.`
+           : 'Élargissez le vocabulaire ou agrandissez la grille.');
     } else {
       $('#etat').textContent = 'Erreur : ' + m.message;
     }
@@ -259,8 +280,8 @@ function lancer(affiner) {
     masque: etat ? Array.from(etat, v => v === 1 ? 1 : 0) : null,
     noirsImposes: etat && etat.some(v => v === 2)
       ? Array.from(etat, v => v === 2 ? 1 : 0) : null,
-    densite: +$('#densite').value / 100,
-    niveau: NIVEAUX[$('#niveau').value-1][1],
+    densite: +$('#densite').value,
+    niveau: +$('#niveau').value,
     maxMots: +$('#max2').value ? { 2: +$('#max2').value } : {},
     affiner, cycles: 5, palier: 2500, duree: 8000
   });
@@ -269,7 +290,26 @@ function lancer(affiner) {
 $('#go').onclick = () => lancer(false);
 $('#affiner').onclick = () => lancer(true);
 $('#imprimer').onclick = () => window.print();
-$('#nl').onchange = $('#nc').onchange = () => { etat = null; derniere = null; dessiner(null); };
+$('#silhouette').onclick = () => {
+  modeSil = !modeSil;
+  $('#silhouette').textContent = 'Dessin : ' + (modeSil ? 'ON' : 'off');
+  if (modeSil && !etat) { etat = new Uint8Array(nl * nc); memoriser(); }
+  dessiner(derniere);
+};
+$('#razgrille').onclick = () => {
+  derniere = null; $('#affiner').disabled = true; $('#imprimer').disabled = true;
+  $('#etat').textContent = 'Grille effacée.'; dessiner(null);
+};
+$('#razforme').onclick = () => {
+  etat = null; ref = null; $('#etat').textContent = 'Dessin effacé.'; dessiner(derniere);
+};
+$('#nl').onchange = $('#nc').onchange = () => {
+  const a = Math.max(5, Math.min(25, +$('#nl').value || 12));
+  const b = Math.max(5, Math.min(25, +$('#nc').value || 12));
+  reporter(a, b); nl = a; nc = b; derniere = null;
+  $('#affiner').disabled = true; $('#imprimer').disabled = true;
+  dessiner(null);
+};
 
 dessiner(null);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');

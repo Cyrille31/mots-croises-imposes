@@ -1,4 +1,4 @@
-const CACHE = 'mc-cgexcel-v6';
+const CACHE = 'mc-cgexcel-v9';
 const FICHIERS = ['./', './index.html', './moteur.js', './worker.js',
                   './lexique.txt', './manifest.webmanifest'];
 

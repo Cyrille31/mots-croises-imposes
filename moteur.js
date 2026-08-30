@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '1.4';
+const VERSION = '1.7';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -359,6 +359,20 @@ class Generateur {
     const g = new Int8Array(N).fill(VIDE);
     if (this.noirsImposes) for (let i = 0; i < N; i++) if (this.noirsImposes[i]) fixe[i] = 1;
     for (let i = 0; i < N; i++) if (fixe[i] === 1 || (M && M[i])) g[i] = NOIR;
+    // une case dont la ligne OU la colonne est reduite a elle seule ne peut
+    // porter aucune lettre : on la noircit d'office (frequent avec une silhouette)
+    for (let passe = 0; passe < 40; passe++) {
+      let change = false;
+      for (const i of this.dedans) {
+        if (g[i] === NOIR) continue;
+        const r = (i / nc) | 0, c = i % nc;
+        if (this.longRun(g, r, c, true) === 1 || this.longRun(g, r, c, false) === 1) {
+          if (fixe[i] === 2) return null;      // lettre imposee isolee : impossible
+          g[i] = NOIR; change = true;
+        }
+      }
+      if (!change) break;
+    }
     const cible = Math.round(this.pNoir * this.dedans.length);
     let poses = 0;
     for (const i of this.dedans) if (g[i] === NOIR) poses++;
