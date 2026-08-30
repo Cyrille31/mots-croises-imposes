@@ -76,7 +76,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">1.9</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">2.1</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -111,7 +111,6 @@
 <div class="barre">
   <button id="go">Générer</button>
   <button id="affiner" class="sec" disabled>Affiner</button>
-  <button id="silhouette" class="sec">Dessin : off</button>
   <button id="razgrille" class="sec">RAZ grille</button>
   <button id="razforme" class="sec">RAZ dessin</button>
   <button id="imprimer" class="sec" disabled>Imprimer</button>
@@ -136,12 +135,15 @@
   s'oppose à la densité : une grille blanche réclame des mots rares.</p>
   <p><b>Mots de 2 lettres</b> — indispensables au bouclage ; les brider rend la
   grille difficile à trouver. Laissez « sans limite » sauf besoin précis.</p>
-  <p><b>Dessin</b> — activez, puis touchez une case : un appui la sort de la
-  grille (gris), deux en font une case noire imposée (noir cerclé), trois la
-  remettent normale. En gardant le doigt ou le bouton enfoncé et en glissant,
-  toutes les cases parcourues prennent la valeur donnée à la première. À la fin
-  du tracé, toute poche de cases isolée du corps principal par des cases
-  effacées ou par les bords est effacée à son tour. Le programme cherche d'abord une solution n'utilisant que
+  <p><b>Dessin</b> — la grille est toujours dessinable : touchez une case, un
+  appui la sort de la grille (gris), deux en font une case noire imposée (noir
+  cerclé), trois la remettent normale. En gardant le doigt ou le bouton enfoncé
+  et en glissant, toutes les cases parcourues prennent la valeur donnée à la
+  première. À la fin du tracé le dessin est nettoyé : toute poche isolée du
+  corps principal est effacée, et toute case isolée <i>dans les deux sens</i> est
+  sortie de la grille. Une bande large d'une seule case reste jouable : comme
+  dans les mots croisés du commerce, une case peut n'appartenir qu'à un seul
+  mot, horizontal ou vertical. Le programme cherche d'abord une solution n'utilisant que
   vos cases noires, puis en concède d'autres si nécessaire.</p>
   <p><b>RAZ grille</b> efface la grille produite ; <b>RAZ dessin</b>
   efface la silhouette et les cases noires imposées.</p>
@@ -158,7 +160,7 @@
 </details>
 
 <footer>
-  Mots croisés CGExcel — interface 1.9, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 2.1, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -172,7 +174,7 @@ window.onerror = (msg, src, l, c) => {
 };
 const $ = s => document.querySelector(s);
 let nl = 12, nc = 12, etat = null, ref = null, derniere = null,
-    imposesNorm = [], worker = null, modeSil = false;
+    imposesNorm = [], worker = null;
 
 for (let d = 0; d <= 45; d += 5) {
   const o = document.createElement('option');
@@ -206,7 +208,7 @@ function dessiner(g) {
   const taille = Math.min(30, Math.floor(Math.min(window.innerWidth - 24, 560) / nc));
   boite.style.gridTemplateColumns = `repeat(${nc}, ${taille}px)`;
   boite.innerHTML = '';
-  boite.style.touchAction = modeSil ? 'none' : 'manipulation';
+  boite.style.touchAction = 'none';
   const imp = new Set(imposesNorm);
   const cellulesImposees = g ? reperer(g, imp) : new Set();
   for (let i = 0; i < nl * nc; i++) {
@@ -241,6 +243,29 @@ function peindre(i, v) {
   if (el) { el.className = 'c' + (v === 1 ? ' hors' : v === 2 ? ' noirimp' : ''); el.textContent = ''; }
 }
 
+// Une case peut n'appartenir qu'a un seul mot : une colonne large d'une case
+// reste jouable a la verticale. Seule une case isolee dans LES DEUX sens est
+// inutilisable, et sort de la grille.
+function retirerIsolees() {
+  if (!etat) return;
+  const barre = i => etat[i] !== 0;          // hors grille ou case noire imposee
+  for (let passe = 0; passe < 60; passe++) {
+    let change = false;
+    for (let i = 0; i < nl * nc; i++) {
+      if (etat[i] !== 0) continue;
+      const r = (i / nc) | 0, c = i % nc;
+      let h = 1;
+      for (let j = c - 1; j >= 0 && !barre(r * nc + j); j--) h++;
+      for (let j = c + 1; j < nc && !barre(r * nc + j); j++) h++;
+      let v = 1;
+      for (let k = r - 1; k >= 0 && !barre(k * nc + c); k--) v++;
+      for (let k = r + 1; k < nl && !barre(k * nc + c); k++) v++;
+      if (h === 1 && v === 1) { etat[i] = 1; change = true; }
+    }
+    if (!change) break;
+  }
+}
+
 // toute poche de cases separee du corps principal est effacee
 function comblerPoches() {
   if (!etat) return;
@@ -271,7 +296,6 @@ function comblerPoches() {
 function installerDessin() {
   const boite = $('#grille');
   boite.addEventListener('pointerdown', ev => {
-    if (!modeSil) return;
     ev.preventDefault();
     if (!etat) etat = new Uint8Array(nl * nc);
     const i = caseSous(ev);
@@ -288,7 +312,9 @@ function installerDessin() {
   const fin = () => {
     if (peinture === null) return;
     peinture = null;
+    retirerIsolees();
     comblerPoches();
+    retirerIsolees();
     memoriser();
     dessiner(derniere);
   };
@@ -372,12 +398,6 @@ $('#partager').onclick = async () => {
   } catch (e) {
     $('#etat').textContent = 'Lien à recopier : ' + url;
   }
-};
-$('#silhouette').onclick = () => {
-  modeSil = !modeSil;
-  $('#silhouette').textContent = 'Dessin : ' + (modeSil ? 'ON' : 'off');
-  if (modeSil && !etat) { etat = new Uint8Array(nl * nc); memoriser(); }
-  dessiner(derniere);
 };
 $('#razgrille').onclick = () => {
   derniere = null; $('#affiner').disabled = true; $('#imprimer').disabled = true;
