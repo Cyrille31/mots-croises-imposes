@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '2.3';
+const VERSION = '2.4';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -88,6 +88,8 @@ class Generateur {
     this.seuilGroupe = opts.seuilGroupe ?? 30;
     this.primeCroix = opts.primeCroix ?? 6;
     this.croixMin = opts.croisementsMin ?? 5;
+    this.longMin = opts.longueurMin ?? 2;
+    this.longueurIdeale = opts.longueurIdeale ?? 5;
     this.noirsImposes = opts.noirsImposes || null;   // 1 = case noire voulue
     this.nbNoirsImposes = this.noirsImposes
       ? this.noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
@@ -381,7 +383,39 @@ class Generateur {
     for (let i = ordre.length - 1; i > 0; i--) {
       const j = Math.floor(this.rnd() * (i + 1));[ordre[i], ordre[j]] = [ordre[j], ordre[i]];
     }
-    for (const mini of [2, 1]) {          // 1re passe : eviter les mots de 2 lettres
+    // Placement guide : on coupe en priorite le plus long mot en deux moities
+    // equilibrees, plutot que de semer les cases noires au hasard. On obtient
+    // des longueurs regulieres et il en faut nettement moins pour boucler.
+    const cibleLong = this.longueurIdeale;
+    while (poses < cible) {
+      const segs = this.segments(g).filter(s => s.length >= 2 * this.longMin + 1
+                                                && s.some(i => !fixe[i]));
+      if (!segs.length) break;
+      segs.sort((a, b) => b.length - a.length);
+      const pool = segs.slice(0, Math.max(1, Math.ceil(segs.length * 0.35)));
+      const seg = pool[Math.floor(this.rnd() * pool.length)];
+      // position de coupe : celle qui rapproche le plus les deux moities
+      // de la longueur ideale, avec un peu d'aleatoire
+      const choix = [];
+      for (let k = this.longMin; k <= seg.length - this.longMin - 1; k++) {
+        const idx = seg[k];
+        if (fixe[idx]) continue;
+        const a = k, b = seg.length - k - 1;
+        const cout = Math.abs(a - cibleLong) + Math.abs(b - cibleLong);
+        choix.push([cout + this.rnd() * 2.5, idx]);
+      }
+      if (!choix.length) { poses += 0; break; }
+      choix.sort((x, y) => x[0] - y[0]);
+      let pose = false;
+      for (const [, idx] of choix) {
+        g[idx] = NOIR;
+        if (this.okLocal(g, (idx / nc) | 0, idx % nc)) { poses++; pose = true; break; }
+        g[idx] = VIDE;
+      }
+      if (!pose) break;
+    }
+    // complement au hasard si la cible n'est pas atteinte
+    for (const mini of [2, 1]) {
       for (const idx of ordre) {
         if (poses >= cible) break;
         if (g[idx] === NOIR) continue;

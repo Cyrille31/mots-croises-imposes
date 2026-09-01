@@ -99,9 +99,8 @@ self.onmessage = async (e) => {
         self.postMessage({ type: 'info',
           texte: `Essai avec ${(100 * d).toFixed(0)} % de cases noires…` });
         const g = faire(d, 0);
-        const res = g.generer(1e9, 20000, court);
-        if (res) G = g;
-        return res;
+        G = g;                       // toujours renseigne, meme en cas d'echec
+        return g.generer(1e9, 20000, court);
       };
       let echec = null, trouve = null, dTrouve = base;
       for (let d = base; d <= 0.501; d += 0.05) {
@@ -132,7 +131,7 @@ self.onmessage = async (e) => {
         texte: `Il a fallu monter à ${(100 * dTrouve).toFixed(0)} % de cases noires.` });
     }
 
-    if (!r) { self.postMessage({ type: 'echec', diag: G.diag }); return; }
+    if (!r) { self.postMessage({ type: 'echec', diag: (G && G.diag) || {} }); return; }
     let noirs = 0;
     for (let i = 0; i < r.grille.length; i++)
       if (r.grille[i] === -2 && !(masque && masque[i])) noirs++;
