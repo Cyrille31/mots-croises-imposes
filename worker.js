@@ -94,7 +94,7 @@ self.onmessage = async (e) => {
       const dedans = masque ? masque.reduce((a, x) => a + (x ? 0 : 1), 0) : p.nl * p.nc;
       const nImp = noirsImposes ? noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
       const base = Math.max(p.densite, nImp / dedans);
-      const court = Math.max(1500, (p.duree || 8000) / 5);
+      const court = Math.max(2000, (p.duree || 8000) / 4);
       const essai = (d) => {
         self.postMessage({ type: 'info',
           texte: `Essai avec ${(100 * d).toFixed(0)} % de cases noires…` });
@@ -109,12 +109,22 @@ self.onmessage = async (e) => {
         if (res) { trouve = res; dTrouve = d; break; }
         echec = d;
       }
-      if (trouve && echec !== null) {                 // on resserre par dichotomie
-        let bas = echec, haut = dTrouve;
-        for (let k = 0; k < 2 && haut - bas > 0.015; k++) {
-          const m = (bas + haut) / 2;
-          const res = essai(m);
-          if (res) { trouve = res; dTrouve = m; haut = m; } else bas = m;
+      // on redescend ensuite le plus bas possible dans le temps imparti
+      if (trouve) {
+        const t0 = Date.now(), budget = (p.duree || 8000) * 2.5;
+        if (echec !== null) {                         // dichotomie
+          let bas = echec, haut = dTrouve;
+          for (let k = 0; k < 5 && haut - bas > 0.008; k++) {
+            if (Date.now() - t0 > budget) break;
+            const m = (bas + haut) / 2;
+            const res = essai(m);
+            if (res) { trouve = res; dTrouve = m; haut = m; } else bas = m;
+          }
+        }
+        while (Date.now() - t0 < budget && dTrouve - 0.02 >= base) {
+          const res = essai(dTrouve - 0.02);          // grignotage
+          if (!res) break;
+          trouve = res; dTrouve -= 0.02;
         }
       }
       r = trouve;
