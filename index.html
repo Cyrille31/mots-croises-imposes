@@ -77,7 +77,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">2.4</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">2.5</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -88,8 +88,7 @@
 
 <div class="params">
   <span class="p">Grille
-    <input type="number" id="nl" value="12" min="5" max="25"> ×
-    <input type="number" id="nc" value="12" min="5" max="25"></span>
+    <select id="nl"></select> × <select id="nc"></select></span>
   <span class="p">Noires ≥
     <select id="densite"></select></span>
   <span class="p">Vocabulaire
@@ -128,9 +127,11 @@
   cherche à les croiser quand c'est possible. Ils s'affichent en bleu à l'écran,
   en blanc à l'impression. La colonne de droite n'est qu'une préférence : à
   qualité égale ces mots passent devant.</p>
-  <p><b>Noires ≥</b> — un <i>minimum</i> visé. Si la grille ne boucle pas, le
-  programme monte par paliers de 5 points jusqu'à trouver, puis resserre par
-  dichotomie, en annonçant chaque essai. Laissez 0 % pour
+  <p><b>Noires ≥</b> — la valeur de départ, pas une limite. Le programme
+  l'essaie d'abord : si elle passe, il <i>descend</i> de deux points en deux
+  points tant qu'il trouve ; sinon il monte, par pas de deux points sous 30 %
+  puis de cinq, et resserre par dichotomie. Chaque essai reçoit d'autant plus
+  de temps que la grille est grande et les mots imposés nombreux. Laissez 0 % pour
   qu'il cherche le plancher lui-même. Les mots croisés français du commerce
   tournent autour de 19 %.</p>
   <p><b>Vocabulaire</b> — tronque le lexique aux mots les plus courants. Il
@@ -163,7 +164,7 @@
 </details>
 
 <footer>
-  Mots croisés CGExcel — interface 2.4, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 2.5, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -181,8 +182,15 @@ let nl = 12, nc = 12, etat = null, ref = null, derniere = null,
 
 for (let d = 0; d <= 45; d += 5) {
   const o = document.createElement('option');
-  o.value = d / 100; o.textContent = d + ' %'; if (d === 30) o.selected = true;
+  o.value = d / 100; o.textContent = d + ' %'; if (d === 15) o.selected = true;
   $('#densite').appendChild(o);
+}
+for (const id of ['#nl', '#nc']) {
+  for (let v = 5; v <= 30; v++) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v; if (v === 12) o.selected = true;
+    $(id).appendChild(o);
+  }
 }
 
 function norm(s) {
@@ -435,8 +443,7 @@ $('#razforme').onclick = () => {
   etat = null; ref = null; $('#etat').textContent = 'Dessin remis à zéro.'; dessiner(derniere);
 };
 $('#nl').onchange = $('#nc').onchange = () => {
-  const a = Math.max(5, Math.min(25, +$('#nl').value || 12));
-  const b = Math.max(5, Math.min(25, +$('#nc').value || 12));
+  const a = +$('#nl').value, b = +$('#nc').value;
   reporter(a, b); nl = a; nc = b; derniere = null;
   $('#affiner').disabled = true; $('#imprimer').disabled = true;
   dessiner(null);

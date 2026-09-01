@@ -87,48 +87,55 @@ self.onmessage = async (e) => {
       r = G.optimiserDensite({ cycles: p.cycles || 4, dureePalier: p.palier || 2500,
                                dMax: Math.max(0.40, p.densite) });
     } else {
-      // La densite demandee est un MINIMUM. Montee rapide par paliers de 5
-      // points pour trouver un niveau qui boucle, puis deux dichotomies pour
-      // redescendre au plus juste. Sans cela, une montee de 2 en 2 depuis 0 %
-      // demandait une trentaine d'essais avant de sortir quoi que ce soit.
+      // On part de la densite demandee et on va DANS LES DEUX SENS : si elle
+      // convient, on descend tant qu'on trouve ; sinon on monte, par petits
+      // pas tant qu'on est bas, puis plus vite. Le temps accorde a chaque
+      // palier grandit avec la taille de la grille et le nombre de mots.
       const dedans = masque ? masque.reduce((a, x) => a + (x ? 0 : 1), 0) : p.nl * p.nc;
       const nImp = noirsImposes ? noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
       const base = Math.max(p.densite, nImp / dedans);
-      const court = Math.max(2000, (p.duree || 8000) / 4);
+      const facteur = 1 + dedans / 400 + imposes.length / 10;
+      const court = Math.round(Math.max(2500, (p.duree || 8000) / 3 * facteur));
+      const t0 = Date.now(), budgetTotal = court * 8;
+      const reste = () => Date.now() - t0 < budgetTotal;
+
       const essai = (d) => {
         self.postMessage({ type: 'info',
           texte: `Essai avec ${(100 * d).toFixed(0)} % de cases noires…` });
         const g = faire(d, 0);
-        G = g;                       // toujours renseigne, meme en cas d'echec
+        G = g;
         return g.generer(1e9, 20000, court);
       };
-      let echec = null, trouve = null, dTrouve = base;
-      for (let d = base; d <= 0.501; d += 0.05) {
-        const res = essai(d);
-        if (res) { trouve = res; dTrouve = d; break; }
-        echec = d;
-      }
-      // on redescend ensuite le plus bas possible dans le temps imparti
+
+      let trouve = essai(base), dTrouve = base;
       if (trouve) {
-        const t0 = Date.now(), budget = (p.duree || 8000) * 2.5;
-        if (echec !== null) {                         // dichotomie
+        // ça passe du premier coup : on essaie de faire mieux
+        while (reste() && dTrouve > 0.06) {
+          const d = dTrouve - 0.02;
+          const res = essai(d);
+          if (!res) break;
+          trouve = res; dTrouve = d;
+        }
+      } else {
+        let echec = base;
+        for (let d = base; d <= 0.501 && reste(); ) {
+          d += d < 0.30 ? 0.02 : 0.05;      // petits pas tant qu'on est bas
+          const res = essai(d);
+          if (res) { trouve = res; dTrouve = d; break; }
+          echec = d;
+        }
+        if (trouve && dTrouve - echec > 0.021) {   // resserrage
           let bas = echec, haut = dTrouve;
-          for (let k = 0; k < 5 && haut - bas > 0.008; k++) {
-            if (Date.now() - t0 > budget) break;
+          for (let k = 0; k < 3 && reste() && haut - bas > 0.015; k++) {
             const m = (bas + haut) / 2;
             const res = essai(m);
             if (res) { trouve = res; dTrouve = m; haut = m; } else bas = m;
           }
         }
-        while (Date.now() - t0 < budget && dTrouve - 0.02 >= base) {
-          const res = essai(dTrouve - 0.02);          // grignotage
-          if (!res) break;
-          trouve = res; dTrouve -= 0.02;
-        }
       }
       r = trouve;
-      if (r && dTrouve > base + 0.005) self.postMessage({ type: 'info',
-        texte: `Il a fallu monter à ${(100 * dTrouve).toFixed(0)} % de cases noires.` });
+      if (r) self.postMessage({ type: 'info',
+        texte: `Retenu : ${(100 * dTrouve).toFixed(0)} % de cases noires.` });
     }
 
     if (!r) { self.postMessage({ type: 'echec', diag: (G && G.diag) || {} }); return; }
