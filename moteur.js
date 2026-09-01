@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '2.5';
+const VERSION = '2.6';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -90,6 +90,7 @@ class Generateur {
     this.croixMin = opts.croisementsMin ?? 5;
     this.longMin = opts.longueurMin ?? 2;
     this.longueurIdeale = opts.longueurIdeale ?? 5;
+    this.polissageMs = opts.polissageMs ?? 0;
     this.noirsImposes = opts.noirsImposes || null;   // 1 = case noire voulue
     this.nbNoirsImposes = this.noirsImposes
       ? this.noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
@@ -698,6 +699,39 @@ class Generateur {
     return meilleur ? { ...meilleur, densite: meilleureD } : null;
   }
 
+  // Polissage : on tente de blanchir les cases noires une par une et de
+  // recoudre localement. C'est ce que fait un verbicruciste devant un pate
+  // de cases noires : il essaie de le remplacer par des lettres.
+  polir(grille, fixe, budgetMs) {
+    const { nl, nc } = this, N = nl * nc, t0 = Date.now();
+    let courant = Int8Array.from(grille);
+    const cands = [];
+    for (let i = 0; i < N; i++) {
+      if (courant[i] !== NOIR) continue;
+      if (this.masque && this.masque[i]) continue;
+      if (this.noirsImposes && this.noirsImposes[i]) continue;
+      if (fixe && fixe[i] === 1) continue;          // bornes des mots imposes
+      cands.push(i);
+    }
+    for (let i = cands.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rnd() * (i + 1));[cands[i], cands[j]] = [cands[j], cands[i]];
+    }
+    let gagne = 0;
+    for (const i of cands) {
+      if (Date.now() - t0 > budgetMs) break;
+      const motif = new Int8Array(N);
+      for (let k = 0; k < N; k++) motif[k] = courant[k] === NOIR ? NOIR : VIDE;
+      motif[i] = VIDE;
+      if (!this.valide(motif)) continue;
+      const init = Int8Array.from(courant);
+      init[i] = VIDE;
+      const r = this.resoudre(motif, { n: 40000 }, init);
+      if (r.grille && r.poses === this.imposes.length) { courant = r.grille; gagne++; }
+    }
+    this.diag.polies = gagne;
+    return courant;
+  }
+
   generer(essais = 600, budgetParEssai = 30000, limiteMs = 0) {
     const t0 = Date.now();
     let res = null, motif = null, etat = null, sansGain = 0;
@@ -728,7 +762,11 @@ class Generateur {
       const r = this.resoudre(motif, { n: budgetParEssai }, init);
       if (r.grille) {
         if (r.poses > score) { meilleur = r; score = r.poses; }
-        if (r.poses === this.imposes.length) return meilleur;
+        if (r.poses === this.imposes.length) {
+          if (this.polissageMs > 0)
+            meilleur = { ...meilleur, grille: this.polir(meilleur.grille, res.fixe, this.polissageMs) };
+          return meilleur;
+        }
       }
       // on garde l'ebauche, mais on relache la region qui coince :
       // les mots loin du conflit sont conserves, ceux d'autour sont effaces

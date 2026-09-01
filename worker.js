@@ -71,7 +71,8 @@ self.onmessage = async (e) => {
     self.postMessage({ type: 'info', texte: 'Recherche…' });
     const masque = p.masque ? Uint8Array.from(p.masque) : null;
     const noirsImposes = p.noirsImposes ? Uint8Array.from(p.noirsImposes) : null;
-    const faire = (densite, duree) => new M.Generateur(index, p.nl, p.nc, {
+    const faire = (densite, polissage) => new M.Generateur(index, p.nl, p.nc, {
+      polissageMs: polissage || 0,
       motsImposes: imposes,
       motsThemes: p.theme || [],
       masque, noirsImposes,
@@ -132,6 +133,13 @@ self.onmessage = async (e) => {
             if (res) { trouve = res; dTrouve = m; haut = m; } else bas = m;
           }
         }
+      }
+      // polissage final : on tente de blanchir des cases noires une a une
+      if (trouve && reste()) {
+        self.postMessage({ type: 'info', texte: 'Polissage des cases noires…' });
+        const g = faire(dTrouve, budgetTotal - (Date.now() - t0));
+        const mieux = g.generer(1e9, 20000, court);
+        if (mieux) { trouve = mieux; G = g; }
       }
       r = trouve;
       if (r) self.postMessage({ type: 'info',
