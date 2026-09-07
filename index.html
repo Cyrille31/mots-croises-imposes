@@ -77,7 +77,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">2.6</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">3.0</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -89,13 +89,13 @@
 <div class="params">
   <span class="p">Grille
     <select id="nl"></select> × <select id="nc"></select></span>
-  <span class="p">Noires ≥
+  <span class="p">Noires :
     <select id="densite"></select></span>
   <span class="p">Vocabulaire
     <select id="niveau">
-      <option value="3000">très courant</option>
+      <option value="3000" selected>très courant</option>
       <option value="8000">courant</option>
-      <option value="20000" selected>étendu</option>
+      <option value="20000">étendu</option>
       <option value="60000">large</option>
       <option value="999999">complet</option>
     </select></span>
@@ -117,13 +117,25 @@
   <button id="partager" class="sec">Copier le lien</button>
 </div>
 
+<div class="barre">
+  <button id="go">Générer</button>
+  <button id="mieux" class="sec" disabled>Chercher mieux</button>
+  <button id="razgrille" class="sec">RAZ mots</button>
+  <button id="razdessin" class="sec">RAZ dessin</button>
+  <button id="exporter" class="sec">Exporter le dessin</button>
+  <button id="importer" class="sec">Importer</button>
+  <button id="imprimer" class="sec" disabled>Imprimer</button>
+</div>
+<input type="file" id="fichier" accept=".json,application/json" style="display:none">
 <div id="etat">Prêt.</div>
 <div id="grille"></div>
 
 <details>
   <summary>Mode d'emploi</summary>
   <p><b>Mots imposés</b> — un par ligne, tous seront présents ou la grille ne
-  sortira pas. Ils n'ont pas besoin de se croiser entre eux, mais le programme
+  sortira pas. <b>Plusieurs mots sur une même ligne</b>, séparés par des blancs,
+  seront placés à la suite dans la grille, séparés par une case noire : écrivez
+  « PIERRE MARIE » pour obtenir <tt>PIERRE#MARIE</tt> aligné. Ils n'ont pas besoin de se croiser entre eux, mais le programme
   cherche à les croiser quand c'est possible. Ils s'affichent en bleu à l'écran,
   en blanc à l'impression. La colonne de droite n'est qu'une préférence : à
   qualité égale ces mots passent devant.</p>
@@ -134,6 +146,14 @@
   de temps que la grille est grande et les mots imposés nombreux. Laissez 0 % pour
   qu'il cherche le plancher lui-même. Les mots croisés français du commerce
   tournent autour de 19 %.</p>
+  <p><b>Thème</b> — ces mots ne sont pas obligatoires, mais sont préférés à
+  qualité égale, et ils sont protégés de la troncature du vocabulaire. Ceux
+  effectivement placés sont listés dans la ligne d'état après la génération.</p>
+  <p><b>Chercher mieux</b> — relance la recherche deux points en dessous de la
+  densité obtenue, et ne remplace la grille que si le résultat est réellement
+  meilleur.</p>
+  <p><b>Exporter / Importer</b> — enregistre ou recharge le dessin (cases grises
+  et cases noires imposées) dans un petit fichier JSON, avec ses dimensions.</p>
   <p><b>Vocabulaire</b> — tronque le lexique aux mots les plus courants. Il
   s'oppose à la densité : une grille blanche réclame des mots rares.</p>
   <p><b>Mots de 2 lettres</b> — indispensables au bouclage ; les brider rend la
@@ -163,8 +183,12 @@
   français n'en fournit.</p>
 </details>
 
+<p style="text-align:center;margin:10px 0">
+  <button id="partager" class="sec">Copier le lien de l'application</button>
+</p>
+
 <footer>
-  Mots croisés CGExcel — interface 2.6, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 3.0, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -374,9 +398,11 @@ function reperer(g, imp) {
   return dedans;
 }
 
+let derniereDensite = -1;
 function lancer(affiner) {
+  const affinage = affiner;
   imposesNorm = lignes('#imposes');
-  $('#go').disabled = $('#affiner').disabled = true;
+  $('#go').disabled = $('#mieux').disabled = true;
   $('#etat').textContent = affiner ? 'Affinage…' : 'Recherche…';
   if (worker) worker.terminate();
   worker = new Worker('./worker.js');
@@ -390,14 +416,23 @@ function lancer(affiner) {
     if (m.type === 'info') { $('#etat').textContent = m.texte; return; }
     $('#go').disabled = false;
     if (m.type === 'grille') {
+      if (affinage && derniereDensite >= 0 && m.densite >= derniereDensite - 0.001) {
+        $('#etat').textContent = `Pas mieux : ${(100 * m.densite).toFixed(1)} % contre `
+          + `${(100 * derniereDensite).toFixed(1)} %. Grille conservée.`;
+        $('#mieux').disabled = false;
+        return;
+      }
       derniere = Int8Array.from(m.grille);
+      derniereDensite = m.densite;
       dessiner(derniere);
-      $('#affiner').disabled = false; $('#imprimer').disabled = false;
+      $('#mieux').disabled = false; $('#imprimer').disabled = false;
       $('#vmot').textContent = m.version || '?';
       const cx = m.croisements || [];
       $('#etat').textContent = `${(100 * m.densite).toFixed(1)} % de noires, `
         + `${m.poses}/${imposesNorm.length} mots imposés, `
-        + (cx.length ? `${cx.length} croisement(s) : ${cx.join(', ')}.` : 'aucun croisement.');
+        + (cx.length ? `${cx.length} croisement(s) : ${cx.join(', ')}.` : 'aucun croisement.')
+        + ((m.themesPlaces && m.themesPlaces.length)
+           ? ` Thème : ${m.themesPlaces.join(', ')}.` : '');
     } else if (m.type === 'echec') {
       const d = m.diag || {};
       $('#etat').textContent = `Aucune grille trouvée (${d.resolution || 0} tentatives). `
@@ -415,16 +450,48 @@ function lancer(affiner) {
     masque: etat ? Array.from(etat, v => v === 1 ? 1 : 0) : null,
     noirsImposes: etat && etat.some(v => v === 2)
       ? Array.from(etat, v => v === 2 ? 1 : 0) : null,
-    densite: +$('#densite').value,
+    densite: affinage && derniereDensite >= 0
+      ? Math.max(0, derniereDensite - 0.02) : +$('#densite').value,
     niveau: +$('#niveau').value,
     maxMots: +$('#max2').value ? { 2: +$('#max2').value } : {},
-    affiner, cycles: 5, palier: 2500, duree: 8000
+    affiner: false,
+    densiteForcee: affinage && derniereDensite >= 0 ? Math.max(0, derniereDensite - 0.02) : null,
+    duree: 8000
   });
 }
 
 $('#go').onclick = () => lancer(false);
-$('#affiner').onclick = () => lancer(true);
+$('#mieux').onclick = () => lancer(true);
 $('#imprimer').onclick = () => window.print();
+$('#exporter').onclick = () => {
+  const obj = { format: 'mots-croises-cgexcel', v: 1, nl, nc,
+                dessin: etat ? Array.from(etat) : [] };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj)], { type: 'application/json' }));
+  a.download = `dessin-${nl}x${nc}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  $('#etat').textContent = 'Dessin exporté.';
+};
+$('#importer').onclick = () => $('#fichier').click();
+$('#fichier').onchange = async ev => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  try {
+    const o = JSON.parse(await f.text());
+    if (!o || !o.nl || !o.nc || !Array.isArray(o.dessin)) throw new Error('fichier illisible');
+    nl = o.nl; nc = o.nc;
+    $('#nl').value = nl; $('#nc').value = nc;
+    etat = Uint8Array.from(o.dessin);
+    memoriser();
+    derniere = null; derniereDensite = -1;
+    dessiner(null);
+    $('#etat').textContent = `Dessin importé (${nl}×${nc}).`;
+  } catch (e) {
+    $('#etat').textContent = 'Import impossible : ' + e.message;
+  }
+  ev.target.value = '';
+};
 $('#partager').onclick = async () => {
   const url = location.href.split('#')[0];
   try {
@@ -436,16 +503,16 @@ $('#partager').onclick = async () => {
   }
 };
 $('#razgrille').onclick = () => {
-  derniere = null; $('#affiner').disabled = true; $('#imprimer').disabled = true;
-  $('#etat').textContent = 'Grille effacée.'; dessiner(null);
+  derniere = null; $('#mieux').disabled = true; $('#imprimer').disabled = true;
+  derniereDensite = -1; $('#etat').textContent = 'Mots effacés.'; dessiner(null);
 };
-$('#razforme').onclick = () => {
+$('#razdessin').onclick = () => {
   etat = null; ref = null; $('#etat').textContent = 'Dessin remis à zéro.'; dessiner(derniere);
 };
 $('#nl').onchange = $('#nc').onchange = () => {
   const a = +$('#nl').value, b = +$('#nc').value;
   reporter(a, b); nl = a; nc = b; derniere = null;
-  $('#affiner').disabled = true; $('#imprimer').disabled = true;
+  $('#mieux').disabled = true; $('#imprimer').disabled = true;
   dessiner(null);
 };
 

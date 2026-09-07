@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '2.6';
+const VERSION = '3.0';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -101,8 +101,15 @@ class Generateur {
     this.dedans = [];
     for (let i = 0; i < nl * nc; i++) if (!this.masque || !this.masque[i]) this.dedans.push(i);
     this.theme = new Set((opts.motsThemes || []).map(normaliser));
-    this.imposes = (opts.motsImposes || []).map(normaliser)
-      .filter(m => index.rang.has(m.length) && index.rang.get(m.length).has(m));
+    // une entree peut contenir plusieurs mots separes par des blancs :
+    // ils seront places a la suite, separes par une case noire
+    this.groupes = (opts.motsImposes || [])
+      .map(e => String(e).split(/\s+/).map(normaliser).filter(Boolean))
+      .filter(g => g.length > 1);
+    this.imposes = (opts.motsImposes || []).join(' ').split(/\s+/)
+      .map(normaliser).filter(m => index.rang.has(m.length) && index.rang.get(m.length).has(m));
+    this.groupes = this.groupes.filter(g => g.every(m => this.imposes.includes(m)));
+    this.enGroupe = new Set([].concat(...this.groupes));
     let s = opts.graine ?? 12345;
     this.rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
   }
@@ -245,8 +252,25 @@ class Generateur {
 
   squeletteAuSeuil(budget, seuil) {
     const { nl, nc } = this, N = nl * nc;
-    const mots = [...this.imposes].sort((a, b) => b.length - a.length);
-    if (!this._pl) this._pl = mots.map(m => this.placementsPossibles(m));
+    // chaque element a placer est soit un mot seul, soit un groupe de mots
+    // separes par une case noire
+    const blocs = [];
+    for (const g of this.groupes) {
+      const suite = [];
+      g.forEach((m, k) => {
+        if (k) suite.push(null);                       // case noire separatrice
+        for (const ch of m) suite.push(ch.charCodeAt(0) - 65);
+      });
+      blocs.push({ suite, nom: g.join(' ') });
+    }
+    for (const m of this.imposes) {
+      if (this.enGroupe.has(m)) continue;
+      blocs.push({ suite: [...m].map(ch => ch.charCodeAt(0) - 65), nom: m });
+    }
+    blocs.sort((a, b) => b.suite.length - a.suite.length);
+    const mots = blocs.map(b => b.suite);
+    if (!this._pl || this._pl.length !== mots.length)
+      this._pl = mots.map(m => this.placementsPossibles({ length: m.length }));
     const lettres = new Int8Array(N).fill(VIDE);
     const fixe = new Uint8Array(N);
     const idMot = new Int8Array(N).fill(-1);   // quel mot impose occupe la case
@@ -255,15 +279,20 @@ class Generateur {
     const rec = (i) => {
       if (--reste <= 0) return false;
       if (i === mots.length) return croixTotal >= seuil;
-      const mot = mots[i], L = mot.length;
+      const suite = mots[i], L = suite.length;
       const cands = [];
       for (const p of this._pl[i]) {
         let croix = 0, ok = true;
         for (let j = 0; j < L; j++) {
           const idx = p.cells[j], v = lettres[idx];
-          if (fixe[idx] === 1 || (this.masque && this.masque[idx])) { ok = false; break; }
+          if (this.masque && this.masque[idx]) { ok = false; break; }
+          if (suite[j] === null) {                     // case noire separatrice
+            if (v !== VIDE) { ok = false; break; }
+            continue;
+          }
+          if (fixe[idx] === 1) { ok = false; break; }
           if (v === VIDE) continue;
-          if (v !== mot.charCodeAt(j) - 65) { ok = false; break; }
+          if (v !== suite[j]) { ok = false; break; }
           croix++;
         }
         if (!ok) continue;
@@ -280,28 +309,28 @@ class Generateur {
           const idx = p.cells[j];
           // case deja occupee = croisement : le mot perpendiculaire est
           // deja un mot valide, il n'y a rien a verifier ici
-          if (lettres[idx] !== VIDE) continue;
+          if (suite[j] === null || lettres[idx] !== VIDE) continue;
           const rr = (idx / nc) | 0, cc = idx % nc;
           // suite perpendiculaire contigue passant par cette case
-          const suite = [];
+          const suite2 = [];
           const pas = p.h ? nc : 1;
           const dansGrille = (k) => p.h ? (k >= 0 && k < nl * nc)
                                         : (((k / nc) | 0) === rr && k >= 0 && k < nl * nc);
           let k = idx - pas;
-          while (dansGrille(k) && lettres[k] !== VIDE) { suite.unshift(lettres[k]); k -= pas; }
-          suite.push(mot.charCodeAt(j) - 65);
+          while (dansGrille(k) && lettres[k] !== VIDE) { suite2.unshift(lettres[k]); k -= pas; }
+          suite2.push(suite[j]);
           k = idx + pas;
-          while (dansGrille(k) && lettres[k] !== VIDE) { suite.push(lettres[k]); k += pas; }
-          if (suite.length < 2) continue;
-          para += suite.length - 1;
-          for (let q = 0; q + 1 < suite.length; q++) {
-            if (this.ix.bi[suite[q] * 26 + suite[q + 1]] < this.seuilGroupe) { groupesOk = false; break; }
-            if (q + 2 < suite.length &&
-                this.ix.tri[(suite[q] * 26 + suite[q + 1]) * 26 + suite[q + 2]] < this.seuilGroupe) {
+          while (dansGrille(k) && lettres[k] !== VIDE) { suite2.push(lettres[k]); k += pas; }
+          if (suite2.length < 2) continue;
+          para += suite2.length - 1;
+          for (let q = 0; q + 1 < suite2.length; q++) {
+            if (this.ix.bi[suite2[q] * 26 + suite2[q + 1]] < this.seuilGroupe) { groupesOk = false; break; }
+            if (q + 2 < suite2.length &&
+                this.ix.tri[(suite2[q] * 26 + suite2[q + 1]) * 26 + suite2[q + 2]] < this.seuilGroupe) {
               groupesOk = false; break;
             }
           }
-          if (suite.length > 4) groupesOk = false;   // pas plus de 4 mots colles
+          if (suite2.length > 4) groupesOk = false;   // pas plus de 4 mots colles
         }
         if (!groupesOk) continue;
         // on les eparpille plutot que de les entrelacer
@@ -321,8 +350,12 @@ class Generateur {
         let nCroix = 0;
         for (let j = 0; j < L; j++) {
           const idx = p.cells[j];
+          if (suite[j] === null) {
+            if (!fixe[idx]) { fixe[idx] = 1; sb.push(idx); }
+            continue;
+          }
           if (lettres[idx] === VIDE) {
-            lettres[idx] = mot.charCodeAt(j) - 65; fixe[idx] = 2; idMot[idx] = i; sv.push(idx);
+            lettres[idx] = suite[j]; fixe[idx] = 2; idMot[idx] = i; sv.push(idx);
           } else nCroix++;
         }
         croixTotal += nCroix;

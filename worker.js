@@ -49,6 +49,30 @@ function compterCroisements(g, nl, nc, imposes) {
   return out;
 }
 
+// combien de mots du theme figurent dans la grille
+function compterThemes(g, nl, nc, theme) {
+  if (!theme.length) return [];
+  const set = new Set(theme), vus = new Set();
+  const lire = (mot) => { if (set.has(mot)) vus.add(mot); };
+  for (let r = 0; r < nl; r++) {
+    let w = '';
+    for (let c = 0; c < nc; c++) {
+      const v = g[r * nc + c];
+      if (v < 0) { lire(w); w = ''; } else w += String.fromCharCode(65 + v);
+    }
+    lire(w);
+  }
+  for (let c = 0; c < nc; c++) {
+    let w = '';
+    for (let r = 0; r < nl; r++) {
+      const v = g[r * nc + c];
+      if (v < 0) { lire(w); w = ''; } else w += String.fromCharCode(65 + v);
+    }
+    lire(w);
+  }
+  return [...vus];
+}
+
 self.onmessage = async (e) => {
   const p = e.data;
   try {
@@ -59,10 +83,14 @@ self.onmessage = async (e) => {
 
     self.postMessage({ type: 'info', texte: 'Indexation de ' + mots.length + ' mots…' });
     const imposes = p.imposes || [];
-    const index = M.Index.depuisListe(mots, 2, p.lmax || 12, imposes, p.niveau || 20000);
+    const theme = p.theme || [];
+    const plats = imposes.join(' ').split(/\s+/).filter(Boolean);
+    // mots imposes ET mots du theme sont proteges de la troncature du lexique
+    const index = M.Index.depuisListe(mots, 2, p.lmax || 12,
+                                      plats.concat(theme), p.niveau || 20000);
 
     // un mot impose absent du lexique ne pourra jamais etre place
-    const absents = imposes.filter(m => {
+    const absents = plats.filter(m => {
       const r = index.rang.get(m.length);
       return !r || !r.has(m);
     });
@@ -74,7 +102,7 @@ self.onmessage = async (e) => {
     const faire = (densite, polissage) => new M.Generateur(index, p.nl, p.nc, {
       polissageMs: polissage || 0,
       motsImposes: imposes,
-      motsThemes: p.theme || [],
+      motsThemes: theme,
       masque, noirsImposes,
       densiteNoirs: densite,
       maxMots: p.maxMots || {},
@@ -155,7 +183,8 @@ self.onmessage = async (e) => {
       grille: Array.from(r.grille),
       poses: r.poses,
       densite: noirs / G.dedans.length,
-      croisements: compterCroisements(r.grille, p.nl, p.nc, imposes),
+      croisements: compterCroisements(r.grille, p.nl, p.nc, plats),
+      themesPlaces: compterThemes(r.grille, p.nl, p.nc, theme),
       version: M.VERSION || '?'
     });
   } catch (err) {
