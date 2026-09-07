@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '3.1';
+const VERSION = '3.2';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -110,6 +110,10 @@ class Generateur {
       .map(normaliser).filter(m => index.rang.has(m.length) && index.rang.get(m.length).has(m));
     this.groupes = this.groupes.filter(g => g.every(m => this.imposes.includes(m)));
     this.enGroupe = new Set([].concat(...this.groupes));
+    // un mot present dans plusieurs groupes doit pouvoir apparaitre plusieurs
+    // fois : on releve le plafond de repetition a la hauteur du besoin
+    this.repImp = new Map();
+    for (const m of this.imposes) this.repImp.set(m, (this.repImp.get(m) || 0) + 1);
     let s = opts.graine ?? 12345;
     this.rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
   }
@@ -589,7 +593,8 @@ class Generateur {
       const mot = s.map(i => String.fromCharCode(65 + grille[i])).join('');
       const rg = ix.rang.get(s.length);
       const n = (emploiInit.get(mot) || 0) + 1;
-      if (!rg || !rg.has(mot) || n > maxRepet(s.length)) {
+      const repMax = Math.max(maxRepet(s.length), this.repImp.get(mot) || 0);
+      if (!rg || !rg.has(mot) || n > repMax) {
         for (const i of s) grille[i] = VIDE;
       } else emploiInit.set(mot, n);
     }
@@ -683,9 +688,9 @@ class Generateur {
       }
       cands.sort((a, b) => a[0] - b[0]);
       libre[best] = 0;
-      const rep = maxRepet(L);
       for (let t = 0; t < Math.min(cands.length, 50); t++) {
         const k = cands[t][1], mot = mots[k];
+        const rep = Math.max(maxRepet(L), this.repImp.get(mot) || 0);
         if ((emploi.get(mot) || 0) >= rep) continue;
         const sauve = [];
         for (let p = 0; p < L; p++) {

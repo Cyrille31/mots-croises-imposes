@@ -77,7 +77,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">3.1</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">3.2</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -125,8 +125,10 @@
   <summary>Mode d'emploi</summary>
   <p><b>Mots imposés</b> — un par ligne, tous seront présents ou la grille ne
   sortira pas. <b>Plusieurs mots sur une même ligne</b>, séparés par des blancs,
-  seront placés à la suite dans la grille, séparés par une case noire : écrivez
-  « PIERRE MARIE » pour obtenir <tt>PIERRE#MARIE</tt> aligné. Ils n'ont pas besoin de se croiser entre eux, mais le programme
+  seront placés à la suite, séparés par une case noire : « PIERRE MARIE » donne
+  <tt>PIERRE#MARIE</tt>, à l'horizontale ou à la verticale selon les tirages.
+  Un même mot peut figurer dans plusieurs lignes — MARIE dans « PIERRE MARIE »
+  et dans « MARIE JO » — il apparaîtra alors deux fois dans la grille. Ils n'ont pas besoin de se croiser entre eux, mais le programme
   cherche à les croiser quand c'est possible. Ils s'affichent en bleu à l'écran,
   en blanc à l'impression. La colonne de droite n'est qu'une préférence : à
   qualité égale ces mots passent devant.</p>
@@ -179,7 +181,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 3.1, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 3.2, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -425,7 +427,7 @@ function lancer(affiner) {
       $('#mieux').disabled = false; $('#imprimer').disabled = false;
       $('#vmot').textContent = m.version || '?';
       const cx = m.croisements || [];
-      const nImp = imposesNorm.join(' ').split(/\s+/).filter(Boolean).length;
+      const nImp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean)).size;
       $('#etat').textContent = `${(100 * m.densite).toFixed(1)} % de noires, `
         + `${m.poses}/${nImp} mots imposés, `
         + (cx.length ? `${cx.length} croisement(s) : ${cx.join(', ')}.` : 'aucun croisement.')
