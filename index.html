@@ -55,6 +55,9 @@
   .def input { flex:1; padding:2px 5px; font:12px inherit; border:1px solid #ccd3dc; border-radius:5px; }
   .def select { flex:1.4; max-width:46%; font:11.5px inherit; }
   .def button { padding:2px 6px; font-size:11px; margin:0; }
+  .def .lien { flex:none; font-size:11px; color:var(--bleu); text-decoration:none;
+               border:1px solid #cfd8e4; border-radius:4px; padding:2px 5px; background:#fff; }
+  @media print { .def .lien { display:none; } }
   @media print { .def select, .def button { display:none; }
                  .def input { border:0; padding:0; }
                  #defs h3 { page-break-after:avoid; } }
@@ -88,7 +91,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">3.3</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">3.4</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -159,14 +162,19 @@
   densité obtenue, et ne remplace la grille que si le résultat est réellement
   meilleur.</p>
   <p><b>Définitions</b> — une fois la grille produite, ce bouton numérote les
-  mots à la manière d'une grille de presse et affiche une ligne par mot. Le
-  bouton « Chercher » interroge le Wiktionnaire et propose les définitions
-  trouvées dans un menu ; vous en choisissez une, puis vous la retouchez
-  librement — une bonne définition de mots croisés n'est pas une définition de
-  dictionnaire. Le champ reste modifiable même hors ligne, et les définitions
-  s'impriment sous la grille. Attention : les mots sont stockés sans accents,
-  la recherche peut donc proposer plusieurs entrées voisines (ÉTÉ, ÊTES…) qu'il
-  vous revient de trancher.</p>
+  mots à la manière d'une grille de presse et affiche une ligne par mot, avec un
+  champ libre pour votre définition.</p>
+  <p>Chaque ligne offre trois liens — <b>fsolver</b>, <b>fléche</b>,
+  <b>dico-mots</b> — qui ouvrent la page du mot sur ces sites, dans un nouvel
+  onglet. Ce sont de vraies définitions de cruciverbistes, bien meilleures que
+  celles d'un dictionnaire ; il faut les lire et recopier celle qui vous plaît.
+  Ces sites n'autorisent pas la lecture automatique par un script d'une autre
+  origine, la récupération ne peut donc pas être automatisée depuis cette page.</p>
+  <p>Le bouton <b>Wiktionnaire</b> est le seul automatique : il propose des
+  définitions de dictionnaire dans le menu déroulant. Utile pour dégrossir, mais
+  « Habitation » n'est pas une bonne définition de MAISON. Attention aussi : les
+  mots étant stockés sans accents, plusieurs entrées voisines peuvent être
+  proposées (ÉTÉ, ÊTES…), à vous de trancher.</p>
   <p><b>Exporter / Importer</b> — enregistre ou recharge le dessin (cases grises
   et cases noires imposées) dans un petit fichier JSON, avec ses dimensions.</p>
   <p><b>Vocabulaire</b> — tronque le lexique aux mots les plus courants. Il
@@ -203,7 +211,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 3.3, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 3.4, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -560,8 +568,21 @@ function afficherDefs(g) {
       const sel = document.createElement('select');
       sel.innerHTML = '<option value="">— propositions —</option>';
       sel.onchange = () => { if (sel.value) { inp.value = sel.value; defsChoisies.set(cle, sel.value); } };
+      // liens vers les sites de definitions de mots croises : ils n'autorisent
+      // pas la lecture par script (CORS), on les ouvre donc dans un onglet
+      const m = e.mot.toLowerCase();
+      for (const [nom, url] of [
+        ['fsolver', 'https://www.fsolver.fr/mots-fleches/' + encodeURIComponent(m)],
+        ['fléche', 'https://www.commeunefleche.com/dictionnaire/' + encodeURIComponent(m)],
+        ['dico-mots', 'https://www.dico-mots.fr/recherche/?q=' + encodeURIComponent(m)]
+      ]) {
+        const a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.rel = 'noopener';
+        a.className = 'lien'; a.textContent = nom;
+        d.appendChild(a);
+      }
       const b = document.createElement('button');
-      b.className = 'sec'; b.textContent = 'Chercher';
+      b.className = 'sec'; b.textContent = 'Wiktionnaire';
       b.onclick = async () => {
         b.disabled = true; b.textContent = '…';
         try {
@@ -571,7 +592,7 @@ function afficherDefs(g) {
         } catch (err) {
           sel.innerHTML = '<option value="">réseau indisponible</option>';
         }
-        b.disabled = false; b.textContent = 'Chercher';
+        b.disabled = false; b.textContent = 'Wiktionnaire';
       };
       d.append(inp, sel, b);
       zone.appendChild(d);
