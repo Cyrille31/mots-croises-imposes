@@ -47,6 +47,17 @@
   summary { cursor:pointer; font-size:12px; color:var(--bleu); font-weight:600; }
   details p { font-size:12px; margin:6px 0; }
   .note { color:#6b7887; font-style:italic; }
+  #defs { margin:10px 0; }
+  #defs h3 { font-size:12px; color:var(--bleu); margin:8px 0 4px; }
+  .def { display:flex; align-items:flex-start; gap:5px; margin:2px 0; font-size:12px; }
+  .def b { flex:none; min-width:26px; text-align:right; color:var(--bleu); }
+  .def .mot { flex:none; min-width:74px; font-family:ui-monospace,monospace; letter-spacing:.05em; }
+  .def input { flex:1; padding:2px 5px; font:12px inherit; border:1px solid #ccd3dc; border-radius:5px; }
+  .def select { flex:1.4; max-width:46%; font:11.5px inherit; }
+  .def button { padding:2px 6px; font-size:11px; margin:0; }
+  @media print { .def select, .def button { display:none; }
+                 .def input { border:0; padding:0; }
+                 #defs h3 { page-break-after:avoid; } }
   footer { margin:12px 0 4px; font-size:10.5px; color:#8a96a4; text-align:center; line-height:1.5; }
   @media print { .mots,.params,.barre,#etat,details,footer { display:none; }
                  .c.impose { background:#fff; } }
@@ -77,7 +88,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">3.2</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">3.3</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -115,11 +126,13 @@
   <button id="razdessin" class="sec">RAZ dessin</button>
   <button id="exporter" class="sec">Exporter le dessin</button>
   <button id="importer" class="sec">Importer</button>
+  <button id="definitions" class="sec" disabled>Définitions</button>
   <button id="imprimer" class="sec" disabled>Imprimer</button>
 </div>
 <input type="file" id="fichier" accept=".json,application/json" style="display:none">
 <div id="etat">Prêt.</div>
 <div id="grille"></div>
+<div id="defs"></div>
 
 <details>
   <summary>Mode d'emploi</summary>
@@ -145,6 +158,15 @@
   <p><b>Chercher mieux</b> — relance la recherche deux points en dessous de la
   densité obtenue, et ne remplace la grille que si le résultat est réellement
   meilleur.</p>
+  <p><b>Définitions</b> — une fois la grille produite, ce bouton numérote les
+  mots à la manière d'une grille de presse et affiche une ligne par mot. Le
+  bouton « Chercher » interroge le Wiktionnaire et propose les définitions
+  trouvées dans un menu ; vous en choisissez une, puis vous la retouchez
+  librement — une bonne définition de mots croisés n'est pas une définition de
+  dictionnaire. Le champ reste modifiable même hors ligne, et les définitions
+  s'impriment sous la grille. Attention : les mots sont stockés sans accents,
+  la recherche peut donc proposer plusieurs entrées voisines (ÉTÉ, ÊTES…) qu'il
+  vous revient de trancher.</p>
   <p><b>Exporter / Importer</b> — enregistre ou recharge le dessin (cases grises
   et cases noires imposées) dans un petit fichier JSON, avec ses dimensions.</p>
   <p><b>Vocabulaire</b> — tronque le lexique aux mots les plus courants. Il
@@ -181,7 +203,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 3.2, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 3.3, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -425,6 +447,8 @@ function lancer(affiner) {
       derniereDensite = m.densite;
       dessiner(derniere);
       $('#mieux').disabled = false; $('#imprimer').disabled = false;
+      $('#definitions').disabled = false;
+      $('#defs').innerHTML = '';
       $('#vmot').textContent = m.version || '?';
       const cx = m.croisements || [];
       const nImp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean)).size;
@@ -462,6 +486,107 @@ function lancer(affiner) {
 
 $('#go').onclick = () => lancer(false);
 $('#mieux').onclick = () => lancer(true);
+// ---------- definitions ----------
+const defsChoisies = new Map();          // cle "H3" -> texte
+
+function numeroter(g) {
+  const out = [], num = new Map();
+  let n = 0;
+  const debutH = i => {
+    const c = i % nc;
+    return g[i] >= 0 && (c === 0 || g[i - 1] < 0) && c + 1 < nc && g[i + 1] >= 0;
+  };
+  const debutV = i => {
+    const r = (i / nc) | 0;
+    return g[i] >= 0 && (r === 0 || g[i - nc] < 0) && r + 1 < nl && g[i + nc] >= 0;
+  };
+  for (let i = 0; i < nl * nc; i++) if (debutH(i) || debutV(i)) num.set(i, ++n);
+  for (let i = 0; i < nl * nc; i++) {
+    if (debutH(i)) {
+      let m = '', k = i;
+      while (k % nc < nc && g[k] >= 0) { m += String.fromCharCode(65 + g[k]); k++; if (k % nc === 0) break; }
+      out.push({ n: num.get(i), dir: 'H', mot: m, i });
+    }
+    if (debutV(i)) {
+      let m = '', k = i;
+      while (k < nl * nc && g[k] >= 0) { m += String.fromCharCode(65 + g[k]); k += nc; }
+      out.push({ n: num.get(i), dir: 'V', mot: m, i });
+    }
+  }
+  return out;
+}
+
+async function chercherDefs(mot) {
+  const base = 'https://fr.wiktionary.org/w/api.php?format=json&origin=*&';
+  const q = encodeURIComponent(mot.toLowerCase());
+  const rep = await fetch(base + 'action=query&list=search&srlimit=6&srnamespace=0&srsearch=' + q);
+  const d = await rep.json();
+  const titres = (d.query && d.query.search || []).map(x => x.title)
+    .filter(t => norm(t) === mot).slice(0, 4);
+  if (!titres.length) return [];
+  const rep2 = await fetch(base + 'action=query&prop=extracts&explaintext=1&exlimit=4&titles='
+                           + encodeURIComponent(titres.join('|')));
+  const d2 = await rep2.json();
+  const out = [];
+  for (const p of Object.values((d2.query && d2.query.pages) || {})) {
+    for (const l of String(p.extract || '').split('\n')) {
+      const t = l.trim();
+      if (t.length < 12 || t.length > 160) continue;
+      if (/^(Étymologie|Prononciation|Références|Anagrammes|Voir aussi|Synonymes|Traductions|Nom |Verbe|Adjectif|Adverbe|Français)/.test(t)) continue;
+      if (out.length < 8 && !out.includes(t)) out.push(t);
+    }
+  }
+  return out;
+}
+
+function afficherDefs(g) {
+  const zone = $('#defs');
+  zone.innerHTML = '';
+  if (!g) return;
+  const liste = numeroter(g);
+  for (const sens of ['H', 'V']) {
+    const t = document.createElement('h3');
+    t.textContent = sens === 'H' ? 'Horizontalement' : 'Verticalement';
+    zone.appendChild(t);
+    for (const e of liste.filter(x => x.dir === sens).sort((a, b) => a.n - b.n)) {
+      const cle = sens + e.n;
+      const d = document.createElement('div');
+      d.className = 'def';
+      d.innerHTML = `<b>${e.n}.</b><span class="mot">${e.mot}</span>`;
+      const inp = document.createElement('input');
+      inp.value = defsChoisies.get(cle) || '';
+      inp.placeholder = 'définition';
+      inp.oninput = () => defsChoisies.set(cle, inp.value);
+      const sel = document.createElement('select');
+      sel.innerHTML = '<option value="">— propositions —</option>';
+      sel.onchange = () => { if (sel.value) { inp.value = sel.value; defsChoisies.set(cle, sel.value); } };
+      const b = document.createElement('button');
+      b.className = 'sec'; b.textContent = 'Chercher';
+      b.onclick = async () => {
+        b.disabled = true; b.textContent = '…';
+        try {
+          const props = await chercherDefs(e.mot);
+          sel.innerHTML = '<option value="">— ' + (props.length || 'aucune') + ' proposition(s) —</option>'
+            + props.map(p => `<option>${p.replace(/</g, '&lt;')}</option>`).join('');
+        } catch (err) {
+          sel.innerHTML = '<option value="">réseau indisponible</option>';
+        }
+        b.disabled = false; b.textContent = 'Chercher';
+      };
+      d.append(inp, sel, b);
+      zone.appendChild(d);
+    }
+  }
+}
+
+$('#definitions').onclick = () => {
+  if (!derniere) return;
+  afficherDefs(derniere);
+  $('#etat').textContent = navigator.onLine
+    ? 'Définitions : « Chercher » interroge le Wiktionnaire pour chaque mot.'
+    : 'Hors ligne : les propositions du Wiktionnaire ne sont pas accessibles, la saisie reste possible.';
+};
+
 $('#imprimer').onclick = () => window.print();
 $('#exporter').onclick = () => {
   const obj = { format: 'mots-croises-cgexcel', v: 1, nl, nc,
