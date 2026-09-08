@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '4.7';
+const VERSION = '4.8';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -784,7 +784,29 @@ class Generateur {
   // Enrichissement thematique : une fois la grille bouclee, on tente de
   // remplacer chaque mot par un mot du theme de meme longueur, en relachant
   // les mots qui le croisent et en recousant localement.
-  enrichirTheme(grille, budgetMs) {
+  // plusieurs passes, on conserve celle qui place le plus de mots du theme
+  enrichirTheme(grille, budgetMs, passes = 3) {
+    if (!this.theme.size) return grille;
+    let meilleure = grille, score = this.compterTheme(grille);
+    const part = Math.max(3000, budgetMs / passes), t0 = Date.now();
+    for (let p = 0; p < passes && Date.now() - t0 < budgetMs; p++) {
+      const g = this.unePasseTheme(meilleure, part);
+      const n = this.compterTheme(g);
+      if (n > score) { meilleure = g; score = n; }
+    }
+    return meilleure;
+  }
+
+  compterTheme(g) {
+    const vus = new Set();
+    for (const s of this.segments(g).filter(x => x.length >= 2)) {
+      const m = s.map(c => String.fromCharCode(65 + g[c])).join('');
+      if (this.theme.has(m)) vus.add(m);
+    }
+    return vus.size;
+  }
+
+  unePasseTheme(grille, budgetMs) {
     if (!this.theme.size) return grille;
     const { nl, nc } = this, N = nl * nc, t0 = Date.now();
     let courant = Int8Array.from(grille);
@@ -825,7 +847,7 @@ class Generateur {
             && this.theme.has(lire(s, r.grille))) { courant = r.grille; gagne++; break; }
       }
     }
-    this.diag.themeAjoutes = gagne;
+    this.diag.themeAjoutes = (this.diag.themeAjoutes || 0) + gagne;
     return courant;
   }
 

@@ -216,14 +216,25 @@ self.onmessage = async (e) => {
           }
         }
       }
-      // polissage final : on tente de blanchir des cases noires une a une
-      if (trouve && reste()) {
-        self.postMessage({ type: 'info',
-          texte: theme.length ? 'Polissage et enrichissement du thème…' : 'Polissage des cases noires…' });
-        const g = faire(dTrouve, (budgetTotal - (Date.now() - t0)) / 2,
-                        theme.length ? (budgetTotal - (Date.now() - t0)) / 2 : 0);
-        const mieux = g.generer(1e9, 20000, court);
-        if (mieux) { trouve = mieux; G = g; }
+      // Retouches appliquees DIRECTEMENT a la grille trouvee : relancer une
+      // generation complete echouait souvent et l'on repartait alors avec la
+      // grille brute, sans polissage ni enrichissement.
+      if (trouve) {
+        const outil = faire(dTrouve, 0, 0);
+        let gr = trouve.grille;
+        // Budgets propres, independants du temps deja consomme par la
+        // recherche : sinon l'enrichissement n'avait que quelques secondes et
+        // ne plaçait qu'un ou deux mots du theme.
+        self.postMessage({ type: 'info', texte: 'Polissage des cases noires…' });
+        gr = outil.polir(gr, null, Math.max(3000, (p.duree || 8000) / 2));
+        if (theme.length) {
+          self.postMessage({ type: 'info', texte: 'Enrichissement du thème…' });
+          gr = outil.enrichirTheme(gr, Math.max(12000, (p.duree || 8000) * 2.5));
+          self.postMessage({ type: 'info',
+            texte: `Thème : ${outil.diag.themeAjoutes || 0} substitution(s) réussie(s).` });
+        }
+        trouve = Object.assign({}, trouve, { grille: gr });
+        G = outil;
       }
       r = trouve;
       if (r) self.postMessage({ type: 'info',
