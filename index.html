@@ -28,7 +28,10 @@
   select, input[type=number] { padding:2px 4px; font:12px inherit; border:1px solid #ccd3dc;
             border-radius:5px; background:#fff; }
   input[type=number] { width:46px; }
-  .barre { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:5px; }
+  .barre { display:flex; flex-wrap:wrap; gap:4px 10px; margin-bottom:5px; align-items:start; }
+  .groupe { display:flex; flex-direction:column; gap:3px;
+            border-left:2px solid #e2e7ee; padding-left:7px; }
+  .groupe button { width:100%; }
   button { font:12.5px/1.1 inherit; padding:6px 10px; border:0; border-radius:6px;
            background:var(--bleu); color:#fff; width:auto; }
   button.sec { background:#fff; color:var(--bleu); border:1px solid #b9c6d8; }
@@ -108,7 +111,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">4.1</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">4.2</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -140,19 +143,18 @@
 </div>
 
 <div class="barre">
-  <button id="go">Générer</button>
-  <button id="mieux" class="sec" disabled>Chercher mieux</button>
-  <button id="razgrille" class="sec">RAZ mots</button>
-  <button id="razdessin" class="sec">RAZ dessin</button>
-  <button id="exporter" class="sec">Exporter le dessin</button>
-  <button id="importer" class="sec">Importer</button>
-  <button id="definitions" class="sec" disabled>Définitions</button>
-  <button id="explorer" class="sec">Explorer</button>
-  <button id="arreter" class="sec" disabled>Arrêter</button>
-  <button id="sauver" class="sec" disabled>Sauver</button>
-  <button id="ouvrir" class="sec">Ouvrir</button>
-  <button id="imprimer" class="sec" disabled>Imprimer corrigé</button>
-  <button id="imprvierge" class="sec" disabled>Imprimer à remplir</button>
+  <div class="groupe"><button id="go">Générer</button>
+    <button id="definitions" class="sec" disabled>Définitions</button></div>
+  <div class="groupe"><button id="explorer" class="sec">Explorer</button>
+    <button id="arreter" class="sec" disabled>Arrêter</button></div>
+  <div class="groupe"><button id="razgrille" class="sec">RAZ mots</button>
+    <button id="razdessin" class="sec">RAZ dessin</button></div>
+  <div class="groupe"><button id="imprimer" class="sec" disabled>Imprimer corrigé</button>
+    <button id="imprvierge" class="sec" disabled>Imprimer à remplir</button></div>
+  <div class="groupe"><button id="sauver" class="sec" disabled>Enregistrer</button>
+    <button id="ouvrir" class="sec">Ouvrir</button></div>
+  <div class="groupe"><button id="exporter" class="sec">Exporter le dessin</button>
+    <button id="importer" class="sec">Importer le dessin</button></div>
 </div>
 <input type="file" id="fgrille" accept=".json,application/json" style="display:none">
 <input type="file" id="fichier" accept=".json,application/json" style="display:none">
@@ -182,9 +184,6 @@
   <p><b>Thème</b> — ces mots ne sont pas obligatoires, mais sont préférés à
   qualité égale, et ils sont protégés de la troncature du vocabulaire. Ceux
   effectivement placés sont listés dans la ligne d'état après la génération.</p>
-  <p><b>Chercher mieux</b> — relance la recherche deux points en dessous de la
-  densité obtenue, et ne remplace la grille que si le résultat est réellement
-  meilleur.</p>
   <p><b>Définitions</b> — une fois la grille produite, ce bouton numérote les
   mots à la manière d'une grille de presse et affiche une ligne par mot, avec un
   champ libre pour votre définition.</p>
@@ -198,9 +197,11 @@
   celles d'un dictionnaire ; il faut les lire et recopier celle qui vous plaît.
   Ces sites n'autorisent pas la lecture automatique par un script d'une autre
   origine, la récupération ne peut donc pas être automatisée depuis cette page.</p>
-  <p>Le bouton <b>coller</b> reprend le contenu du presse-papier dans le champ
-  de la ligne : lisez la définition qui vous plaît sur l'un des sites, copiez-la,
-  revenez et collez.</p>
+  <p>Le bouton <b>coller</b> place le curseur dans le champ de la ligne ; il ne
+  reste qu'à faire Ctrl+V, ou un appui long sur mobile. Il ne demande jamais
+  d'autorisation d'accès au presse-papier : les navigateurs l'exigent pour toute
+  lecture par script, et cette demande est plus gênante que la frappe qu'elle
+  éviterait. Si vous avez déjà accordé ce droit, le collage se fait tout seul.</p>
   <p>Le bouton <b>Wiktionnaire</b> est le seul automatique : il propose des
   définitions de dictionnaire dans le menu déroulant. Utile pour dégrossir, mais
   « Habitation » n'est pas une bonne définition de MAISON. Attention aussi : les
@@ -253,7 +254,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 4.1, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 4.2, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -488,7 +489,7 @@ let derniereDensite = -1;
 function lancer(affiner, mode) {
   const affinage = affiner;
   imposesNorm = lignes('#imposes');
-  $('#go').disabled = $('#mieux').disabled = $('#explorer').disabled = true;
+  $('#go').disabled = $('#explorer').disabled = true;
   $('#arreter').disabled = mode !== 'explorer';
   $('#etat').textContent = mode === 'explorer' ? 'Exploration…'
     : (affiner ? 'Recherche d\u2019une meilleure grille…' : 'Recherche…');
@@ -510,16 +511,10 @@ function lancer(affiner, mode) {
     }
     if (!m.provisoire) { $('#go').disabled = false; $('#explorer').disabled = false; }
     if (m.type === 'grille') {
-      if (affinage && derniereDensite >= 0 && m.densite >= derniereDensite - 0.001) {
-        $('#etat').textContent = `Pas mieux : ${(100 * m.densite).toFixed(1)} % contre `
-          + `${(100 * derniereDensite).toFixed(1)} %. Grille conservée.`;
-        $('#mieux').disabled = false;
-        return;
-      }
       derniere = Int8Array.from(m.grille);
       derniereDensite = m.densite;
       dessiner(derniere);
-      $('#mieux').disabled = false; $('#imprimer').disabled = false;
+      $('#imprimer').disabled = false;
       $('#imprvierge').disabled = false; $('#definitions').disabled = false;
       $('#sauver').disabled = false;
       $('#defs').innerHTML = '';
@@ -559,7 +554,6 @@ function lancer(affiner, mode) {
 }
 
 $('#go').onclick = () => lancer(false);
-$('#mieux').onclick = () => lancer(true);
 // ---------- definitions ----------
 const defsChoisies = new Map();          // cle "H3" -> texte
 
@@ -638,7 +632,6 @@ function afficherDefs(g) {
         const sel = document.createElement('select');
         sel.innerHTML = '<option value="">— propositions —</option>';
         sel.onchange = () => { if (sel.value) { inp.value = sel.value; defsChoisies.set(cle, sel.value); } };
-        d.append(inp, sel);
         const m = mot.toLowerCase();
         for (const [nom, url] of [
           ['fsolver', 'https://www.fsolver.fr/mots-fleches/' + encodeURIComponent(m)],
@@ -652,14 +645,21 @@ function afficherDefs(g) {
         }
         const bc = document.createElement('button');
         bc.className = 'sec'; bc.textContent = 'coller';
+        bc.title = 'Place le curseur dans le champ : collez ensuite (Ctrl+V, ou appui long)';
         bc.onclick = async () => {
+          // on ne lit le presse-papier que si le droit est DEJA accorde,
+          // pour ne jamais declencher de demande d'autorisation
           try {
-            const txt = (await navigator.clipboard.readText()).trim();
-            if (txt) { inp.value = txt; defsChoisies.set(cle, txt); }
-          } catch (err) {
-            const txt = prompt('Coller la définition pour ' + mot, inp.value || '');
-            if (txt !== null) { inp.value = txt.trim(); defsChoisies.set(cle, inp.value); }
-          }
+            if (navigator.permissions && navigator.clipboard && navigator.clipboard.readText) {
+              const p = await navigator.permissions.query({ name: 'clipboard-read' });
+              if (p.state === 'granted') {
+                const txt = (await navigator.clipboard.readText()).trim();
+                if (txt) { inp.value = txt; defsChoisies.set(cle, txt); inp.focus(); return; }
+              }
+            }
+          } catch (err) { /* rien : on se rabat sur le collage manuel */ }
+          inp.focus(); inp.select();
+          $('#etat').textContent = 'Champ prêt : collez avec Ctrl+V (ou appui long sur mobile).';
         };
         const b = document.createElement('button');
         b.className = 'sec'; b.textContent = 'Wiktionnaire';
@@ -672,7 +672,7 @@ function afficherDefs(g) {
           } catch (err) { sel.innerHTML = '<option value="">réseau indisponible</option>'; }
           b.disabled = false; b.textContent = 'Wiktionnaire';
         };
-        d.append(bc, b);
+        d.append(bc, b, inp, sel);
         zone.appendChild(d);
       });
     }
@@ -741,7 +741,7 @@ $('#fgrille').onchange = async ev => {
     imposesNorm = lignes('#imposes');
     dessiner(derniere);
     const actif = !!derniere;
-    for (const b of ['#mieux', '#imprimer', '#imprvierge', '#definitions', '#sauver'])
+    for (const b of ['#imprimer', '#imprvierge', '#definitions', '#sauver'])
       $(b).disabled = !actif;
     if (actif) afficherDefs(derniere);
     $('#etat').textContent = `Grille rechargée (${nl}×${nc}).`;
@@ -795,7 +795,7 @@ $('#partager').onclick = async () => {
   }
 };
 $('#razgrille').onclick = () => {
-  derniere = null; $('#mieux').disabled = true; $('#imprimer').disabled = true;
+  derniere = null; $('#imprimer').disabled = true;
   derniereDensite = -1; $('#etat').textContent = 'Mots effacés.'; dessiner(null);
 };
 $('#razdessin').onclick = () => {
@@ -804,7 +804,7 @@ $('#razdessin').onclick = () => {
 $('#nl').onchange = $('#nc').onchange = () => {
   const a = +$('#nl').value, b = +$('#nc').value;
   reporter(a, b); nl = a; nc = b; derniere = null;
-  $('#mieux').disabled = true; $('#imprimer').disabled = true;
+  $('#imprimer').disabled = true;
   dessiner(null);
 };
 
