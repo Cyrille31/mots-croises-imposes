@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '4.6';
+const VERSION = '4.7';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -91,6 +91,7 @@ class Generateur {
     this.longMin = opts.longueurMin ?? 2;
     this.longueurIdeale = opts.longueurIdeale ?? 5;
     this.polissageMs = opts.polissageMs ?? 0;
+    this.themeMs = opts.themeMs ?? 0;
     this.noirsImposes = opts.noirsImposes || null;   // 1 = case noire voulue
     this.nbNoirsImposes = this.noirsImposes
       ? this.noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
@@ -697,7 +698,8 @@ class Generateur {
       libre[best] = 0;
       for (let t = 0; t < Math.min(cands.length, 50); t++) {
         const k = cands[t][1], mot = mots[k];
-        const rep = Math.max(maxRepet(L), this.repImp.get(mot) || 0);
+        let rep = Math.max(maxRepet(L), this.repImp.get(mot) || 0);
+        if (this.theme.has(mot) && !this.repImp.has(mot)) rep = 1;
         if ((emploi.get(mot) || 0) >= rep) continue;
         const sauve = [];
         for (let p = 0; p < L; p++) {
@@ -779,6 +781,54 @@ class Generateur {
     return courant;
   }
 
+  // Enrichissement thematique : une fois la grille bouclee, on tente de
+  // remplacer chaque mot par un mot du theme de meme longueur, en relachant
+  // les mots qui le croisent et en recousant localement.
+  enrichirTheme(grille, budgetMs) {
+    if (!this.theme.size) return grille;
+    const { nl, nc } = this, N = nl * nc, t0 = Date.now();
+    let courant = Int8Array.from(grille);
+    const motif = new Int8Array(N);
+    for (let k = 0; k < N; k++) motif[k] = courant[k] === NOIR ? NOIR : VIDE;
+    const segs = this.segments(motif).filter(x => x.length >= 2);
+    for (let i = segs.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rnd() * (i + 1));[segs[i], segs[j]] = [segs[j], segs[i]];
+    }
+    const parCase = new Map();
+    for (const s of segs) for (const c of s) {
+      if (!parCase.has(c)) parCase.set(c, []);
+      parCase.get(c).push(s);
+    }
+    const lire = (s, g) => s.map(c => String.fromCharCode(65 + g[c])).join('');
+    let gagne = 0;
+    for (const s of segs) {
+      if (Date.now() - t0 > budgetMs) break;
+      const L = s.length;
+      const deja = new Set(segs.map(x => lire(x, courant)));
+      if (this.theme.has(lire(s, courant))) continue;
+      const cands = [];
+      for (const m of this.theme) if (m.length === L && !deja.has(m)) cands.push(m);
+      if (!cands.length) continue;
+      for (let i = cands.length - 1; i > 0; i--) {
+        const j = Math.floor(this.rnd() * (i + 1));[cands[i], cands[j]] = [cands[j], cands[i]];
+      }
+      for (const m of cands.slice(0, 25)) {
+        if (Date.now() - t0 > budgetMs) break;
+        const init = Int8Array.from(courant);
+        s.forEach((c, k) => { init[c] = m.charCodeAt(k) - 65; });
+        for (const c of s) for (const autre of parCase.get(c) || []) {
+          if (autre === s) continue;
+          for (const d of autre) if (!s.includes(d)) init[d] = VIDE;
+        }
+        const r = this.resoudre(motif, { n: 30000 }, init);
+        if (r.grille && r.poses === this.imposes.length
+            && this.theme.has(lire(s, r.grille))) { courant = r.grille; gagne++; break; }
+      }
+    }
+    this.diag.themeAjoutes = gagne;
+    return courant;
+  }
+
   generer(essais = 600, budgetParEssai = 30000, limiteMs = 0) {
     const t0 = Date.now();
     let res = null, motif = null, etat = null, sansGain = 0;
@@ -810,8 +860,10 @@ class Generateur {
       if (r.grille) {
         if (r.poses > score) { meilleur = r; score = r.poses; }
         if (r.poses === this.imposes.length) {
-          if (this.polissageMs > 0)
-            meilleur = { ...meilleur, grille: this.polir(meilleur.grille, res.fixe, this.polissageMs) };
+          let g = meilleur.grille;
+          if (this.polissageMs > 0) g = this.polir(g, res.fixe, this.polissageMs);
+          if (this.themeMs > 0) g = this.enrichirTheme(g, this.themeMs);
+          meilleur = { ...meilleur, grille: g };
           return meilleur;
         }
       }

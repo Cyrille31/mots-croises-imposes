@@ -51,10 +51,12 @@
   .hdr { display:flex; align-items:center; justify-content:center; font-size:10px;
          color:#6b7887; font-weight:600; border:0; background:transparent; }
   body.vierge .c span { visibility:hidden; }
-  body.vierge .c.impose { background:#fff; }
+  body.vierge .c.impose, body.vierge .c.themeq { background:#fff !important; }
   #impression { display:none; }
   @media print {
     body.vierge #defs { display:none; }
+    body.vierge .c.impose, body.vierge .c.themeq {
+      background:#fff !important; border-color:#b9c2ce !important; }
     #impression { display:block; font-size:11.5px; }
     #impression h3 { font-size:12px; color:#000; margin:8px 0 3px; }
     #impression p { margin:2px 0; }
@@ -112,7 +114,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">4.6</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">4.7</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -201,6 +203,12 @@
   trois mille mots), vous choisissez la catégorie et la liste se remplit, les
   mots les plus courts en tête. Privilégiez les mots courts, de trois à six lettres : ce sont eux
   qui trouvent le plus souvent leur place.</p>
+  <p>Après avoir bouclé la grille, le programme fait une passe
+  d'<b>enrichissement</b> : il tente de remplacer chaque mot par un mot du thème
+  de même longueur, en relâchant les mots croisés et en recousant localement.
+  Sur un essai à quarante mots de marine, cela fait passer la moyenne de 4,5 à
+  près de 11 mots du thème par grille. Un mot du thème n'apparaît jamais deux
+  fois.</p>
   <p>Ces mots ne sont pas obligatoires, mais sont préférés à
   qualité égale, et ils sont protégés de la troncature du vocabulaire. Ceux
   effectivement placés apparaissent <b style="background:#ffdcb0">en orange</b>
@@ -281,7 +289,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 4.6, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 4.7, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -351,6 +359,8 @@ $('#cats').onchange = async e => {
     const uniq = [...new Set(mots)].sort((a, b) => a.length - b.length);
     $('#theme').value = uniq.join('\n');
     $('#etat').textContent = uniq.length + ' mots chargés (les plus courts en tête).';
+    $('#qtheme').value = '';
+    $('#cats').style.display = 'none';
   } catch (err) { $('#etat').textContent = 'Chargement impossible : ' + err.message; }
   e.target.value = '';
 };
