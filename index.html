@@ -46,6 +46,7 @@
   .c.hors { background:#e9edf2; border-color:#dfe4ea; }
   .c.noirimp { background:var(--trait); box-shadow:inset 0 0 0 2px #6b8bb5; }
   .c.impose { background:#cfe4f7; }
+  .c.themeq { background:#ffdcb0; }
   .c { position:relative; }
   .hdr { display:flex; align-items:center; justify-content:center; font-size:10px;
          color:#6b7887; font-weight:600; border:0; background:transparent; }
@@ -111,7 +112,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">4.3</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">4.4</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -183,7 +184,10 @@
   tournent autour de 19 %.</p>
   <p><b>Thème</b> — ces mots ne sont pas obligatoires, mais sont préférés à
   qualité égale, et ils sont protégés de la troncature du vocabulaire. Ceux
-  effectivement placés sont listés dans la ligne d'état après la génération.</p>
+  effectivement placés apparaissent <b style="background:#ffdcb0">en orange</b>
+  dans la grille, et sont listés dans la ligne d'état. Comptez deux à quatre
+  mots par grille : la préférence ne joue que là où le mot rentre. Pour en
+  garantir un, déplacez-le dans la colonne des mots imposés.</p>
   <p>Les définitions sont mises en forme automatiquement : tout en minuscules,
   seule la première lettre en capitale. Elles sont effacées dès qu'une nouvelle
   grille est produite, puisqu'elles ne correspondent plus.</p>
@@ -258,7 +262,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 4.3, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 4.4, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -325,6 +329,7 @@ function dessiner(g) {
   cases = new Array(nl * nc);
   const imp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean));
   const cellulesImposees = g ? reperer(g, imp) : new Set();
+  const cellulesTheme = g ? reperer(g, new Set(lignes('#theme'))) : new Set();
   const entete = (txt, w, ht) => {
     const e = document.createElement('div');
     e.className = 'hdr'; e.textContent = txt;
@@ -349,6 +354,7 @@ function dessiner(g) {
         s.textContent = String.fromCharCode(65 + v);
         d.appendChild(s);
         if (cellulesImposees.has(i)) d.classList.add('impose');
+        else if (cellulesTheme.has(i)) d.classList.add('themeq');
       }
     }
     d.dataset.i = i;

@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '4.3';
+const VERSION = '4.4';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -101,6 +101,11 @@ class Generateur {
     this.dedans = [];
     for (let i = 0; i < nl * nc; i++) if (!this.masque || !this.masque[i]) this.dedans.push(i);
     this.theme = new Set((opts.motsThemes || []).map(normaliser));
+    this.mth = {};
+    for (const m of this.theme) {
+      const k = index.rang.get(m.length) && index.rang.get(m.length).get(m);
+      if (k !== undefined) this.mth[m.length] = (this.mth[m.length] || 0n) | (1n << BigInt(k));
+    }
     // une entree peut contenir plusieurs mots separes par des blancs :
     // ils seront places a la suite, separes par une case noire
     this.groupes = (opts.motsImposes || [])
@@ -603,6 +608,7 @@ class Generateur {
     for (const s of segs) dom.push(new Uint32Array(ix.n32.get(s.length)));
     const emploi = new Map();
     const restant = new Set(this.imposes);
+    const thRest = new Set(this.theme);
     let poses = 0;
     const fait = new Uint8Array(nS);
     for (let i = 0; i < nS; i++) {
@@ -612,6 +618,7 @@ class Generateur {
       const mot = s.map(k => String.fromCharCode(65 + grille[k])).join('');
       emploi.set(mot, (emploi.get(mot) || 0) + 1);
       if (restant.delete(mot)) poses++;
+      thRest.delete(mot);
     }
     let meilleurN = -1, meilleurG = null, faits = 0;
     for (let i = 0; i < nS; i++) if (fait[i]) faits++;
@@ -699,8 +706,10 @@ class Generateur {
         emploi.set(mot, (emploi.get(mot) || 0) + 1);
         const etait = restant.delete(mot);
         if (etait) poses++;
+        const etaitTh = thRest.delete(mot);
         if (rec(reste - 1)) return true;
         if (etait) { restant.add(mot); poses--; }
+        if (etaitTh) thRest.add(mot);
         emploi.set(mot, emploi.get(mot) - 1);
         for (const idx of sauve) grille[idx] = VIDE;
       }
