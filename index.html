@@ -111,7 +111,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">4.2</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">4.3</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -184,6 +184,9 @@
   <p><b>Thème</b> — ces mots ne sont pas obligatoires, mais sont préférés à
   qualité égale, et ils sont protégés de la troncature du vocabulaire. Ceux
   effectivement placés sont listés dans la ligne d'état après la génération.</p>
+  <p>Les définitions sont mises en forme automatiquement : tout en minuscules,
+  seule la première lettre en capitale. Elles sont effacées dès qu'une nouvelle
+  grille est produite, puisqu'elles ne correspondent plus.</p>
   <p><b>Définitions</b> — une fois la grille produite, ce bouton numérote les
   mots à la manière d'une grille de presse et affiche une ligne par mot, avec un
   champ libre pour votre définition.</p>
@@ -202,8 +205,9 @@
   d'autorisation d'accès au presse-papier : les navigateurs l'exigent pour toute
   lecture par script, et cette demande est plus gênante que la frappe qu'elle
   éviterait. Si vous avez déjà accordé ce droit, le collage se fait tout seul.</p>
-  <p>Le bouton <b>Wiktionnaire</b> est le seul automatique : il propose des
-  définitions de dictionnaire dans le menu déroulant. Utile pour dégrossir, mais
+  <p>Le bouton <b>Wiktionnaire</b> est le seul automatique : il lit le
+  wikitexte de l'article et en extrait les vraies lignes de définition, puis les
+  propose dans le menu déroulant. Utile pour dégrossir, mais
   « Habitation » n'est pas une bonne définition de MAISON. Attention aussi : les
   mots étant stockés sans accents, plusieurs entrées voisines peuvent être
   proposées (ÉTÉ, ÊTES…), à vous de trancher.</p>
@@ -254,7 +258,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 4.2, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 4.3, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -267,6 +271,7 @@ window.onerror = (msg, src, l, c) => {
   if (e) e.textContent = 'Erreur page : ' + msg + ' (ligne ' + l + ')';
 };
 const $ = s => document.querySelector(s);
+let cases = [];      // element DOM de chaque case, indexe par numero de case
 let nl = 12, nc = 12, etat = null, ref = null, derniere = null,
     imposesNorm = [], worker = null;
 
@@ -317,6 +322,7 @@ function dessiner(g) {
   boite.style.gridTemplateColumns = `${marge}px repeat(${nc}, ${taille}px)`;
   boite.style.border = 'none';
   boite.innerHTML = '';
+  cases = new Array(nl * nc);
   const imp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean));
   const cellulesImposees = g ? reperer(g, imp) : new Set();
   const entete = (txt, w, ht) => {
@@ -346,6 +352,7 @@ function dessiner(g) {
       }
     }
     d.dataset.i = i;
+    cases[i] = d;
     boite.appendChild(d);
   }
 }
@@ -369,7 +376,7 @@ function terminer() {
 function peindre(i, v) {
   if (i < 0 || !etat || etat[i] === v) return;
   etat[i] = v;
-  const el = $('#grille').children[i];
+  const el = cases[i];
   if (el) { el.className = 'c' + (v === 1 ? ' hors' : v === 2 ? ' noirimp' : ''); el.textContent = ''; }
 }
 
@@ -513,6 +520,7 @@ function lancer(affiner, mode) {
     if (m.type === 'grille') {
       derniere = Int8Array.from(m.grille);
       derniereDensite = m.densite;
+      defsChoisies.clear();               // la grille change : les definitions ne valent plus
       dessiner(derniere);
       $('#imprimer').disabled = false;
       $('#imprvierge').disabled = false; $('#definitions').disabled = false;
@@ -584,25 +592,58 @@ function motsParLigne(g) {
   return out;
 }
 
+// minuscules partout, majuscule a la seule premiere lettre
+function formater(t) {
+  const s = String(t).replace(/\s+/g, ' ').trim().toLowerCase();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+
+// Le texte brut du Wiktionnaire mele definitions, exemples et rubriques.
+// Le wikitexte, lui, marque chaque definition par une ligne commencant par « # ».
+function nettoyerWiki(t) {
+  let s = String(t);
+  for (let k = 0; k < 4; k++) s = s.replace(/\{\{[^{}]*\}\}/g, ' ');
+  return s
+    .replace(/\[\[[^\]|]*\|([^\]]*)\]\]/g, '$1')
+    .replace(/\[\[([^\]]*)\]\]/g, '$1')
+    .replace(/'''?/g, '')
+    .replace(/<ref[^>]*>[\s\S]*?<\/ref>/g, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s,;:.]+/, '')
+    .trim();
+}
+
 async function chercherDefs(mot) {
   const base = 'https://fr.wiktionary.org/w/api.php?format=json&origin=*&';
   const q = encodeURIComponent(mot.toLowerCase());
-  const rep = await fetch(base + 'action=query&list=search&srlimit=6&srnamespace=0&srsearch=' + q);
+  const rep = await fetch(base + 'action=query&list=search&srlimit=8&srnamespace=0&srsearch=' + q);
   const d = await rep.json();
   const titres = (d.query && d.query.search || []).map(x => x.title)
-    .filter(t => norm(t) === mot).slice(0, 4);
+    .filter(t => norm(t) === mot).slice(0, 3);
   if (!titres.length) return [];
-  const rep2 = await fetch(base + 'action=query&prop=extracts&explaintext=1&exlimit=4&titles='
-                           + encodeURIComponent(titres.join('|')));
-  const d2 = await rep2.json();
   const out = [];
-  for (const p of Object.values((d2.query && d2.query.pages) || {})) {
-    for (const l of String(p.extract || '').split('\n')) {
-      const t = l.trim();
-      if (t.length < 12 || t.length > 160) continue;
-      if (/^(Étymologie|Prononciation|Références|Anagrammes|Voir aussi|Synonymes|Traductions|Nom |Verbe|Adjectif|Adverbe|Français)/.test(t)) continue;
-      if (out.length < 8 && !out.includes(t)) out.push(t);
+  for (const titre of titres) {
+    const r2 = await fetch(base + 'action=parse&prop=wikitext&page=' + encodeURIComponent(titre));
+    const d2 = await r2.json();
+    let wt = (d2.parse && d2.parse.wikitext && d2.parse.wikitext['*']) || '';
+    // on ne garde que la section française
+    const i = wt.indexOf('{{langue|fr}}');
+    if (i >= 0) {
+      wt = wt.slice(i);
+      const j = wt.indexOf('\n== ', 3);
+      if (j > 0) wt = wt.slice(0, j);
     }
+    for (const ligne of wt.split('\n')) {
+      if (!/^#[^#*:]/.test(ligne)) continue;        // # = definition, #* = exemple
+      const t = nettoyerWiki(ligne.replace(/^#\s*/, ''));
+      if (t.length < 8) continue;
+      const court = t.length > 220 ? t.slice(0, 217) + '…' : t;
+      const f = formater(court) + (titres.length > 1 ? '  [' + titre + ']' : '');
+      if (!out.includes(f)) out.push(f);
+      if (out.length >= 12) break;
+    }
+    if (out.length >= 12) break;
   }
   return out;
 }
@@ -629,9 +670,12 @@ function afficherDefs(g) {
         inp.value = defsChoisies.get(cle) || '';
         inp.placeholder = 'définition';
         inp.oninput = () => defsChoisies.set(cle, inp.value);
+        inp.onblur = () => { inp.value = formater(inp.value); defsChoisies.set(cle, inp.value); };
         const sel = document.createElement('select');
         sel.innerHTML = '<option value="">— propositions —</option>';
-        sel.onchange = () => { if (sel.value) { inp.value = sel.value; defsChoisies.set(cle, sel.value); } };
+        sel.onchange = () => {
+          if (sel.value) { inp.value = formater(sel.value); defsChoisies.set(cle, inp.value); }
+        };
         const m = mot.toLowerCase();
         for (const [nom, url] of [
           ['fsolver', 'https://www.fsolver.fr/mots-fleches/' + encodeURIComponent(m)],
@@ -654,7 +698,7 @@ function afficherDefs(g) {
               const p = await navigator.permissions.query({ name: 'clipboard-read' });
               if (p.state === 'granted') {
                 const txt = (await navigator.clipboard.readText()).trim();
-                if (txt) { inp.value = txt; defsChoisies.set(cle, txt); inp.focus(); return; }
+                if (txt) { inp.value = formater(txt); defsChoisies.set(cle, inp.value); inp.focus(); return; }
               }
             }
           } catch (err) { /* rien : on se rabat sur le collage manuel */ }
@@ -795,7 +839,7 @@ $('#partager').onclick = async () => {
   }
 };
 $('#razgrille').onclick = () => {
-  derniere = null; $('#imprimer').disabled = true;
+  derniere = null; defsChoisies.clear(); $('#defs').innerHTML = ''; $('#imprimer').disabled = true;
   derniereDensite = -1; $('#etat').textContent = 'Mots effacés.'; dessiner(null);
 };
 $('#razdessin').onclick = () => {
