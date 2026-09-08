@@ -73,8 +73,13 @@ function compterThemes(g, nl, nc, theme) {
   return [...vus];
 }
 
+let stop = false;
+const pause = () => new Promise(r => setTimeout(r, 0));
+
 self.onmessage = async (e) => {
   const p = e.data;
+  if (p && p.mode === 'stop') { stop = true; return; }
+  stop = false;
   try {
     if (!pret) throw new Error('moteur non charge');
     self.postMessage({ type: 'version', v: M.VERSION || '?' });
@@ -111,6 +116,54 @@ self.onmessage = async (e) => {
     });
 
     let G, r = null;
+
+    // ---- exploration longue : on cherche sans limite de temps, en publiant
+    //      chaque amélioration, jusqu'a ce que l'utilisateur arrête
+    if (p.mode === 'explorer') {
+      const dedans = masque ? masque.reduce((a, x) => a + (x ? 0 : 1), 0) : p.nl * p.nc;
+      const nImp = noirsImposes ? noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
+      const base = Math.max(p.densite, nImp / dedans);
+      const court = Math.round(Math.max(2500, (p.duree || 8000) / 3
+                    * (1 + dedans / 400 + imposes.length / 10)));
+      let meilleurD = 2, d = base, essais = 0;
+      while (!stop) {
+        essais++;
+        self.postMessage({ type: 'info',
+          texte: `Exploration : essai ${essais} à ${(100 * d).toFixed(0)} %`
+                 + (meilleurD < 2 ? ` — meilleure grille : ${(100 * meilleurD).toFixed(1)} %` : '') });
+        const g = faire(d, 0);
+        const res = g.generer(1e9, 20000, court);
+        await pause();
+        if (res) {
+          let noirs = 0;
+          for (let i = 0; i < res.grille.length; i++)
+            if (res.grille[i] === -2 && !(masque && masque[i])) noirs++;
+          const dens = noirs / dedans;
+          if (dens < meilleurD) {
+            meilleurD = dens;
+            self.postMessage({
+              type: 'grille', provisoire: true,
+              grille: Array.from(res.grille), poses: res.poses, densite: dens,
+              croisements: compterCroisements(res.grille, p.nl, p.nc, plats),
+              themesPlaces: compterThemes(res.grille, p.nl, p.nc, theme),
+              version: M.VERSION || '?'
+            });
+          }
+          d = Math.max(0.02, meilleurD - 0.02);
+        } else {
+          d = meilleurD < 2 ? Math.min(meilleurD - 0.005, 0.5)
+                            : Math.min(d + 0.02, 0.5);
+          if (meilleurD === 2 && d >= 0.499) d = base;
+        }
+        await pause();
+      }
+      self.postMessage({ type: 'fini',
+        texte: meilleurD < 2
+          ? `Exploration arrêtée après ${essais} essais — meilleure grille : ${(100 * meilleurD).toFixed(1)} %.`
+          : `Exploration arrêtée après ${essais} essais, sans solution.` });
+      return;
+    }
+
     if (p.affiner) {
       G = faire(p.densite, 0);
       r = G.optimiserDensite({ cycles: p.cycles || 4, dureePalier: p.palier || 2500,

@@ -43,6 +43,18 @@
   .c.hors { background:#e9edf2; border-color:#dfe4ea; }
   .c.noirimp { background:var(--trait); box-shadow:inset 0 0 0 2px #6b8bb5; }
   .c.impose { background:#cfe4f7; }
+  .c { position:relative; }
+  .c i { position:absolute; top:0; left:1px; font-size:8px; font-style:normal;
+         font-weight:400; color:#6b7887; line-height:1; }
+  body.vierge .c span { visibility:hidden; }
+  body.vierge .c.impose { background:#fff; }
+  #impression { display:none; }
+  @media print {
+    body.vierge #defs { display:none; }
+    #impression { display:block; font-size:11.5px; }
+    #impression h3 { font-size:12px; color:#000; margin:8px 0 3px; }
+    #impression p { margin:2px 0; }
+  }
   details { background:#fff; border:1px solid #d7dce3; border-radius:7px; padding:6px 9px; margin:6px 0; }
   summary { cursor:pointer; font-size:12px; color:var(--bleu); font-weight:600; }
   details p { font-size:12px; margin:6px 0; }
@@ -91,7 +103,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">3.4</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">4.0</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -130,12 +142,19 @@
   <button id="exporter" class="sec">Exporter le dessin</button>
   <button id="importer" class="sec">Importer</button>
   <button id="definitions" class="sec" disabled>Définitions</button>
-  <button id="imprimer" class="sec" disabled>Imprimer</button>
+  <button id="explorer" class="sec">Explorer</button>
+  <button id="arreter" class="sec" disabled>Arrêter</button>
+  <button id="sauver" class="sec" disabled>Sauver</button>
+  <button id="ouvrir" class="sec">Ouvrir</button>
+  <button id="imprimer" class="sec" disabled>Imprimer corrigé</button>
+  <button id="imprvierge" class="sec" disabled>Imprimer à remplir</button>
 </div>
+<input type="file" id="fgrille" accept=".json,application/json" style="display:none">
 <input type="file" id="fichier" accept=".json,application/json" style="display:none">
 <div id="etat">Prêt.</div>
 <div id="grille"></div>
 <div id="defs"></div>
+<div id="impression"></div>
 
 <details>
   <summary>Mode d'emploi</summary>
@@ -175,6 +194,17 @@
   « Habitation » n'est pas une bonne définition de MAISON. Attention aussi : les
   mots étant stockés sans accents, plusieurs entrées voisines peuvent être
   proposées (ÉTÉ, ÊTES…), à vous de trancher.</p>
+  <p><b>Explorer / Arrêter</b> — l'exploration cherche sans limite de temps.
+  Elle affiche la meilleure grille dès qu'elle en trouve une, puis continue à
+  chercher mieux en descendant la densité ; chaque amélioration remplace la
+  grille à l'écran. « Arrêter » rend la main et conserve la meilleure trouvée.</p>
+  <p><b>Sauver / Ouvrir</b> — enregistre tout le travail en cours : grille,
+  dessin, mots imposés, thème, réglages et définitions déjà saisies. Vous pouvez
+  ainsi rédiger les définitions en plusieurs fois.</p>
+  <p><b>Imprimer corrigé / à remplir</b> — la première imprime la grille avec
+  les lettres, la seconde seulement les cases noires et les numéros, pour le
+  cruciverbiste. Les définitions sont dans les deux cas condensées en deux
+  blocs, horizontal et vertical.</p>
   <p><b>Exporter / Importer</b> — enregistre ou recharge le dessin (cases grises
   et cases noires imposées) dans un petit fichier JSON, avec ses dimensions.</p>
   <p><b>Vocabulaire</b> — tronque le lexique aux mots les plus courants. Il
@@ -211,7 +241,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 3.4, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 4.0, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -273,6 +303,7 @@ function dessiner(g) {
   boite.style.gridTemplateColumns = `repeat(${nc}, ${taille}px)`;
   boite.innerHTML = '';
   const imp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean));
+  const numGrille = g ? numeros(g) : new Map();
   const cellulesImposees = g ? reperer(g, imp) : new Set();
   for (let i = 0; i < nl * nc; i++) {
     const d = document.createElement('div');
@@ -284,8 +315,14 @@ function dessiner(g) {
     else if (g) {
       const v = g[i];
       if (v === -2) d.classList.add('noir');
-      else { d.textContent = String.fromCharCode(65 + v);
-             if (cellulesImposees.has(i)) d.classList.add('impose'); }
+      else {
+        const s = document.createElement('span');
+        s.textContent = String.fromCharCode(65 + v);
+        d.appendChild(s);
+        if (numGrille.has(i)) { const q = document.createElement('i');
+                                q.textContent = numGrille.get(i); d.appendChild(q); }
+        if (cellulesImposees.has(i)) d.classList.add('impose');
+      }
     }
     d.dataset.i = i;
     boite.appendChild(d);
@@ -428,13 +465,16 @@ function reperer(g, imp) {
 }
 
 let derniereDensite = -1;
-function lancer(affiner) {
+function lancer(affiner, mode) {
   const affinage = affiner;
   imposesNorm = lignes('#imposes');
-  $('#go').disabled = $('#mieux').disabled = true;
-  $('#etat').textContent = affiner ? 'Affinage…' : 'Recherche…';
+  $('#go').disabled = $('#mieux').disabled = $('#explorer').disabled = true;
+  $('#arreter').disabled = mode !== 'explorer';
+  $('#etat').textContent = mode === 'explorer' ? 'Exploration…'
+    : (affiner ? 'Recherche d\u2019une meilleure grille…' : 'Recherche…');
   if (worker) worker.terminate();
   worker = new Worker('./worker.js');
+  worker.onmessageerror = () => { $('#etat').textContent = 'Message illisible du worker.'; };
   worker.onerror = ev => {
     $('#go').disabled = false;
     $('#etat').textContent = 'Erreur worker : ' + (ev.message || 'voir la console');
@@ -443,7 +483,12 @@ function lancer(affiner) {
     const m = e.data;
     if (m.type === 'version') { $('#vmot').textContent = m.v; return; }
     if (m.type === 'info') { $('#etat').textContent = m.texte; return; }
-    $('#go').disabled = false;
+    if (m.type === 'fini') {
+      $('#etat').textContent = m.texte;
+      $('#go').disabled = false; $('#explorer').disabled = false; $('#arreter').disabled = true;
+      return;
+    }
+    if (!m.provisoire) { $('#go').disabled = false; $('#explorer').disabled = false; }
     if (m.type === 'grille') {
       if (affinage && derniereDensite >= 0 && m.densite >= derniereDensite - 0.001) {
         $('#etat').textContent = `Pas mieux : ${(100 * m.densite).toFixed(1)} % contre `
@@ -455,7 +500,8 @@ function lancer(affiner) {
       derniereDensite = m.densite;
       dessiner(derniere);
       $('#mieux').disabled = false; $('#imprimer').disabled = false;
-      $('#definitions').disabled = false;
+      $('#imprvierge').disabled = false; $('#definitions').disabled = false;
+      $('#sauver').disabled = false;
       $('#defs').innerHTML = '';
       $('#vmot').textContent = m.version || '?';
       const cx = m.croisements || [];
@@ -486,7 +532,7 @@ function lancer(affiner) {
       ? Math.max(0, derniereDensite - 0.02) : +$('#densite').value,
     niveau: +$('#niveau').value,
     maxMots: +$('#max2').value ? { 2: +$('#max2').value } : {},
-    affiner: false,
+    affiner: false, mode,
     densiteForcee: affinage && derniereDensite >= 0 ? Math.max(0, derniereDensite - 0.02) : null,
     duree: 8000
   });
@@ -497,9 +543,19 @@ $('#mieux').onclick = () => lancer(true);
 // ---------- definitions ----------
 const defsChoisies = new Map();          // cle "H3" -> texte
 
-function numeroter(g) {
-  const out = [], num = new Map();
+function numeros(g) {
+  const num = new Map();
   let n = 0;
+  const dH = i => { const c = i % nc;
+    return g[i] >= 0 && (c === 0 || g[i - 1] < 0) && c + 1 < nc && g[i + 1] >= 0; };
+  const dV = i => { const r = (i / nc) | 0;
+    return g[i] >= 0 && (r === 0 || g[i - nc] < 0) && r + 1 < nl && g[i + nc] >= 0; };
+  for (let i = 0; i < nl * nc; i++) if (dH(i) || dV(i)) num.set(i, ++n);
+  return num;
+}
+
+function numeroter(g) {
+  const out = [], num = numeros(g);
   const debutH = i => {
     const c = i % nc;
     return g[i] >= 0 && (c === 0 || g[i - 1] < 0) && c + 1 < nc && g[i + 1] >= 0;
@@ -508,7 +564,6 @@ function numeroter(g) {
     const r = (i / nc) | 0;
     return g[i] >= 0 && (r === 0 || g[i - nc] < 0) && r + 1 < nl && g[i + nc] >= 0;
   };
-  for (let i = 0; i < nl * nc; i++) if (debutH(i) || debutV(i)) num.set(i, ++n);
   for (let i = 0; i < nl * nc; i++) {
     if (debutH(i)) {
       let m = '', k = i;
@@ -573,8 +628,8 @@ function afficherDefs(g) {
       const m = e.mot.toLowerCase();
       for (const [nom, url] of [
         ['fsolver', 'https://www.fsolver.fr/mots-fleches/' + encodeURIComponent(m)],
-        ['fléche', 'https://www.commeunefleche.com/dictionnaire/' + encodeURIComponent(m)],
-        ['dico-mots', 'https://www.dico-mots.fr/recherche/?q=' + encodeURIComponent(m)]
+        ['fléche', 'https://commeunefleche.com'],
+        ['dico-mots', 'https://www.dico-mots.fr/mots-croises/' + e.mot + '.html']
       ]) {
         const a = document.createElement('a');
         a.href = url; a.target = '_blank'; a.rel = 'noopener';
@@ -608,7 +663,73 @@ $('#definitions').onclick = () => {
     : 'Hors ligne : les propositions du Wiktionnaire ne sont pas accessibles, la saisie reste possible.';
 };
 
-$('#imprimer').onclick = () => window.print();
+function construireImpression() {
+  if (!derniere) return;
+  const liste = numeroter(derniere), z = $('#impression');
+  z.innerHTML = '';
+  for (const [sens, titre] of [['H', 'Horizontalement'], ['V', 'Verticalement']]) {
+    const t = document.createElement('h3'); t.textContent = titre; z.appendChild(t);
+    const p = document.createElement('p');
+    p.textContent = liste.filter(x => x.dir === sens).sort((a, b) => a.n - b.n)
+      .map(e => `${e.n}. ${defsChoisies.get(sens + e.n) || '…'}`).join('   —   ');
+    z.appendChild(p);
+  }
+}
+$('#imprimer').onclick = () => { construireImpression(); window.print(); };
+$('#imprvierge').onclick = () => {
+  construireImpression();
+  document.body.classList.add('vierge');
+  window.print();
+  setTimeout(() => document.body.classList.remove('vierge'), 300);
+};
+
+// ---------- sauvegarde et reprise du mot croise en cours ----------
+$('#sauver').onclick = () => {
+  const obj = { format: 'mots-croises-cgexcel', v: 2, nl, nc,
+    grille: derniere ? Array.from(derniere) : null,
+    dessin: etat ? Array.from(etat) : [],
+    imposes: $('#imposes').value, theme: $('#theme').value,
+    densite: $('#densite').value, niveau: $('#niveau').value,
+    definitions: Object.fromEntries(defsChoisies) };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj)], { type: 'application/json' }));
+  a.download = `grille-${nl}x${nc}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  $('#etat').textContent = 'Grille et définitions sauvegardées.';
+};
+$('#ouvrir').onclick = () => $('#fgrille').click();
+$('#fgrille').onchange = async ev => {
+  const f = ev.target.files[0]; if (!f) return;
+  try {
+    const o = JSON.parse(await f.text());
+    if (!o || !o.nl || !o.nc) throw new Error('fichier illisible');
+    nl = o.nl; nc = o.nc; $('#nl').value = nl; $('#nc').value = nc;
+    etat = (o.dessin && o.dessin.length) ? Uint8Array.from(o.dessin) : null;
+    memoriser();
+    $('#imposes').value = o.imposes || ''; $('#theme').value = o.theme || '';
+    if (o.densite) $('#densite').value = o.densite;
+    if (o.niveau) $('#niveau').value = o.niveau;
+    defsChoisies.clear();
+    for (const [k, v] of Object.entries(o.definitions || {})) defsChoisies.set(k, v);
+    derniere = o.grille ? Int8Array.from(o.grille) : null;
+    derniereDensite = -1;
+    imposesNorm = lignes('#imposes');
+    dessiner(derniere);
+    const actif = !!derniere;
+    for (const b of ['#mieux', '#imprimer', '#imprvierge', '#definitions', '#sauver'])
+      $(b).disabled = !actif;
+    if (actif) afficherDefs(derniere);
+    $('#etat').textContent = `Grille rechargée (${nl}×${nc}).`;
+  } catch (e) { $('#etat').textContent = 'Ouverture impossible : ' + e.message; }
+  ev.target.value = '';
+};
+
+// ---------- exploration longue ----------
+$('#explorer').onclick = () => lancer(false, 'explorer');
+$('#arreter').onclick = () => {
+  if (worker) worker.postMessage({ mode: 'stop' });
+  $('#arreter').disabled = true;
+};
 $('#exporter').onclick = () => {
   const obj = { format: 'mots-croises-cgexcel', v: 1, nl, nc,
                 dessin: etat ? Array.from(etat) : [] };
