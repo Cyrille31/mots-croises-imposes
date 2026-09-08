@@ -112,13 +112,17 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">4.4</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">4.5</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
 <div class="mots">
   <div><label>Mots imposés (un par ligne)</label><textarea id="imposes"></textarea></div>
-  <div><label>Thème — simple préférence</label><textarea id="theme"></textarea></div>
+  <div><label>Mots du thème, un par ligne — simple préférence
+      <select id="exemples" style="font:11px inherit;margin-left:4px">
+        <option value="">exemples…</option>
+      </select></label><textarea id="theme"
+      placeholder="MER&#10;VOILE&#10;QUAI&#10;RAME"></textarea></div>
 </div>
 
 <div class="params">
@@ -182,7 +186,12 @@
   de temps que la grille est grande et les mots imposés nombreux. Laissez 0 % pour
   qu'il cherche le plancher lui-même. Les mots croisés français du commerce
   tournent autour de 19 %.</p>
-  <p><b>Thème</b> — ces mots ne sont pas obligatoires, mais sont préférés à
+  <p><b>Thème</b> — il faut y écrire une <b>liste de mots</b>, un par ligne, et
+  non le nom d'un thème : « MER, VOILE, QUAI… » et non « marine ». Le menu
+  « exemples… » remplit la zone avec une liste toute faite dont vous pouvez vous
+  inspirer. Privilégiez les mots courts, de trois à six lettres : ce sont eux
+  qui trouvent le plus souvent leur place.</p>
+  <p>Ces mots ne sont pas obligatoires, mais sont préférés à
   qualité égale, et ils sont protégés de la troncature du vocabulaire. Ceux
   effectivement placés apparaissent <b style="background:#ffdcb0">en orange</b>
   dans la grille, et sont listés dans la ligne d'état. Comptez deux à quatre
@@ -262,7 +271,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 4.4, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 4.5, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -284,6 +293,23 @@ for (let d = 0; d <= 45; d += 5) {
   o.value = d / 100; o.textContent = d + ' %'; if (d === 15) o.selected = true;
   $('#densite').appendChild(o);
 }
+const THEMES = {
+  'Mer et marine': 'MER ILE CAP MAT QUAI RAME CALE PONT VOILE ANCRE MAREE RECIF PORT PROUE MOUSSE HUNIER ESCALE VAGUE PHARE CANOT',
+  'Cuisine': 'SEL POT PLAT FOUR MIEL PAIN RIZ HUILE SAUCE POELE FARINE SUCRE OEUF CREME PATE TARTE CHEF MENU EPICE',
+  'Musique': 'AIR NOTE TON CLE LUTH FLUTE PIANO CHANT ORGUE ARCHET CHOEUR ACCORD RYTHME OPERA SOLO DUO GAMME',
+  'Nature': 'PRE BOIS MONT VENT PLUIE ARBRE FEUILLE RACINE SOURCE ROCHE NEIGE ORAGE SABLE MOUSSE RUISSEAU CIME',
+  'Animaux': 'CHAT CHIEN RAT LOUP OURS CERF AIGLE MERLE TRUITE ABEILLE RENARD LAPIN CHEVAL SOURIS OIE ANE',
+  'Astronomie': 'LUNE ETOILE ORBITE COMETE ASTRE NOVA MARS VENUS SOLEIL ECLIPSE PHASE NUIT CIEL AMAS'
+};
+for (const nom of Object.keys(THEMES)) {
+  const o = document.createElement('option');
+  o.value = nom; o.textContent = nom; $('#exemples').appendChild(o);
+}
+$('#exemples').onchange = e => {
+  if (!e.target.value) return;
+  $('#theme').value = THEMES[e.target.value].split(' ').join('\n');
+  e.target.value = '';
+};
 for (const id of ['#nl', '#nc']) {
   for (let v = 5; v <= 30; v++) {
     const o = document.createElement('option');
