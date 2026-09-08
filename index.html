@@ -112,7 +112,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">4.5</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">4.6</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -120,9 +120,15 @@
   <div><label>Mots imposés (un par ligne)</label><textarea id="imposes"></textarea></div>
   <div><label>Mots du thème, un par ligne — simple préférence
       <select id="exemples" style="font:11px inherit;margin-left:4px">
-        <option value="">exemples…</option>
-      </select></label><textarea id="theme"
-      placeholder="MER&#10;VOILE&#10;QUAI&#10;RAME"></textarea></div>
+        <option value="">listes toutes faites…</option>
+      </select></label>
+    <div style="display:flex;gap:4px;margin-bottom:3px">
+      <input id="qtheme" placeholder="thème à chercher : marine, cuisine, oiseaux…"
+             style="flex:1;padding:3px 5px;font:12px inherit;border:1px solid #ccd3dc;border-radius:5px">
+      <button id="btheme" class="sec" style="margin:0">Wiktionnaire</button>
+    </div>
+    <select id="cats" style="width:100%;font:11.5px inherit;margin-bottom:3px;display:none"></select>
+    <textarea id="theme" placeholder="MER&#10;VOILE&#10;QUAI&#10;RAME"></textarea></div>
 </div>
 
 <div class="params">
@@ -186,10 +192,14 @@
   de temps que la grille est grande et les mots imposés nombreux. Laissez 0 % pour
   qu'il cherche le plancher lui-même. Les mots croisés français du commerce
   tournent autour de 19 %.</p>
-  <p><b>Thème</b> — il faut y écrire une <b>liste de mots</b>, un par ligne, et
-  non le nom d'un thème : « MER, VOILE, QUAI… » et non « marine ». Le menu
-  « exemples… » remplit la zone avec une liste toute faite dont vous pouvez vous
-  inspirer. Privilégiez les mots courts, de trois à six lettres : ce sont eux
+  <p><b>Thème</b> — la zone attend une <b>liste de mots</b>, un par ligne, et
+  non le nom d'un thème. Trois façons de la remplir : à la main ; par le menu
+  des listes toutes faites, que j'ai écrites moi-même et qui sont donc courtes ;
+  ou en tapant un thème dans le champ de recherche et en cliquant
+  <b>Wiktionnaire</b> — il interroge alors les catégories thématiques du
+  Wiktionnaire (« Lexique en français de la marine » compte à elle seule plus de
+  trois mille mots), vous choisissez la catégorie et la liste se remplit, les
+  mots les plus courts en tête. Privilégiez les mots courts, de trois à six lettres : ce sont eux
   qui trouvent le plus souvent leur place.</p>
   <p>Ces mots ne sont pas obligatoires, mais sont préférés à
   qualité égale, et ils sont protégés de la troncature du vocabulaire. Ceux
@@ -271,7 +281,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 4.5, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 4.6, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -305,6 +315,46 @@ for (const nom of Object.keys(THEMES)) {
   const o = document.createElement('option');
   o.value = nom; o.textContent = nom; $('#exemples').appendChild(o);
 }
+// ---- recherche d'un thème dans les catégories du Wiktionnaire ----
+const apiWk = 'https://fr.wiktionary.org/w/api.php?format=json&origin=*&';
+$('#btheme').onclick = async () => {
+  const q = $('#qtheme').value.trim();
+  if (!q) return;
+  const b = $('#btheme'); b.disabled = true; b.textContent = '…';
+  try {
+    const r = await fetch(apiWk + 'action=query&list=search&srnamespace=14&srlimit=15&srsearch='
+                          + encodeURIComponent('lexique français ' + q));
+    const d = await r.json();
+    const cats = (d.query && d.query.search || []).map(x => x.title)
+      .filter(t => /^Catégorie:Lexique en français/.test(t));
+    const sel = $('#cats');
+    if (!cats.length) { sel.style.display = 'none'; $('#etat').textContent =
+      'Aucune catégorie trouvée pour « ' + q +' ».'; }
+    else {
+      sel.innerHTML = '<option value="">— ' + cats.length + ' catégorie(s), choisissez —</option>'
+        + cats.map(c => `<option value="${c}">${c.replace('Catégorie:Lexique en français ', '')}</option>`).join('');
+      sel.style.display = '';
+      $('#etat').textContent = 'Choisissez une catégorie dans la liste.';
+    }
+  } catch (e) { $('#etat').textContent = 'Recherche impossible : ' + e.message; }
+  b.disabled = false; b.textContent = 'Wiktionnaire';
+};
+$('#cats').onchange = async e => {
+  if (!e.target.value) return;
+  $('#etat').textContent = 'Chargement des mots…';
+  try {
+    const r = await fetch(apiWk + 'action=query&list=categorymembers&cmnamespace=0&cmlimit=500&cmtitle='
+                          + encodeURIComponent(e.target.value));
+    const d = await r.json();
+    const mots = (d.query && d.query.categorymembers || []).map(x => norm(x.title))
+      .filter(m => /^[A-Z]{3,9}$/.test(m));
+    const uniq = [...new Set(mots)].sort((a, b) => a.length - b.length);
+    $('#theme').value = uniq.join('\n');
+    $('#etat').textContent = uniq.length + ' mots chargés (les plus courts en tête).';
+  } catch (err) { $('#etat').textContent = 'Chargement impossible : ' + err.message; }
+  e.target.value = '';
+};
+
 $('#exemples').onchange = e => {
   if (!e.target.value) return;
   $('#theme').value = THEMES[e.target.value].split(' ').join('\n');
