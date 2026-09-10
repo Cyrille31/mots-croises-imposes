@@ -48,6 +48,11 @@
   .c.impose { background:#cfe4f7; }
   .c.themeq { background:#ffdcb0; }
   .c { position:relative; }
+  .c u { position:absolute; top:0; left:1px; font-size:8px; text-decoration:none;
+         font-weight:400; color:#8a96a4; line-height:1; }
+  #legende { display:grid; gap:0; width:max-content; margin:8px auto;
+             border:2px solid var(--trait); }
+  #legende .c { position:relative; }
   .hdr { display:flex; align-items:center; justify-content:center; font-size:10px;
          color:#6b7887; font-weight:600; border:0; background:transparent; }
   body.vierge .c span { visibility:hidden; }
@@ -55,9 +60,11 @@
   #impression { display:none; }
   @media print {
     body.vierge #defs { display:none; }
+    body.vierge #legende span { visibility:hidden; }
     body.vierge .c.impose, body.vierge .c.themeq {
       background:#fff !important; border-color:#b9c2ce !important; }
     #impression { display:block; font-size:11.5px; }
+    #legende { page-break-inside:avoid; }
     #impression h3 { font-size:12px; color:#000; margin:8px 0 3px; }
     #impression p { margin:2px 0; }
   }
@@ -115,7 +122,7 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">4.8</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">5.0</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -135,6 +142,12 @@
 </div>
 
 <div class="params">
+  <span class="p">Type
+    <select id="type">
+      <option value="croises" selected>mots croisés</option>
+      <option value="fleches">mots fléchés</option>
+      <option value="codes">mots codés</option>
+    </select></span>
   <span class="p">Grille
     <select id="nl"></select> × <select id="nc"></select></span>
   <span class="p">Noires :
@@ -175,6 +188,7 @@
 <div id="etat">Prêt.</div>
 <div id="grille"></div>
 <div id="defs"></div>
+<div id="legende"></div>
 <div id="impression"></div>
 
 <details>
@@ -214,9 +228,24 @@
   <b>Wiktionnaire</b>, qui interroge ses catégories thématiques — celle de la
   marine compte à elle seule plus de trois mille mots. Ces mots ne sont pas
   obligatoires ; ceux qui trouvent leur place ressortent
-  <b style="background:#ffdcb0">en orange</b>. Comptez une dizaine par grille de
-  15×15 avec une liste fournie ; privilégiez les mots de trois à six lettres.
+  <b style="background:#ffdcb0">en orange</b>. Le programme en <b>impose d'office</b> une poignée, choisis au hasard dans
+  votre liste — une dizaine sur un 12×12 — et réduit ce nombre si la grille ne
+  boucle pas ; il complète ensuite par substitution. Comptez une dizaine de mots
+  du thème par grille. Privilégiez les mots de trois à sept lettres : seuls
+  ceux-là sont candidats à l'imposition d'office.
   Pour en garantir un, mettez-le dans les mots imposés.</p>
+
+  <h4>Les trois types de grille</h4>
+  <p><b>Mots croisés</b> — le fonctionnement habituel.</p>
+  <p><b>Mots fléchés</b> — le programme impose des cases noires en première
+  ligne et en première colonne, une sur deux, en commençant par le coin
+  supérieur gauche. Vous pouvez toujours dessiner une forme, mais ces deux
+  bandes ne sont plus modifiables.</p>
+  <p><b>Mots codés</b> — chaque lettre employée dans la grille reçoit un numéro
+  tiré au hasard, affiché en petit dans le coin des cases. Une petite grille de
+  correspondance est ajoutée sous la grille, avec au plus vingt-six cases, une
+  par lettre réellement utilisée ; à l'impression « à remplir », ses lettres sont
+  masquées et seuls les numéros subsistent.</p>
 
   <h4>Les réglages</h4>
   <p><b>Grille</b> — de 5 à 30 lignes et colonnes. Le format confortable est
@@ -288,7 +317,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 4.8, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 5.0, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -302,6 +331,7 @@ window.onerror = (msg, src, l, c) => {
 };
 const $ = s => document.querySelector(s);
 let cases = [];      // element DOM de chaque case, indexe par numero de case
+let codeNum = null;  // lettre -> numero, pour les mots codés
 let nl = 12, nc = 12, etat = null, ref = null, derniere = null,
     imposesNorm = [], worker = null;
 
@@ -404,6 +434,52 @@ function reporter(nnl, nnc) {
   etat = neuf;
 }
 
+// ---- mots fléchés : cases noires imposées en première ligne et colonne
+function typeCourant() { return $('#type').value; }
+function appliquerType() {
+  if (typeCourant() !== 'fleches') return;
+  if (!etat) etat = new Uint8Array(nl * nc);
+  for (let c = 0; c < nc; c++) etat[c] = (c % 2 === 0) ? 2 : (etat[c] === 2 ? 0 : etat[c]);
+  for (let r = 0; r < nl; r++) etat[r * nc] = (r % 2 === 0) ? 2 : (etat[r * nc] === 2 ? 0 : etat[r * nc]);
+  memoriser();
+}
+function borde(i) {                       // case de la première ligne ou colonne
+  return typeCourant() === 'fleches' && (i < nc || i % nc === 0);
+}
+
+// ---- mots codés : numérotation aléatoire des lettres employées
+function construireCode(g) {
+  const lettres = new Set();
+  for (const v of g) if (v >= 0) lettres.add(String.fromCharCode(65 + v));
+  const l = [...lettres].sort();
+  const ordre = [...l];
+  for (let i = ordre.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));[ordre[i], ordre[j]] = [ordre[j], ordre[i]];
+  }
+  codeNum = new Map();
+  ordre.forEach((ch, k) => codeNum.set(ch, k + 1));
+  return l;
+}
+function afficherLegende(g) {
+  const z = $('#legende');
+  z.innerHTML = '';
+  if (!g || typeCourant() !== 'codes') { z.style.display = 'none'; return; }
+  const lettres = construireCode(g);
+  const t = Math.min(26, Math.max(6, Math.ceil(lettres.length / 2)));
+  z.style.display = 'grid';
+  z.style.gridTemplateColumns = `repeat(${t}, 26px)`;
+  for (const ch of lettres.slice().sort((a, b) => codeNum.get(a) - codeNum.get(b))) {
+    const d = document.createElement('div');
+    d.className = 'c';
+    d.style.width = d.style.height = '26px';
+    d.style.fontSize = '14px';
+    const u = document.createElement('u'); u.textContent = codeNum.get(ch);
+    const s = document.createElement('span'); s.textContent = ch;
+    d.append(u, s);
+    z.appendChild(d);
+  }
+}
+
 function dessiner(g) {
   const boite = $('#grille');
   const taille = Math.min(30, Math.floor(Math.min(window.innerWidth - 40, 560) / (nc + 1)));
@@ -437,6 +513,11 @@ function dessiner(g) {
       else {
         const s = document.createElement('span');
         s.textContent = String.fromCharCode(65 + v);
+        if (typeCourant() === 'codes' && codeNum) {
+          const u = document.createElement('u');
+          u.textContent = codeNum.get(String.fromCharCode(65 + v)) || '';
+          d.appendChild(u);
+        }
         d.appendChild(s);
         if (cellulesImposees.has(i)) d.classList.add('impose');
         else if (cellulesTheme.has(i)) d.classList.add('themeq');
@@ -465,7 +546,7 @@ function terminer() {
   dessiner(derniere);
 }
 function peindre(i, v) {
-  if (i < 0 || !etat || etat[i] === v) return;
+  if (i < 0 || !etat || etat[i] === v || borde(i)) return;
   etat[i] = v;
   const el = cases[i];
   if (el) { el.className = 'c' + (v === 1 ? ' hors' : v === 2 ? ' noirimp' : ''); el.textContent = ''; }
@@ -531,7 +612,7 @@ function installerDessin() {
     tactile = true;
     if (!etat) etat = new Uint8Array(nl * nc);
     const i = caseSous(ev.touches[0]);
-    if (i < 0) return;
+    if (i < 0 || borde(i)) return;
     ev.preventDefault();
     peinture = (etat[i] + 1) % 3;
     peindre(i, peinture);
@@ -550,7 +631,7 @@ function installerDessin() {
     ev.preventDefault();
     if (!etat) etat = new Uint8Array(nl * nc);
     const i = caseSous(ev);
-    if (i < 0) return;
+    if (i < 0 || borde(i)) return;
     peinture = (etat[i] + 1) % 3;
     peindre(i, peinture);
     try { boite.setPointerCapture(ev.pointerId); } catch (e) {}
@@ -612,7 +693,9 @@ function lancer(affiner, mode) {
       derniere = Int8Array.from(m.grille);
       derniereDensite = m.densite;
       defsChoisies.clear();               // la grille change : les definitions ne valent plus
+      if (typeCourant() === 'codes') construireCode(derniere); else codeNum = null;
       dessiner(derniere);
+      afficherLegende(derniere);
       $('#imprimer').disabled = false;
       $('#imprvierge').disabled = false; $('#definitions').disabled = false;
       $('#sauver').disabled = false;
@@ -652,7 +735,7 @@ function lancer(affiner, mode) {
   });
 }
 
-$('#go').onclick = () => lancer(false);
+$('#go').onclick = () => { appliquerType(); lancer(false); };
 // ---------- definitions ----------
 const defsChoisies = new Map();          // cle "H3" -> texte
 
@@ -936,14 +1019,28 @@ $('#razgrille').onclick = () => {
 $('#razdessin').onclick = () => {
   etat = null; ref = null; $('#etat').textContent = 'Dessin remis à zéro.'; dessiner(derniere);
 };
+$('#type').onchange = () => {
+  if (typeCourant() === 'fleches') appliquerType();
+  if (typeCourant() !== 'codes') { codeNum = null; }
+  else if (derniere) construireCode(derniere);
+  dessiner(derniere); afficherLegende(derniere);
+  $('#etat').textContent = typeCourant() === 'fleches'
+    ? 'Mots fléchés : cases noires imposées en première ligne et première colonne.'
+    : (typeCourant() === 'codes'
+       ? 'Mots codés : chaque lettre reçoit un numéro tiré au hasard.'
+       : 'Mots croisés.');
+};
 $('#nl').onchange = $('#nc').onchange = () => {
   const a = +$('#nl').value, b = +$('#nc').value;
-  reporter(a, b); nl = a; nc = b; derniere = null;
+  reporter(a, b); nl = a; nc = b; derniere = null; codeNum = null;
+  appliquerType();
   $('#imprimer').disabled = true;
   dessiner(null);
 };
 
+appliquerType();
 dessiner(null);
+afficherLegende(null);
 installerDessin();
 if (location.protocol === 'file:') {
   $('#etat').textContent = "Cette page doit être servie par un serveur web : "
