@@ -52,7 +52,7 @@
          font-weight:400; color:#8a96a4; line-height:1; }
   #legende { display:grid; gap:0; width:max-content; margin:8px auto;
              border:2px solid var(--trait); }
-  #legende .c { position:relative; }
+  #legende .c { position:relative; cursor:pointer; }
   .hdr { display:flex; align-items:center; justify-content:center; font-size:10px;
          color:#6b7887; font-weight:600; border:0; background:transparent; }
   body.vierge .c span { visibility:hidden; }
@@ -62,6 +62,9 @@
     body.vierge #defs { display:none; }
     body.codes #defs, body.codes #impression { display:none; }
     body.vierge #legende span { visibility:hidden; }
+    body.vierge #legende .c.revelee span { visibility:visible; }
+    body.codes .c { background:#fff !important; }
+    body.codes .c.noir { background:#243447 !important; }
     body.vierge .c.impose, body.vierge .c.themeq {
       background:#fff !important; border-color:#b9c2ce !important; }
     #impression { display:block; font-size:11.5px; }
@@ -125,8 +128,8 @@
     <rect x="1.5" y="1.5" width="117" height="117" fill="none" stroke="#c8d0da" stroke-width="2"/>
   </svg>
   <div>
-    <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">5.1</span> — © 2026 Cyrille Gindre</p>
+    <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
+    <p class="sous">version <span id="vapp">5.3</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -194,6 +197,8 @@
 <div id="etat">Prêt.</div>
 <div id="grille"></div>
 <div id="defs"></div>
+<p id="titreleg" style="display:none;text-align:center;font-size:11.5px;color:#6b7887;margin:8px 0 0">
+  Grille de correspondance</p>
 <div id="legende"></div>
 <div id="impression"></div>
 
@@ -326,7 +331,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 5.1, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 5.3, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -341,6 +346,9 @@ window.onerror = (msg, src, l, c) => {
 const $ = s => document.querySelector(s);
 let cases = [];      // element DOM de chaque case, indexe par numero de case
 let codeNum = null;  // lettre -> numero, pour les mots codés
+const revelees = new Map();   // lettre -> couleur d'aide, pour les mots codés
+const PALETTE = ['#ffd6d6', '#d6ecff', '#d9f7d6', '#fff3c4', '#e8dbff',
+                 '#ffe0c2', '#d3fbf1', '#f7d9f0'];
 let nl = 12, nc = 12, etat = null, ref = null, derniere = null,
     imposesNorm = [], worker = null;
 
@@ -445,6 +453,11 @@ function reporter(nnl, nnc) {
 
 // ---- mots fléchés : cases noires imposées en première ligne et colonne
 function typeCourant() { return $('#type').value; }
+const NOMS = { croises: 'Mots croisés', fleches: 'Mots fléchés', codes: 'Mots codés' };
+function majTitre() {
+  $('#titre').textContent = NOMS[typeCourant()];
+  document.title = NOMS[typeCourant()] + ' — CGExcel';
+}
 function appliquerType() {
   if (typeCourant() !== 'fleches') return;
   if (!etat) etat = new Uint8Array(nl * nc);
@@ -458,6 +471,7 @@ function borde(i) {                       // case de la première ligne ou colon
 
 // ---- mots codés : numérotation aléatoire des lettres employées
 function construireCode(g) {
+  revelees.clear();
   const lettres = new Set();
   for (const v of g) if (v >= 0) lettres.add(String.fromCharCode(65 + v));
   const l = [...lettres].sort();
@@ -472,8 +486,13 @@ function construireCode(g) {
 function afficherLegende(g) {
   const z = $('#legende');
   z.innerHTML = '';
-  if (!g || typeCourant() !== 'codes') { z.style.display = 'none'; return; }
-  const lettres = construireCode(g);
+  const titreLeg = $('#titreleg');
+  if (!g || typeCourant() !== 'codes') {
+    z.style.display = 'none'; titreLeg.style.display = 'none'; return;
+  }
+  titreLeg.style.display = 'block';
+  if (!codeNum) construireCode(g);          // on ne retire jamais au sort ici
+  const lettres = [...codeNum.keys()];
   const t = Math.min(26, Math.max(6, Math.ceil(lettres.length / 2)));
   z.style.display = 'grid';
   z.style.gridTemplateColumns = `repeat(${t}, 26px)`;
@@ -485,6 +504,20 @@ function afficherLegende(g) {
     const u = document.createElement('u'); u.textContent = codeNum.get(ch);
     const s = document.createElement('span'); s.textContent = ch;
     d.append(u, s);
+    if (revelees.has(ch)) { d.style.background = revelees.get(ch); d.classList.add('revelee'); }
+    d.onclick = () => {
+      if (revelees.has(ch)) revelees.delete(ch);
+      else {
+        const prises = new Set(revelees.values());
+        const libre = PALETTE.find(c => !prises.has(c)) || PALETTE[revelees.size % PALETTE.length];
+        revelees.set(ch, libre);
+      }
+      dessiner(derniere); afficherLegende(derniere);
+      $('#etat').textContent = revelees.size
+        ? 'Lettres révélées : ' + [...revelees.keys()].sort().join(' ')
+          + ' — elles seront imprimées dans la grille de correspondance.'
+        : 'Aucune lettre révélée.';
+    };
     z.appendChild(d);
   }
 }
@@ -523,9 +556,11 @@ function dessiner(g) {
         const s = document.createElement('span');
         s.textContent = String.fromCharCode(65 + v);
         if (typeCourant() === 'codes' && codeNum) {
+          const ch = String.fromCharCode(65 + v);
           const u = document.createElement('u');
-          u.textContent = codeNum.get(String.fromCharCode(65 + v)) || '';
+          u.textContent = codeNum.get(ch) || '';
           d.appendChild(u);
+          if (revelees.has(ch)) { d.style.background = revelees.get(ch); d.classList.add('revelee'); }
         }
         d.appendChild(s);
         if (cellulesImposees.has(i)) d.classList.add('impose');
@@ -1036,6 +1071,7 @@ $('#razdessin').onclick = () => {
   etat = null; ref = null; $('#etat').textContent = 'Dessin remis à zéro.'; dessiner(derniere);
 };
 $('#type').onchange = () => {
+  majTitre();
   if (typeCourant() === 'fleches') appliquerType();
   if (typeCourant() !== 'codes') { codeNum = null; }
   else if (derniere) construireCode(derniere);
@@ -1054,6 +1090,7 @@ $('#nl').onchange = $('#nc').onchange = () => {
   dessiner(null);
 };
 
+majTitre();
 appliquerType();
 dessiner(null);
 afficherLegende(null);
