@@ -60,6 +60,7 @@
   #impression { display:none; }
   @media print {
     body.vierge #defs { display:none; }
+    body.codes #defs, body.codes #impression { display:none; }
     body.vierge #legende span { visibility:hidden; }
     body.vierge .c.impose, body.vierge .c.themeq {
       background:#fff !important; border-color:#b9c2ce !important; }
@@ -68,6 +69,9 @@
     #impression h3 { font-size:12px; color:#000; margin:8px 0 3px; }
     #impression p { margin:2px 0; }
   }
+  details.pli { padding:3px 8px 6px; margin:0 0 6px; }
+  details.pli summary { font-size:12px; }
+  details.pli .mots { margin-top:4px; }
   details { background:#fff; border:1px solid #d7dce3; border-radius:7px; padding:6px 9px; margin:6px 0; }
   summary { cursor:pointer; font-size:12px; color:var(--bleu); font-weight:600; }
   details p { font-size:12px; margin:6px 0; }
@@ -122,12 +126,13 @@
   </svg>
   <div>
     <h1>Mots croisés <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">5.0</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">5.1</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
+<details class="pli" open><summary>Mots imposés</summary>
 <div class="mots">
-  <div><label>Mots imposés (un par ligne)</label><textarea id="imposes"></textarea></div>
+  <div><label>Un par ligne ; plusieurs sur une ligne = séparés par une case noire</label><textarea id="imposes"></textarea></div>
   <div><label>Mots du thème, un par ligne — simple préférence
       <select id="exemples" style="font:11px inherit;margin-left:4px">
         <option value="">listes toutes faites…</option>
@@ -140,6 +145,7 @@
     <select id="cats" style="width:100%;font:11.5px inherit;margin-bottom:3px;display:none"></select>
     <textarea id="theme" placeholder="MER&#10;VOILE&#10;QUAI&#10;RAME"></textarea></div>
 </div>
+</details>
 
 <div class="params">
   <span class="p">Type
@@ -241,7 +247,8 @@
   ligne et en première colonne, une sur deux, en commençant par le coin
   supérieur gauche. Vous pouvez toujours dessiner une forme, mais ces deux
   bandes ne sont plus modifiables.</p>
-  <p><b>Mots codés</b> — chaque lettre employée dans la grille reçoit un numéro
+  <p><b>Mots codés</b> — pas de définitions : le jeu consiste à retrouver le
+  code. Chaque lettre employée dans la grille reçoit un numéro
   tiré au hasard, affiché en petit dans le coin des cases. Une petite grille de
   correspondance est ajoutée sous la grille, avec au plus vingt-six cases, une
   par lettre réellement utilisée ; à l'impression « à remplir », ses lettres sont
@@ -261,6 +268,8 @@
   rend la grille difficile à trouver. Laissez « sans limite » sauf besoin précis.</p>
 
   <h4>Le dessin</h4>
+  <p>Les blocs « Mots imposés » et « Thème » se replient : cliquez sur leur
+  titre pour les escamoter quand vous ne vous en servez pas.</p>
   <p>La grille est dessinable en permanence. Un appui sort une case de la grille
   (gris), deux en font une case noire imposée (noir cerclé), trois la remettent
   normale. En gardant le doigt ou le bouton enfoncé et en glissant, toutes les
@@ -317,7 +326,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 5.0, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 5.1, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -899,6 +908,12 @@ function afficherDefs(g) {
 
 $('#definitions').onclick = () => {
   if (!derniere) return;
+  if (typeCourant() === 'codes') {
+    $('#etat').textContent = 'Les mots codés n\u2019ont pas de définitions : '
+      + 'le jeu consiste à retrouver le code.';
+    $('#defs').innerHTML = '';
+    return;
+  }
   afficherDefs(derniere);
   $('#etat').textContent = navigator.onLine
     ? 'Définitions : « Chercher » interroge le Wiktionnaire pour chaque mot.'
@@ -906,7 +921,8 @@ $('#definitions').onclick = () => {
 };
 
 function construireImpression() {
-  if (!derniere) return;
+  document.body.classList.toggle('codes', typeCourant() === 'codes');
+  if (!derniere || typeCourant() === 'codes') { $('#impression').innerHTML = ''; return; }
   const par = motsParLigne(derniere), z = $('#impression');
   z.innerHTML = '';
   for (const [sens, titre] of [['H', 'Horizontalement'], ['V', 'Verticalement']]) {

@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '5.0';
+const VERSION = '5.1';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -162,10 +162,23 @@ class Generateur {
 
   // interdit les paquets de noirs : aucun carre 2x2 entierement noir,
   // et au plus maxVoisinsNoirs noirs orthogonaux autour d'une case noire
-  okNoir(g, r, c) {
+  // longueur de la suite de cases noires passant par (r,c)
+  longNoir(g, r, c, horiz) {
+    const { nl, nc } = this;
+    const nr = (a, b) => a >= 0 && a < nl && b >= 0 && b < nc && g[a * nc + b] === NOIR;
+    let n = 1;
+    if (horiz) { for (let j = c - 1; nr(r, j); j--) n++; for (let j = c + 1; nr(r, j); j++) n++; }
+    else { for (let i = r - 1; nr(i, c); i--) n++; for (let i = r + 1; nr(i, c); i++) n++; }
+    return n;
+  }
+
+  okNoir(g, r, c, strict) {
     const { nl, nc } = this;
     const noir = (a, b) => (a < 0 || a >= nl || b < 0 || b >= nc)
       ? false : g[a * nc + b] === NOIR;
+    // preference : pas plus de deux cases noires a la suite
+    if (strict && (this.longNoir(g, r, c, true) > 2 || this.longNoir(g, r, c, false) > 2))
+      return false;
     for (const [dr, dc] of [[-1, -1], [-1, 0], [0, -1], [0, 0]]) {
       const a = r + dr, b = c + dc;
       if (noir(a, b) && noir(a + 1, b) && noir(a, b + 1) && noir(a + 1, b + 1)) return false;
@@ -175,8 +188,8 @@ class Generateur {
     return k <= this.maxVoisinsNoirs;
   }
 
-  okLocal(g, r, c) {
-    if (!this.okNoir(g, r, c)) return false;
+  okLocal(g, r, c, mini = 1, strict = false) {
+    if (!this.okNoir(g, r, c, strict)) return false;
     const v = [[r, c - 1], [r, c + 1], [r - 1, c], [r + 1, c]];
     for (const [a, b] of v) {
       const h = this.longRun(g, a, b, true), w = this.longRun(g, a, b, false);
@@ -451,21 +464,26 @@ class Generateur {
       if (!choix.length) { poses += 0; break; }
       choix.sort((x, y) => x[0] - y[0]);
       let pose = false;
-      for (const [, idx] of choix) {
-        g[idx] = NOIR;
-        if (this.okLocal(g, (idx / nc) | 0, idx % nc)) { poses++; pose = true; break; }
-        g[idx] = VIDE;
+      for (const strict of [true, false]) {          // d'abord sans chapelet
+        for (const [, idx] of choix) {
+          g[idx] = NOIR;
+          if (this.okLocal(g, (idx / nc) | 0, idx % nc, 1, strict)) {
+            poses++; pose = true; break;
+          }
+          g[idx] = VIDE;
+        }
+        if (pose) break;
       }
       if (!pose) break;
     }
     // complement au hasard si la cible n'est pas atteinte
-    for (const mini of [2, 1]) {
+    for (const [mini, strict] of [[2, true], [1, true], [2, false], [1, false]]) {
       for (const idx of ordre) {
         if (poses >= cible) break;
         if (g[idx] === NOIR) continue;
         const r = (idx / nc) | 0, c = idx % nc;
         g[idx] = NOIR;
-        if (this.okLocal(g, r, c, mini)) poses++; else g[idx] = VIDE;
+        if (this.okLocal(g, r, c, mini, strict)) poses++; else g[idx] = VIDE;
       }
       if (poses >= cible) break;
     }
@@ -552,6 +570,7 @@ class Generateur {
     if (horiz ? (seg[seg.length - 1] % nc) < nc - 1
               : seg[seg.length - 1] < nl * nc - nc) bornes.push(apres);
 
+    let tolere = null;
     for (let essai = 0; essai < 40; essai++) {
       const svg = Int8Array.from(g);
       const t = this.rnd();
@@ -575,10 +594,23 @@ class Generateur {
         if (horiz && ((dst / nc) | 0) !== ((src / nc) | 0)) continue;
         g[src] = VIDE; g[dst] = NOIR;
       }
-      if (this.valide(g)) return true;
+      if (this.valide(g) && this.pasDeChapelet(g)) return true;
+      if (this.valide(g)) { const sv2 = Int8Array.from(g); g.set(svg); tolere = tolere || sv2; continue; }
       g.set(svg);
     }
+    if (tolere) { g.set(tolere); return true; }   // faute de mieux
     return false;
+  }
+
+  // aucune suite de plus de deux cases noires
+  pasDeChapelet(g) {
+    const { nl, nc } = this;
+    for (let i = 0; i < nl * nc; i++) {
+      if (g[i] !== NOIR) continue;
+      const r = (i / nc) | 0, c = i % nc;
+      if (this.longNoir(g, r, c, true) > 2 || this.longNoir(g, r, c, false) > 2) return false;
+    }
+    return true;
   }
 
   // ---------- resolution ----------
