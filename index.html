@@ -48,6 +48,10 @@
   .c.impose { background:#cfe4f7; }
   .c.themeq { background:#ffdcb0; }
   .c { position:relative; }
+  #legende .c input { width:100%; height:100%; border:0; text-align:center;
+       font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
+       padding:0; color:#1a3a6b; }
+  #legende .c input:focus { outline:2px solid #6b8bb5; }
   .c u { position:absolute; top:0; left:1px; font-size:8px; text-decoration:none;
          font-weight:400; color:#8a96a4; line-height:1; }
   #legende { display:grid; gap:0; width:max-content; margin:8px auto;
@@ -129,7 +133,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">5.3</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">5.4</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -183,6 +187,8 @@
     <button id="definitions" class="sec" disabled>Définitions</button></div>
   <div class="groupe"><button id="explorer" class="sec">Explorer</button>
     <button id="arreter" class="sec" disabled>Arrêter</button></div>
+  <div class="groupe"><button id="joueur" class="sec">Mode joueur : off</button>
+    <button id="razjoueur" class="sec">Effacer mes lettres</button></div>
   <div class="groupe"><button id="razgrille" class="sec">RAZ mots</button>
     <button id="razdessin" class="sec">RAZ dessin</button></div>
   <div class="groupe"><button id="imprimer" class="sec" disabled>Imprimer corrigé</button>
@@ -259,6 +265,18 @@
   par lettre réellement utilisée ; à l'impression « à remplir », ses lettres sont
   masquées et seuls les numéros subsistent.</p>
 
+  <h4>Le mode joueur</h4>
+  <p>Destiné à celui qui <i>résout</i> une grille de mots codés, et non à celui
+  qui la fabrique. Ouvrez le fichier que quelqu'un vous a transmis : vous voyez
+  la grille telle qu'elle serait imprimée, numéros seuls.</p>
+  <p>Dans la grille des lettres, un clic sur une case colore toutes les cases de
+  la grille portant ce numéro — un second clic enlève la couleur. Tapez une
+  lettre dans une case : elle apparaît aussitôt dans les deux grilles, à toutes
+  les positions concernées. « Effacer mes lettres » remet le tout à zéro.</p>
+  <p>Le codage est enregistré dans le fichier : le joueur voit exactement la même
+  numérotation que l'auteur. Le dessin de la grille n'est pas modifiable tant que
+  le mode joueur est actif.</p>
+
   <h4>Les réglages</h4>
   <p><b>Grille</b> — de 5 à 30 lignes et colonnes. Le format confortable est
   12×12 à 15×15 ; en deçà de 11×11 les mots imposés manquent de place.</p>
@@ -331,7 +349,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 5.3, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 5.4, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -347,6 +365,8 @@ const $ = s => document.querySelector(s);
 let cases = [];      // element DOM de chaque case, indexe par numero de case
 let codeNum = null;  // lettre -> numero, pour les mots codés
 const revelees = new Map();   // lettre -> couleur d'aide, pour les mots codés
+const props = new Map();      // numero -> lettre proposee par le joueur
+let modeJoueur = false;
 const PALETTE = ['#ffd6d6', '#d6ecff', '#d9f7d6', '#fff3c4', '#e8dbff',
                  '#ffe0c2', '#d3fbf1', '#f7d9f0'];
 let nl = 12, nc = 12, etat = null, ref = null, derniere = null,
@@ -501,11 +521,27 @@ function afficherLegende(g) {
     d.className = 'c';
     d.style.width = d.style.height = '26px';
     d.style.fontSize = '14px';
-    const u = document.createElement('u'); u.textContent = codeNum.get(ch);
-    const s = document.createElement('span'); s.textContent = ch;
-    d.append(u, s);
+    const n = codeNum.get(ch);
+    const u = document.createElement('u'); u.textContent = n;
+    d.appendChild(u);
+    if (modeJoueur) {
+      const inp = document.createElement('input');
+      inp.maxLength = 1;
+      inp.value = props.get(String(n)) || '';
+      inp.oninput = () => {
+        const v = norm(inp.value).slice(0, 1);
+        inp.value = v;
+        if (v) props.set(String(n), v); else props.delete(String(n));
+        dessiner(derniere);
+      };
+      d.appendChild(inp);
+    } else {
+      const s = document.createElement('span'); s.textContent = ch;
+      d.appendChild(s);
+    }
     if (revelees.has(ch)) { d.style.background = revelees.get(ch); d.classList.add('revelee'); }
-    d.onclick = () => {
+    d.onclick = (ev) => {
+      if (ev.target.tagName === 'INPUT') return;
       if (revelees.has(ch)) revelees.delete(ch);
       else {
         const prises = new Set(revelees.values());
@@ -557,9 +593,11 @@ function dessiner(g) {
         s.textContent = String.fromCharCode(65 + v);
         if (typeCourant() === 'codes' && codeNum) {
           const ch = String.fromCharCode(65 + v);
+          const n = codeNum.get(ch) || '';
           const u = document.createElement('u');
-          u.textContent = codeNum.get(ch) || '';
+          u.textContent = n;
           d.appendChild(u);
+          if (modeJoueur) s.textContent = props.get(String(n)) || '';
           if (revelees.has(ch)) { d.style.background = revelees.get(ch); d.classList.add('revelee'); }
         }
         d.appendChild(s);
@@ -590,7 +628,7 @@ function terminer() {
   dessiner(derniere);
 }
 function peindre(i, v) {
-  if (i < 0 || !etat || etat[i] === v || borde(i)) return;
+  if (modeJoueur || i < 0 || !etat || etat[i] === v || borde(i)) return;
   etat[i] = v;
   const el = cases[i];
   if (el) { el.className = 'c' + (v === 1 ? ' hors' : v === 2 ? ' noirimp' : ''); el.textContent = ''; }
@@ -675,7 +713,7 @@ function installerDessin() {
     ev.preventDefault();
     if (!etat) etat = new Uint8Array(nl * nc);
     const i = caseSous(ev);
-    if (i < 0 || borde(i)) return;
+    if (modeJoueur || i < 0 || borde(i)) return;
     peinture = (etat[i] + 1) % 3;
     peindre(i, peinture);
     try { boite.setPointerCapture(ev.pointerId); } catch (e) {}
@@ -979,7 +1017,10 @@ $('#imprvierge').onclick = () => {
 
 // ---------- sauvegarde et reprise du mot croise en cours ----------
 $('#sauver').onclick = () => {
-  const obj = { format: 'mots-croises-cgexcel', v: 2, nl, nc,
+  const obj = { format: 'mots-croises-cgexcel', v: 3, nl, nc,
+    type: typeCourant(),
+    code: codeNum ? Object.fromEntries(codeNum) : null,
+    revelees: [...revelees.keys()],
     grille: derniere ? Array.from(derniere) : null,
     dessin: etat ? Array.from(etat) : [],
     imposes: $('#imposes').value, theme: $('#theme').value,
@@ -998,6 +1039,14 @@ $('#fgrille').onchange = async ev => {
     const o = JSON.parse(await f.text());
     if (!o || !o.nl || !o.nc) throw new Error('fichier illisible');
     nl = o.nl; nc = o.nc; $('#nl').value = nl; $('#nc').value = nc;
+    if (o.type) { $('#type').value = o.type; majTitre(); }
+    codeNum = o.code ? new Map(Object.entries(o.code)) : null;
+    revelees.clear();
+    if (codeNum) for (const ch of (o.revelees || [])) {
+      const prises = new Set(revelees.values());
+      revelees.set(ch, PALETTE.find(c => !prises.has(c)) || PALETTE[0]);
+    }
+    props.clear();
     etat = (o.dessin && o.dessin.length) ? Uint8Array.from(o.dessin) : null;
     memoriser();
     $('#imposes').value = o.imposes || ''; $('#theme').value = o.theme || '';
@@ -1013,6 +1062,7 @@ $('#fgrille').onchange = async ev => {
     for (const b of ['#imprimer', '#imprvierge', '#definitions', '#sauver'])
       $(b).disabled = !actif;
     if (actif) afficherDefs(derniere);
+    afficherLegende(derniere);
     $('#etat').textContent = `Grille rechargée (${nl}×${nc}).`;
   } catch (e) { $('#etat').textContent = 'Ouverture impossible : ' + e.message; }
   ev.target.value = '';
@@ -1070,6 +1120,22 @@ $('#razgrille').onclick = () => {
 $('#razdessin').onclick = () => {
   etat = null; ref = null; $('#etat').textContent = 'Dessin remis à zéro.'; dessiner(derniere);
 };
+$('#joueur').onclick = () => {
+  modeJoueur = !modeJoueur;
+  $('#joueur').textContent = 'Mode joueur : ' + (modeJoueur ? 'ON' : 'off');
+  document.body.classList.toggle('joueur', modeJoueur);
+  dessiner(derniere); afficherLegende(derniere);
+  $('#etat').textContent = modeJoueur
+    ? 'Mode joueur : cliquez une case de la grille des lettres pour la colorer, '
+      + 'ou tapez-y une lettre — elle apparaîtra dans les deux grilles.'
+    : 'Mode auteur.';
+};
+$('#razjoueur').onclick = () => {
+  props.clear(); revelees.clear();
+  dessiner(derniere); afficherLegende(derniere);
+  $('#etat').textContent = 'Vos lettres ont été effacées.';
+};
+
 $('#type').onchange = () => {
   majTitre();
   if (typeCourant() === 'fleches') appliquerType();
