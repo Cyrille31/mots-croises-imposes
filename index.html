@@ -55,9 +55,10 @@
        color:#14202e; }
   .c input.js:focus { outline:2px solid #1a3a6b; outline-offset:-2px; background:#fff6d5; }
   .def.vise { background:#fff6d5; border-radius:4px; }
-  body.joueur .def .mot, body.joueur .def .lien,
-  body.joueur .def button, body.joueur .def select { display:none; }
-  body.joueur .def input { background:transparent; border:0; }
+  .blocdef { font-size:12.5px; line-height:1.7; margin:2px 0 8px; }
+  .undef { cursor:pointer; padding:1px 2px; border-radius:3px; }
+  .undef:hover { background:#f0f4f9; }
+  .undef.vise { background:#fff6d5; }
   #bravo { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
            background:rgba(255,255,255,.82); z-index:99; font-size:26px; color:var(--bleu);
            font-weight:700; text-align:center; }
@@ -154,7 +155,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">6.4</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">6.5</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -298,6 +299,8 @@
   <b>mode joueur</b>, un seul appui fait les deux à la fois — la case et toutes
   celles portant le même numéro prennent la couleur, et le clavier s'ouvre pour
   la saisie. Un nouvel appui retire la couleur sans quitter la saisie.</p>
+  <p>Quand toutes les lettres du code sont justes, le même feu d'artifice vous
+  félicite qu'en mots croisés.</p>
   <p>Le bouton <b>Aide : une lettre</b> dévoile une lettre à chaque clic, en
   choisissant la plus utile : au moins deux occurrences — en dessous cela
   n'apprend rien — mais moins de 9 % des lettres de la grille, ce qui écarte le
@@ -311,8 +314,9 @@
   <p>Ouvrez le fichier reçu et activez le mode joueur : la grille apparaît vide,
   avec les définitions en dessous, et chaque case blanche devient saisissable —
   la saisie avance toute seule vers la case suivante.</p>
-  <p>Seules les définitions sont affichées : ni les mots de la solution, ni les
-  liens de recherche, exactement comme sur la feuille « à remplir ».</p>
+  <p>Les définitions sont présentées comme sur la feuille « à remplir » : deux
+  blocs continus, <i>Horizontalement</i> et <i>Verticalement</i>, sans les mots
+  de la solution ni les liens de recherche. Chaque définition reste cliquable.</p>
   <p>Un clic dans une case met en évidence ses deux définitions, l'horizontale et
   la verticale. Inversement, un clic sur une définition colore les cases du mot
   correspondant. Quand la grille est entièrement juste, un petit feu d'artifice
@@ -399,7 +403,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 6.4, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 6.5, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -629,6 +633,7 @@ function afficherLegende(g) {
           const s = cases[i].querySelector('span');
           if (s) s.textContent = v;
         }
+        verifierVictoireCode();
       };
       d.appendChild(inp);
     } else {
@@ -859,21 +864,26 @@ function indexerMots(g) {
 }
 function eclairer(i) {
   document.querySelectorAll('.c.vise').forEach(e => e.classList.remove('vise'));
-  document.querySelectorAll('.def.vise').forEach(e => e.classList.remove('vise'));
+  document.querySelectorAll('.def.vise, .undef.vise').forEach(e => e.classList.remove('vise'));
   if (!motsDeCase) return;
   for (const m of motsDeCase.get(i) || []) {
-    const l = document.querySelector(`.def[data-cle="${m.cle}"]`);
+    const l = document.querySelector(`[data-cle="${m.cle}"]`);
     if (l) l.classList.add('vise');
   }
 }
 function eclairerMot(cle) {
   document.querySelectorAll('.c.vise').forEach(e => e.classList.remove('vise'));
   document.querySelectorAll('.def.vise').forEach(e => e.classList.remove('vise'));
-  const l = document.querySelector(`.def[data-cle="${cle}"]`);
+  const l = document.querySelector(`[data-cle="${cle}"]`);
   if (l) l.classList.add('vise');
   if (!motsDeCase) return;
   for (const [c, liste] of motsDeCase)
     for (const m of liste) if (m.cle === cle) cases[c] && cases[c].classList.add('vise');
+}
+function verifierVictoireCode() {
+  if (!derniere || !modeJoueur || !codeNum) return;
+  for (const [ch, n] of codeNum) if (props.get(String(n)) !== ch) return;
+  feter();
 }
 function verifierVictoire() {
   if (!derniere || !modeJoueur) return;
@@ -1099,7 +1109,42 @@ async function chercherDefs(mot) {
   return out;
 }
 
+// En mode joueur, les définitions sont présentées comme sur la feuille
+// imprimée : deux blocs continus, chaque définition restant cliquable.
+function afficherDefsJoueur(g) {
+  const zone = $('#defs');
+  zone.innerHTML = '';
+  const par = motsParLigne(g);
+  for (const [sens, titre] of [['H', 'Horizontalement'], ['V', 'Verticalement']]) {
+    const t = document.createElement('h3');
+    t.textContent = titre; zone.appendChild(t);
+    const p = document.createElement('p');
+    p.className = 'blocdef';
+    par[sens].forEach(e => {
+      const num = document.createElement('b');
+      num.textContent = ' ' + e.n + '. ';
+      p.appendChild(num);
+      e.mots.forEach((mot, k) => {
+        const cle = sens + e.n + '.' + k;
+        const s = document.createElement('span');
+        s.className = 'undef';
+        s.dataset.cle = cle;
+        s.textContent = defsChoisies.get(cle) || '…';
+        s.onclick = () => {
+          document.querySelectorAll('.undef.vise').forEach(x => x.classList.remove('vise'));
+          s.classList.add('vise');
+          eclairerMot(cle);
+        };
+        p.appendChild(s);
+        if (k < e.mots.length - 1) p.appendChild(document.createTextNode(' ; '));
+      });
+    });
+    zone.appendChild(p);
+  }
+}
+
 function afficherDefs(g) {
+  if (modeJoueur) return afficherDefsJoueur(g);
   const zone = $('#defs');
   zone.innerHTML = '';
   if (!g) return;
