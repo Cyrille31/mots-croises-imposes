@@ -37,11 +37,13 @@
   button.sec { background:#fff; color:var(--bleu); border:1px solid #b9c6d8; }
   button:disabled { opacity:.45; }
   #etat { font-size:11.5px; color:#6b7887; margin:5px 0; min-height:15px; }
+  body.joueur #grille, body.joueur .c { touch-action:manipulation; }
   #grille { display:grid; gap:0; margin:6px auto; touch-action:none;
             border:2px solid var(--trait); width:max-content; max-width:100%; }
   .c { display:flex; align-items:center; justify-content:center; font-weight:600;
        border:1px solid #b9c2ce; background:#fff; user-select:none;
        touch-action:none; -webkit-user-select:none; }
+  body.joueur .c input.js { pointer-events:auto; }
   .c.noir { background:var(--trait); }
   .c.hors { background:#e9edf2; border-color:#dfe4ea; }
   .c.noirimp { background:var(--trait); box-shadow:inset 0 0 0 2px #6b8bb5; }
@@ -148,7 +150,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">6.0</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">6.1</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -210,8 +212,8 @@
   <div class="groupe"><button id="exporter" class="sec">Exporter le dessin</button>
     <button id="importer" class="sec">Importer le dessin</button></div>
 </div>
-<input type="file" id="fgrille" accept=".json,application/json" style="display:none">
-<input type="file" id="fichier" accept=".json,application/json" style="display:none">
+<input type="file" id="fgrille" style="display:none">
+<input type="file" id="fichier" style="display:none">
 <div id="etat">Prêt.</div>
 <div id="grille"></div>
 <div id="defs"></div>
@@ -365,6 +367,11 @@
   <p><b>Imprimer corrigé</b> sort la grille avec les lettres, <b>Imprimer à
   remplir</b> seulement les cases noires et les numéros. Les définitions figurent
   dans les deux cas en deux blocs condensés.</p>
+  <p>Sur Chrome et Edge de bureau, <b>Enregistrer sous</b> ouvre la véritable
+  boîte de dialogue du système : vous choisissez le dossier et le nom, et les
+  enregistrements suivants réécrivent ce fichier sans rien redemander. Ailleurs —
+  Android notamment — le nom vous est demandé puis le fichier est téléchargé, le
+  navigateur pouvant alors signaler qu'un fichier de même nom existe déjà.</p>
   <p><b>Enregistrer</b> conserve tout — grille, dessin, mots, réglages,
   définitions, et la tentative en cours d'un joueur — sous le nom du jour, au
   format <tt>grille-2026-09-12.json</tt>. <b>Enregistrer sous</b> crée un nouveau
@@ -381,7 +388,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 6.0, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 6.1, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -747,6 +754,7 @@ function installerDessin() {
   //     exploitable pendant un glissement ; on double avec les evenements touch
   let tactile = false;
   boite.addEventListener('touchstart', ev => {
+    if (modeJoueur) return;          // la saisie doit pouvoir prendre le focus
     tactile = true;
     if (!etat) etat = new Uint8Array(nl * nc);
     const i = caseSous(ev.touches[0]);
@@ -756,7 +764,7 @@ function installerDessin() {
     peindre(i, peinture);
   }, { passive: false });
   boite.addEventListener('touchmove', ev => {
-    if (peinture === null) return;
+    if (modeJoueur || peinture === null) return;
     ev.preventDefault();
     peindre(caseSous(ev.touches[0]), peinture);
   }, { passive: false });
@@ -765,7 +773,7 @@ function installerDessin() {
   boite.addEventListener('touchcancel', finTouche, { passive: false });
 
   boite.addEventListener('pointerdown', ev => {
-    if (tactile) return;
+    if (tactile || modeJoueur) return;
     ev.preventDefault();
     if (!etat) etat = new Uint8Array(nl * nc);
     const i = caseSous(ev);
@@ -775,7 +783,7 @@ function installerDessin() {
     try { boite.setPointerCapture(ev.pointerId); } catch (e) {}
   });
   boite.addEventListener('pointermove', ev => {
-    if (peinture === null) return;
+    if (modeJoueur || peinture === null) return;
     ev.preventDefault();
     peindre(caseSous(ev), peinture);
   });
@@ -1138,6 +1146,39 @@ $('#definitions').onclick = () => {
 // Sur Android, un lien de téléchargement détaché du document est ignoré :
 // il faut l'insérer, cliquer, puis le retirer. On propose aussi le partage
 // natif quand il accepte les fichiers.
+let poigneeFichier = null;    // handle du fichier choisi (navigateurs récents)
+
+async function enregistrerVers(nom, texte, demanderNom) {
+  // Chrome/Edge de bureau : vraie boîte « Enregistrer sous », nom modifiable,
+  // et réécriture silencieuse ensuite.
+  if (window.showSaveFilePicker) {
+    try {
+      if (demanderNom || !poigneeFichier) {
+        poigneeFichier = await window.showSaveFilePicker({
+          suggestedName: nom,
+          types: [{ description: 'Grille CGExcel', accept: { 'application/json': ['.json'] } }]
+        });
+      }
+      const w = await poigneeFichier.createWritable();
+      await w.write(texte); await w.close();
+      $('#etat').textContent = 'Enregistré : ' + poigneeFichier.name;
+      nomCourant = poigneeFichier.name;
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') { $('#etat').textContent = 'Enregistrement annulé.'; return; }
+    }
+  }
+  // ailleurs (Android…) : on demande le nom puis on télécharge
+  if (demanderNom) {
+    const saisi = prompt('Nom du fichier', nom);
+    if (saisi === null) { $('#etat').textContent = 'Enregistrement annulé.'; return; }
+    nom = saisi.trim().replace(/\s+/g, '-') || nom;
+    if (!/\.json$/i.test(nom)) nom += '.json';
+    nomCourant = nom;
+  }
+  await telecharger(nom, texte);
+}
+
 async function telecharger(nom, texte) {
   const blob = new Blob([texte], { type: 'application/json' });
   try {
@@ -1210,11 +1251,11 @@ function etatComplet() {
 }
 $('#sauver').onclick = () => {
   if (!nomCourant) nomCourant = nomDuJour(false);
-  telecharger(nomCourant, JSON.stringify(etatComplet()));
+  enregistrerVers(nomCourant, JSON.stringify(etatComplet()), false);
 };
 $('#sauversous').onclick = () => {
-  nomCourant = nomDuJour(true);
-  telecharger(nomCourant, JSON.stringify(etatComplet()));
+  poigneeFichier = null;
+  enregistrerVers(nomDuJour(true), JSON.stringify(etatComplet()), true);
 };
 $('#ouvrir').onclick = () => $('#fgrille').click();
 $('#fgrille').onchange = async ev => {
