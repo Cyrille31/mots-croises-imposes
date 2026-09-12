@@ -104,7 +104,9 @@
   details p { font-size:12px; margin:6px 0; }
   details h4 { font-size:12px; color:var(--bleu); margin:10px 0 2px; }
   .note { color:#6b7887; font-style:italic; }
-  #defs { margin:10px 0; }
+  #defs { margin:8px 0; max-height:34vh; overflow-y:auto; overscroll-behavior:contain;
+          border:1px solid #e2e7ee; border-radius:8px; padding:2px 8px; background:#fff; }
+  #grille { position:sticky; top:0; background:var(--fond); z-index:2; padding:2px 0; }
   #defs h3 { font-size:12px; color:var(--bleu); margin:8px 0 4px; }
   .def { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin:3px 0;
          font-size:12px; }
@@ -112,7 +114,7 @@
   .def .mot { flex:none; min-width:74px; font-family:ui-monospace,monospace; letter-spacing:.05em; }
   .def input { flex:1 1 100%; min-width:150px; padding:3px 6px; font:12px inherit;
        border:1px solid #ccd3dc; border-radius:5px; }
-  .def select { flex:1 1 60%; min-width:120px; font:11.5px inherit; }
+  .def select { flex:0 1 auto; max-width:42%; font:11.5px inherit; }
   .def button { padding:2px 6px; font-size:11px; margin:0; }
   .def .lien { flex:none; font-size:11px; color:var(--bleu); text-decoration:none;
                border:1px solid #cfd8e4; border-radius:4px; padding:2px 5px; background:#fff; }
@@ -123,6 +125,8 @@
   footer { margin:12px 0 4px; font-size:10.5px; color:#8a96a4; text-align:center; line-height:1.5; }
   @media print {
     body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    #defs { max-height:none; overflow:visible; border:0; padding:0; }
+    #grille { position:static; }
     .c.noir { background:#243447 !important; border-color:#243447 !important; }
     .c.hors { background:#fff !important; border-color:#fff !important; }
     #grille { border-color:#000 !important; }
@@ -155,7 +159,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">6.5</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">6.6</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -323,7 +327,7 @@
   vous félicite.</p>
 
   <h4>Les réglages</h4>
-  <p><b>Grille</b> — de 5 à 30 lignes et colonnes. Le format confortable est
+  <p><b>Grille</b> — de 2 à 30 lignes et colonnes. Le format confortable est
   12×12 à 15×15 ; en deçà de 11×11 les mots imposés manquent de place.</p>
   <p><b>Noires</b> — un point de départ, pas une limite. Le programme essaie
   cette valeur, puis descend tant qu'il trouve, ou monte s'il ne trouve pas, en
@@ -403,7 +407,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 6.5, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 6.6, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -494,7 +498,7 @@ $('#exemples').onchange = e => {
   e.target.value = '';
 };
 for (const id of ['#nl', '#nc']) {
-  for (let v = 5; v <= 30; v++) {
+  for (let v = 2; v <= 30; v++) {
     const o = document.createElement('option');
     o.value = v; o.textContent = v; if (v === 10) o.selected = true;
     $(id).appendChild(o);
@@ -866,9 +870,12 @@ function eclairer(i) {
   document.querySelectorAll('.c.vise').forEach(e => e.classList.remove('vise'));
   document.querySelectorAll('.def.vise, .undef.vise').forEach(e => e.classList.remove('vise'));
   if (!motsDeCase) return;
+  let premier = true;
   for (const m of motsDeCase.get(i) || []) {
     const l = document.querySelector(`[data-cle="${m.cle}"]`);
-    if (l) l.classList.add('vise');
+    if (!l) continue;
+    l.classList.add('vise');
+    if (premier) { l.scrollIntoView({ block: 'nearest' }); premier = false; }
   }
 }
 function eclairerMot(cle) {
@@ -1134,6 +1141,7 @@ function afficherDefsJoueur(g) {
           document.querySelectorAll('.undef.vise').forEach(x => x.classList.remove('vise'));
           s.classList.add('vise');
           eclairerMot(cle);
+          s.scrollIntoView({ block: 'nearest' });
         };
         p.appendChild(s);
         if (k < e.mots.length - 1) p.appendChild(document.createTextNode(' ; '));
@@ -1169,6 +1177,7 @@ function afficherDefs(g) {
         inp.placeholder = 'définition';
         if (modeJoueur) inp.readOnly = true;
         inp.oninput = () => defsChoisies.set(cle, inp.value);
+        inp.onfocus = () => d.scrollIntoView({ block: 'nearest' });
         inp.onblur = () => { inp.value = formater(inp.value); defsChoisies.set(cle, inp.value); };
         const sel = document.createElement('select');
         sel.innerHTML = '<option value="">— propositions —</option>';
@@ -1215,7 +1224,7 @@ function afficherDefs(g) {
           } catch (err) { sel.innerHTML = '<option value="">réseau indisponible</option>'; }
           b.disabled = false; b.textContent = 'Wiktionnaire';
         };
-        d.append(bc, b, inp, sel);
+        d.append(bc, b, sel, inp);
         zone.appendChild(d);
       });
     }
