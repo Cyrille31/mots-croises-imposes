@@ -47,10 +47,25 @@
   .c.noirimp { background:var(--trait); box-shadow:inset 0 0 0 2px #6b8bb5; }
   .c.impose { background:#cfe4f7; }
   .c.themeq { background:#ffdcb0; }
+  .c.vise { background:#ffe9a8 !important; }
+  .c input.js { width:100%; height:100%; border:0; text-align:center; padding:0;
+       font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
+       color:#14202e; }
+  .c input.js:focus { outline:2px solid #1a3a6b; outline-offset:-2px; background:#fff6d5; }
+  .def.vise { background:#fff6d5; border-radius:4px; }
+  #bravo { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+           background:rgba(255,255,255,.82); z-index:99; font-size:26px; color:var(--bleu);
+           font-weight:700; text-align:center; }
+  #bravo.on { display:flex; }
+  .conf { position:fixed; top:-30px; font-size:20px; animation:tombe 2.6s linear forwards; z-index:98; }
+  @keyframes tombe { to { transform:translateY(105vh) rotate(540deg); opacity:.2; } }
+  @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.12); } }
+  #bravo span { animation:pulse 1s ease-in-out infinite; display:inline-block; }
   .c { position:relative; }
   #legende .c input { width:100%; height:100%; border:0; text-align:center;
        font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
-       padding:0; color:#1a3a6b; }
+       padding:0; color:#1a3a6b; pointer-events:none; }
+  #legende .c input.actif { pointer-events:auto; }
   #legende .c input:focus { outline:2px solid #6b8bb5; }
   .c u { position:absolute; top:0; left:1px; font-size:8px; text-decoration:none;
          font-weight:400; color:#8a96a4; line-height:1; }
@@ -133,11 +148,11 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">5.4</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">6.0</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
-<details class="pli" open><summary>Mots imposés</summary>
+<details class="pli"><summary>Mots imposés et thème</summary>
 <div class="mots">
   <div><label>Un par ligne ; plusieurs sur une ligne = séparés par une case noire</label><textarea id="imposes"></textarea></div>
   <div><label>Mots du thème, un par ligne — simple préférence
@@ -173,13 +188,6 @@
       <option value="60000">large</option>
       <option value="999999">complet</option>
     </select></span>
-  <span class="p">Mots de 2 lettres
-    <select id="max2">
-      <option value="0" selected>sans limite</option>
-      <option value="5">5</option><option value="10">10</option>
-      <option value="15">15</option><option value="20">20</option>
-      <option value="30">30</option><option value="40">40</option>
-    </select></span>
 </div>
 
 <div class="barre">
@@ -189,12 +197,16 @@
     <button id="arreter" class="sec" disabled>Arrêter</button></div>
   <div class="groupe"><button id="joueur" class="sec">Mode joueur : off</button>
     <button id="razjoueur" class="sec">Effacer mes lettres</button></div>
+  <div class="groupe"><button id="aide" class="sec">Aide : une lettre</button>
+    <button id="vide" class="sec" style="visibility:hidden">.</button></div>
   <div class="groupe"><button id="razgrille" class="sec">RAZ mots</button>
     <button id="razdessin" class="sec">RAZ dessin</button></div>
   <div class="groupe"><button id="imprimer" class="sec" disabled>Imprimer corrigé</button>
     <button id="imprvierge" class="sec" disabled>Imprimer à remplir</button></div>
   <div class="groupe"><button id="sauver" class="sec" disabled>Enregistrer</button>
-    <button id="ouvrir" class="sec">Ouvrir</button></div>
+    <button id="sauversous" class="sec" disabled>Enregistrer sous</button></div>
+  <div class="groupe"><button id="ouvrir" class="sec">Ouvrir</button>
+    <button id="vide2" class="sec" style="visibility:hidden">.</button></div>
   <div class="groupe"><button id="exporter" class="sec">Exporter le dessin</button>
     <button id="importer" class="sec">Importer le dessin</button></div>
 </div>
@@ -205,6 +217,8 @@
 <div id="defs"></div>
 <p id="titreleg" style="display:none;text-align:center;font-size:11.5px;color:#6b7887;margin:8px 0 0">
   Grille de correspondance</p>
+<div id="bravo"><div><span>🎉 Bravo ! 🎉</span><br>
+  <small style="font-size:14px;font-weight:400">Grille entièrement juste</small></div></div>
 <div id="legende"></div>
 <div id="impression"></div>
 
@@ -273,9 +287,26 @@
   la grille portant ce numéro — un second clic enlève la couleur. Tapez une
   lettre dans une case : elle apparaît aussitôt dans les deux grilles, à toutes
   les positions concernées. « Effacer mes lettres » remet le tout à zéro.</p>
+  <p>Sur écran tactile, un appui simple sur une case de la grille des lettres
+  change sa couleur ; il faut un <b>double appui</b> pour y saisir une lettre.
+  Sans cela, le clavier s'ouvrait à chaque effleurement.</p>
+  <p>Le bouton <b>Aide : une lettre</b> dévoile une lettre à chaque clic, en
+  choisissant la plus utile : au moins deux occurrences — en dessous cela
+  n'apprend rien — mais moins de 9 % des lettres de la grille, ce qui écarte le
+  E et le S qui se devinent seuls et éventeraient la grille. Il vise de
+  préférence les lettres apparaissant trois fois.</p>
   <p>Le codage est enregistré dans le fichier : le joueur voit exactement la même
   numérotation que l'auteur. Le dessin de la grille n'est pas modifiable tant que
   le mode joueur est actif.</p>
+
+  <h4>Le mode joueur, grilles classiques</h4>
+  <p>Ouvrez le fichier reçu et activez le mode joueur : la grille apparaît vide,
+  avec les définitions en dessous, et chaque case blanche devient saisissable —
+  la saisie avance toute seule vers la case suivante.</p>
+  <p>Un clic dans une case met en évidence ses deux définitions, l'horizontale et
+  la verticale. Inversement, un clic sur une définition colore les cases du mot
+  correspondant. Quand la grille est entièrement juste, un petit feu d'artifice
+  vous félicite.</p>
 
   <h4>Les réglages</h4>
   <p><b>Grille</b> — de 5 à 30 lignes et colonnes. Le format confortable est
@@ -287,8 +318,7 @@
   s'oppose à la densité : une grille blanche réclame des mots rares. Si rien ne
   sort, élargissez-le. Les mots imposés et ceux du thème échappent à cette
   troncature.</p>
-  <p><b>Mots de 2 lettres</b> — ils sont indispensables au bouclage ; les brider
-  rend la grille difficile à trouver. Laissez « sans limite » sauf besoin précis.</p>
+
 
   <h4>Le dessin</h4>
   <p>Les blocs « Mots imposés » et « Thème » se replient : cliquez sur leur
@@ -335,8 +365,10 @@
   <p><b>Imprimer corrigé</b> sort la grille avec les lettres, <b>Imprimer à
   remplir</b> seulement les cases noires et les numéros. Les définitions figurent
   dans les deux cas en deux blocs condensés.</p>
-  <p><b>Enregistrer / Ouvrir</b> conserve tout le travail — grille, dessin, mots,
-  réglages, définitions — pour reprendre plus tard. <b>Exporter / Importer le
+  <p><b>Enregistrer</b> conserve tout — grille, dessin, mots, réglages,
+  définitions, et la tentative en cours d'un joueur — sous le nom du jour, au
+  format <tt>grille-2026-09-12.json</tt>. <b>Enregistrer sous</b> crée un nouveau
+  nom en ajoutant un numéro si vous enregistrez plusieurs fois le même jour. <b>Exporter / Importer le
   dessin</b> ne concerne que la silhouette.</p>
 
   <p class="note">Aucune donnée ne quitte votre appareil, hormis les requêtes que
@@ -349,7 +381,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 5.4, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 6.0, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -366,10 +398,13 @@ let cases = [];      // element DOM de chaque case, indexe par numero de case
 let codeNum = null;  // lettre -> numero, pour les mots codés
 const revelees = new Map();   // lettre -> couleur d'aide, pour les mots codés
 const props = new Map();      // numero -> lettre proposee par le joueur
+const saisies = new Map();    // case -> lettre saisie par le joueur
+let motsDeCase = null;        // case -> [{cle, cells}] pour l'eclairage croise
+let cleActive = null;         // definition mise en evidence
 let modeJoueur = false;
 const PALETTE = ['#ffd6d6', '#d6ecff', '#d9f7d6', '#fff3c4', '#e8dbff',
                  '#ffe0c2', '#d3fbf1', '#f7d9f0'];
-let nl = 12, nc = 12, etat = null, ref = null, derniere = null,
+let nl = 10, nc = 10, etat = null, ref = null, derniere = null,
     imposesNorm = [], worker = null;
 
 for (let d = 0; d <= 45; d += 5) {
@@ -439,7 +474,7 @@ $('#exemples').onchange = e => {
 for (const id of ['#nl', '#nc']) {
   for (let v = 5; v <= 30; v++) {
     const o = document.createElement('option');
-    o.value = v; o.textContent = v; if (v === 12) o.selected = true;
+    o.value = v; o.textContent = v; if (v === 10) o.selected = true;
     $(id).appendChild(o);
   }
 }
@@ -527,7 +562,13 @@ function afficherLegende(g) {
     if (modeJoueur) {
       const inp = document.createElement('input');
       inp.maxLength = 1;
+      inp.readOnly = true;
       inp.value = props.get(String(n)) || '';
+      inp.onblur = () => { inp.readOnly = true; inp.classList.remove('actif'); };
+      d.ondblclick = () => {
+        inp.readOnly = false; inp.classList.add('actif');
+        inp.focus(); inp.select();
+      };
       inp.oninput = () => {
         const v = norm(inp.value).slice(0, 1);
         inp.value = v;
@@ -588,6 +629,21 @@ function dessiner(g) {
     else if (g) {
       const v = g[i];
       if (v === -2) d.classList.add('noir');
+      else if (modeJoueur && typeCourant() !== 'codes') {
+        const inp = document.createElement('input');
+        inp.className = 'js'; inp.maxLength = 1;
+        inp.value = saisies.get(i) || '';
+        inp.onfocus = () => { cleActive = null; eclairer(i); };
+        inp.oninput = () => {
+          const w = norm(inp.value).slice(0, 1);
+          inp.value = w;
+          if (w) saisies.set(i, w); else saisies.delete(i);
+          verifierVictoire();
+          const suiv = cases[i + 1];
+          if (w && suiv) { const e = suiv.querySelector('input.js'); if (e) e.focus(); }
+        };
+        d.appendChild(inp);
+      }
       else {
         const s = document.createElement('span');
         s.textContent = String.fromCharCode(65 + v);
@@ -731,6 +787,63 @@ function installerDessin() {
   });
 }
 
+// ---- mise en évidence croisée grille <-> définitions ----
+function indexerMots(g) {
+  motsDeCase = new Map();
+  const par = motsParLigne2(g);
+  for (const sens of ['H', 'V'])
+    for (const e of par[sens])
+      e.mots.forEach((m, k) => {
+        const cle = sens + e.n + '.' + k;
+        for (const c of m.cells) {
+          if (!motsDeCase.has(c)) motsDeCase.set(c, []);
+          motsDeCase.get(c).push({ cle, cells: m.cells });
+        }
+      });
+}
+function eclairer(i) {
+  document.querySelectorAll('.c.vise').forEach(e => e.classList.remove('vise'));
+  document.querySelectorAll('.def.vise').forEach(e => e.classList.remove('vise'));
+  if (!motsDeCase) return;
+  for (const m of motsDeCase.get(i) || []) {
+    const l = document.querySelector(`.def[data-cle="${m.cle}"]`);
+    if (l) l.classList.add('vise');
+  }
+}
+function eclairerMot(cle) {
+  document.querySelectorAll('.c.vise').forEach(e => e.classList.remove('vise'));
+  document.querySelectorAll('.def.vise').forEach(e => e.classList.remove('vise'));
+  const l = document.querySelector(`.def[data-cle="${cle}"]`);
+  if (l) l.classList.add('vise');
+  if (!motsDeCase) return;
+  for (const [c, liste] of motsDeCase)
+    for (const m of liste) if (m.cle === cle) cases[c] && cases[c].classList.add('vise');
+}
+function verifierVictoire() {
+  if (!derniere || !modeJoueur) return;
+  for (let i = 0; i < nl * nc; i++) {
+    const v = derniere[i];
+    if (v < 0) continue;
+    if (saisies.get(i) !== String.fromCharCode(65 + v)) return;
+  }
+  feter();
+}
+function feter() {
+  const b = $('#bravo');
+  b.classList.add('on');
+  const emo = ['🎉', '✨', '🎊', '⭐', '🥳', '🏆'];
+  for (let k = 0; k < 40; k++) {
+    const d = document.createElement('div');
+    d.className = 'conf';
+    d.textContent = emo[k % emo.length];
+    d.style.left = Math.random() * 96 + 'vw';
+    d.style.animationDelay = (Math.random() * 1.2) + 's';
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 4200);
+  }
+  setTimeout(() => b.classList.remove('on'), 4000);
+}
+
 function reperer(g, imp) {
   const dedans = new Set();
   const test = cells => {
@@ -776,11 +889,12 @@ function lancer(affiner, mode) {
       derniereDensite = m.densite;
       defsChoisies.clear();               // la grille change : les definitions ne valent plus
       if (typeCourant() === 'codes') construireCode(derniere); else codeNum = null;
+      saisies.clear(); indexerMots(derniere);
       dessiner(derniere);
       afficherLegende(derniere);
       $('#imprimer').disabled = false;
       $('#imprvierge').disabled = false; $('#definitions').disabled = false;
-      $('#sauver').disabled = false;
+      $('#sauver').disabled = false; $('#sauversous').disabled = false;
       $('#defs').innerHTML = '';
       $('#vmot').textContent = m.version || '?';
       const cx = m.croisements || [];
@@ -810,7 +924,7 @@ function lancer(affiner, mode) {
     densite: affinage && derniereDensite >= 0
       ? Math.max(0, derniereDensite - 0.02) : +$('#densite').value,
     niveau: +$('#niveau').value,
-    maxMots: +$('#max2').value ? { 2: +$('#max2').value } : {},
+    maxMots: {},
     affiner: false, mode,
     densiteForcee: affinage && derniereDensite >= 0 ? Math.max(0, derniereDensite - 0.02) : null,
     duree: 8000
@@ -823,6 +937,31 @@ const defsChoisies = new Map();          // cle "H3" -> texte
 
 // mots regroupes par ligne puis par colonne, la numerotation portant
 // sur les lignes et les colonnes et non sur les cases
+function motsParLigne2(g) {
+  const out = { H: [], V: [] };
+  for (let r = 0; r < nl; r++) {
+    const mots = []; let m = '', cells = [];
+    for (let c = 0; c < nc; c++) {
+      const i = r * nc + c, v = g[i];
+      if (v < 0) { if (m.length > 1) mots.push({ mot: m, cells }); m = ''; cells = []; }
+      else { m += String.fromCharCode(65 + v); cells.push(i); }
+    }
+    if (m.length > 1) mots.push({ mot: m, cells });
+    if (mots.length) out.H.push({ n: r + 1, mots });
+  }
+  for (let c = 0; c < nc; c++) {
+    const mots = []; let m = '', cells = [];
+    for (let r = 0; r < nl; r++) {
+      const i = r * nc + c, v = g[i];
+      if (v < 0) { if (m.length > 1) mots.push({ mot: m, cells }); m = ''; cells = []; }
+      else { m += String.fromCharCode(65 + v); cells.push(i); }
+    }
+    if (m.length > 1) mots.push({ mot: m, cells });
+    if (mots.length) out.V.push({ n: c + 1, mots });
+  }
+  return out;
+}
+
 function motsParLigne(g) {
   const out = { H: [], V: [] };
   for (let r = 0; r < nl; r++) {
@@ -917,6 +1056,8 @@ function afficherDefs(g) {
         const cle = sens + e.n + '.' + k;
         const d = document.createElement('div');
         d.className = 'def';
+        d.dataset.cle = cle;
+        d.onclick = ev => { if (ev.target.tagName !== 'INPUT') eclairerMot(cle); };
         const b0 = document.createElement('b');
         b0.textContent = k === 0 ? e.n + '.' : '';
         const sp = document.createElement('span');
@@ -925,6 +1066,7 @@ function afficherDefs(g) {
         const inp = document.createElement('input');
         inp.value = defsChoisies.get(cle) || '';
         inp.placeholder = 'définition';
+        if (modeJoueur) inp.readOnly = true;
         inp.oninput = () => defsChoisies.set(cle, inp.value);
         inp.onblur = () => { inp.value = formater(inp.value); defsChoisies.set(cle, inp.value); };
         const sel = document.createElement('select');
@@ -993,6 +1135,28 @@ $('#definitions').onclick = () => {
     : 'Hors ligne : les propositions du Wiktionnaire ne sont pas accessibles, la saisie reste possible.';
 };
 
+// Sur Android, un lien de téléchargement détaché du document est ignoré :
+// il faut l'insérer, cliquer, puis le retirer. On propose aussi le partage
+// natif quand il accepte les fichiers.
+async function telecharger(nom, texte) {
+  const blob = new Blob([texte], { type: 'application/json' });
+  try {
+    const f = new File([blob], nom, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      await navigator.share({ files: [f], title: nom });
+      $('#etat').textContent = 'Fichier partagé : ' + nom;
+      return;
+    }
+  } catch (e) { /* on retombe sur le téléchargement classique */ }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nom; a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+  $('#etat').textContent = 'Fichier enregistré : ' + nom;
+}
+
 function construireImpression() {
   document.body.classList.toggle('codes', typeCourant() === 'codes');
   if (!derniere || typeCourant() === 'codes') { $('#impression').innerHTML = ''; return; }
@@ -1016,8 +1180,25 @@ $('#imprvierge').onclick = () => {
 };
 
 // ---------- sauvegarde et reprise du mot croise en cours ----------
-$('#sauver').onclick = () => {
-  const obj = { format: 'mots-croises-cgexcel', v: 3, nl, nc,
+let nomCourant = null;
+function nomDuJour(nouveau) {
+  const d = new Date();
+  const jour = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+             + '-' + String(d.getDate()).padStart(2, '0');
+  let k = 1;
+  try {
+    const cle = 'mc-compteur-' + jour;
+    k = (+localStorage.getItem(cle) || 0) + (nouveau ? 1 : 0);
+    if (k < 1) k = 1;
+    localStorage.setItem(cle, String(k));
+  } catch (e) { /* stockage indisponible */ }
+  return 'grille-' + jour + (k > 1 ? '-' + k : '') + '.json';
+}
+function etatComplet() {
+  return { format: 'mots-croises-cgexcel', v: 4, nl, nc,
+    saisies: Object.fromEntries(saisies),
+    props: Object.fromEntries(props),
+    joueur: modeJoueur,
     type: typeCourant(),
     code: codeNum ? Object.fromEntries(codeNum) : null,
     revelees: [...revelees.keys()],
@@ -1026,11 +1207,14 @@ $('#sauver').onclick = () => {
     imposes: $('#imposes').value, theme: $('#theme').value,
     densite: $('#densite').value, niveau: $('#niveau').value,
     definitions: Object.fromEntries(defsChoisies) };
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj)], { type: 'application/json' }));
-  a.download = `grille-${nl}x${nc}.json`;
-  a.click(); URL.revokeObjectURL(a.href);
-  $('#etat').textContent = 'Grille et définitions sauvegardées.';
+}
+$('#sauver').onclick = () => {
+  if (!nomCourant) nomCourant = nomDuJour(false);
+  telecharger(nomCourant, JSON.stringify(etatComplet()));
+};
+$('#sauversous').onclick = () => {
+  nomCourant = nomDuJour(true);
+  telecharger(nomCourant, JSON.stringify(etatComplet()));
 };
 $('#ouvrir').onclick = () => $('#fgrille').click();
 $('#fgrille').onchange = async ev => {
@@ -1055,11 +1239,18 @@ $('#fgrille').onchange = async ev => {
     defsChoisies.clear();
     for (const [k, v] of Object.entries(o.definitions || {})) defsChoisies.set(k, v);
     derniere = o.grille ? Int8Array.from(o.grille) : null;
+    saisies.clear();
+    for (const [k, v] of Object.entries(o.saisies || {})) saisies.set(+k, v);
+    props.clear();
+    for (const [k, v] of Object.entries(o.props || {})) props.set(k, v);
+    if (derniere) indexerMots(derniere);
     derniereDensite = -1;
     imposesNorm = lignes('#imposes');
     dessiner(derniere);
     const actif = !!derniere;
-    for (const b of ['#imprimer', '#imprvierge', '#definitions', '#sauver'])
+    nomCourant = f.name || null;
+    if (o.joueur && !modeJoueur) $('#joueur').click();
+    for (const b of ['#imprimer', '#imprvierge', '#definitions', '#sauver', '#sauversous'])
       $(b).disabled = !actif;
     if (actif) afficherDefs(derniere);
     afficherLegende(derniere);
@@ -1077,12 +1268,7 @@ $('#arreter').onclick = () => {
 $('#exporter').onclick = () => {
   const obj = { format: 'mots-croises-cgexcel', v: 1, nl, nc,
                 dessin: etat ? Array.from(etat) : [] };
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj)], { type: 'application/json' }));
-  a.download = `dessin-${nl}x${nc}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  $('#etat').textContent = 'Dessin exporté.';
+  telecharger(`dessin-${nl}x${nc}.json`, JSON.stringify(obj));
 };
 $('#importer').onclick = () => $('#fichier').click();
 $('#fichier').onchange = async ev => {
@@ -1125,11 +1311,39 @@ $('#joueur').onclick = () => {
   $('#joueur').textContent = 'Mode joueur : ' + (modeJoueur ? 'ON' : 'off');
   document.body.classList.toggle('joueur', modeJoueur);
   dessiner(derniere); afficherLegende(derniere);
+  if (modeJoueur && derniere && typeCourant() !== 'codes') afficherDefs(derniere);
   $('#etat').textContent = modeJoueur
     ? 'Mode joueur : cliquez une case de la grille des lettres pour la colorer, '
       + 'ou tapez-y une lettre — elle apparaîtra dans les deux grilles.'
     : 'Mode auteur.';
 };
+// Une lettre utile : ni trop rare (une seule occurrence n'aide pas), ni trop
+// répandue (E ou S se devinent seuls et éventent la grille).
+function lettreUtile() {
+  if (!derniere || !codeNum) return null;
+  const n = new Map();
+  for (const v of derniere) if (v >= 0) {
+    const ch = String.fromCharCode(65 + v);
+    n.set(ch, (n.get(ch) || 0) + 1);
+  }
+  const total = [...n.values()].reduce((a, b) => a + b, 0);
+  const cands = [...n.entries()]
+    .filter(([ch, k]) => k >= 2 && !revelees.has(ch) && k / total < 0.09)
+    .sort((a, b) => Math.abs(a[1] - 3) - Math.abs(b[1] - 3) || a[1] - b[1]);
+  return cands.length ? cands[0][0] : null;
+}
+$('#aide').onclick = () => {
+  const ch = lettreUtile();
+  if (!ch) { $('#etat').textContent = 'Plus de lettre utile à révéler.'; return; }
+  const prises = new Set(revelees.values());
+  revelees.set(ch, PALETTE.find(c => !prises.has(c)) || PALETTE[revelees.size % PALETTE.length]);
+  if (modeJoueur && codeNum) props.set(String(codeNum.get(ch)), ch);
+  dessiner(derniere); afficherLegende(derniere);
+  let k = 0; for (const v of derniere) if (v >= 0 && String.fromCharCode(65 + v) === ch) k++;
+  $('#etat').textContent = `Lettre révélée : ${ch} (${k} occurrences). `
+    + `Total révélé : ${revelees.size}.`;
+};
+
 $('#razjoueur').onclick = () => {
   props.clear(); revelees.clear();
   dessiner(derniere); afficherLegende(derniere);
