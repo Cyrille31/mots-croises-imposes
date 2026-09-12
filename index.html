@@ -55,6 +55,9 @@
        color:#14202e; }
   .c input.js:focus { outline:2px solid #1a3a6b; outline-offset:-2px; background:#fff6d5; }
   .def.vise { background:#fff6d5; border-radius:4px; }
+  body.joueur .def .mot, body.joueur .def .lien,
+  body.joueur .def button, body.joueur .def select { display:none; }
+  body.joueur .def input { background:transparent; border:0; }
   #bravo { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
            background:rgba(255,255,255,.82); z-index:99; font-size:26px; color:var(--bleu);
            font-weight:700; text-align:center; }
@@ -66,8 +69,7 @@
   .c { position:relative; }
   #legende .c input { width:100%; height:100%; border:0; text-align:center;
        font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
-       padding:0; color:#1a3a6b; pointer-events:none; }
-  #legende .c input.actif { pointer-events:auto; }
+       padding:0; color:#1a3a6b; }
   #legende .c input:focus { outline:2px solid #6b8bb5; }
   .c u { position:absolute; top:0; left:1px; font-size:8px; text-decoration:none;
          font-weight:400; color:#8a96a4; line-height:1; }
@@ -150,7 +152,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">6.2</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">6.3</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -289,9 +291,11 @@
   la grille portant ce numéro — un second clic enlève la couleur. Tapez une
   lettre dans une case : elle apparaît aussitôt dans les deux grilles, à toutes
   les positions concernées. « Effacer mes lettres » remet le tout à zéro.</p>
-  <p>Sur écran tactile, un appui simple sur une case de la grille des lettres
-  change sa couleur ; il faut un <b>double appui</b> pour y saisir une lettre.
-  Sans cela, le clavier s'ouvrait à chaque effleurement.</p>
+  <p>En <b>mode auteur</b>, un appui sur une case de la grille des lettres
+  change sa couleur : c'est ainsi que vous révélez une lettre au joueur. En
+  <b>mode joueur</b>, la priorité va à la saisie : un appui ouvre le clavier et
+  surligne au passage les cases portant ce numéro, et c'est un <b>double
+  appui</b> qui pose ou retire la couleur.</p>
   <p>Le bouton <b>Aide : une lettre</b> dévoile une lettre à chaque clic, en
   choisissant la plus utile : au moins deux occurrences — en dessous cela
   n'apprend rien — mais moins de 9 % des lettres de la grille, ce qui écarte le
@@ -305,6 +309,8 @@
   <p>Ouvrez le fichier reçu et activez le mode joueur : la grille apparaît vide,
   avec les définitions en dessous, et chaque case blanche devient saisissable —
   la saisie avance toute seule vers la case suivante.</p>
+  <p>Seules les définitions sont affichées : ni les mots de la solution, ni les
+  liens de recherche, exactement comme sur la feuille « à remplir ».</p>
   <p>Un clic dans une case met en évidence ses deux définitions, l'horizontale et
   la verticale. Inversement, un clic sur une définition colore les cases du mot
   correspondant. Quand la grille est entièrement juste, un petit feu d'artifice
@@ -391,7 +397,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 6.2, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 6.3, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -548,6 +554,42 @@ function construireCode(g) {
   ordre.forEach((ch, k) => codeNum.set(ch, k + 1));
   return l;
 }
+// bascule la couleur d'aide SANS reconstruire le DOM : une reconstruction
+// détachait la case et le champ perdait aussitôt le focus
+function basculerCouleur(ch, caseLeg) {
+  if (revelees.has(ch)) revelees.delete(ch);
+  else {
+    const prises = new Set(revelees.values());
+    revelees.set(ch, PALETTE.find(c => !prises.has(c))
+                     || PALETTE[revelees.size % PALETTE.length]);
+  }
+  const coul = revelees.get(ch) || '';
+  if (caseLeg) {
+    caseLeg.style.background = coul;
+    caseLeg.classList.toggle('revelee', !!coul);
+  }
+  if (derniere) for (let i = 0; i < nl * nc; i++) {
+    const v = derniere[i];
+    if (v < 0 || String.fromCharCode(65 + v) !== ch || !cases[i]) continue;
+    cases[i].style.background = coul;
+    cases[i].classList.toggle('revelee', !!coul);
+  }
+  $('#etat').textContent = revelees.size
+    ? 'Lettres colorées : ' + [...revelees.keys()].sort().join(' ')
+    : 'Aucune lettre colorée.';
+}
+
+// surligne provisoirement les cases portant un numéro donné
+function surlignerNum(n) {
+  document.querySelectorAll('#grille .c.vise').forEach(e => e.classList.remove('vise'));
+  if (!derniere || !codeNum) return;
+  for (let i = 0; i < nl * nc; i++) {
+    const v = derniere[i];
+    if (v < 0 || !cases[i]) continue;
+    if (codeNum.get(String.fromCharCode(65 + v)) === n) cases[i].classList.add('vise');
+  }
+}
+
 function afficherLegende(g) {
   const z = $('#legende');
   z.innerHTML = '';
@@ -572,39 +614,34 @@ function afficherLegende(g) {
     if (modeJoueur) {
       const inp = document.createElement('input');
       inp.maxLength = 1;
-      inp.readOnly = true;
       inp.value = props.get(String(n)) || '';
-      inp.onblur = () => { inp.readOnly = true; inp.classList.remove('actif'); };
-      d.ondblclick = () => {
-        inp.readOnly = false; inp.classList.add('actif');
-        inp.focus(); inp.select();
-      };
       inp.oninput = () => {
         const v = norm(inp.value).slice(0, 1);
         inp.value = v;
         if (v) props.set(String(n), v); else props.delete(String(n));
-        dessiner(derniere);
+        // mise à jour en place des cases concernées, sans tout redessiner
+        if (derniere) for (let i = 0; i < nl * nc; i++) {
+          const w = derniere[i];
+          if (w < 0 || !cases[i]) continue;
+          if (codeNum.get(String.fromCharCode(65 + w)) !== n) continue;
+          const s = cases[i].querySelector('span');
+          if (s) s.textContent = v;
+        }
       };
+      inp.onfocus = () => surlignerNum(n);
       d.appendChild(inp);
     } else {
       const s = document.createElement('span'); s.textContent = ch;
       d.appendChild(s);
     }
     if (revelees.has(ch)) { d.style.background = revelees.get(ch); d.classList.add('revelee'); }
-    d.onclick = (ev) => {
-      if (ev.target.tagName === 'INPUT') return;
-      if (revelees.has(ch)) revelees.delete(ch);
-      else {
-        const prises = new Set(revelees.values());
-        const libre = PALETTE.find(c => !prises.has(c)) || PALETTE[revelees.size % PALETTE.length];
-        revelees.set(ch, libre);
-      }
-      dessiner(derniere); afficherLegende(derniere);
-      $('#etat').textContent = revelees.size
-        ? 'Lettres révélées : ' + [...revelees.keys()].sort().join(' ')
-          + ' — elles seront imprimées dans la grille de correspondance.'
-        : 'Aucune lettre révélée.';
-    };
+    if (modeJoueur) {
+      // priorité à la saisie : un appui ouvre le clavier et surligne les cases
+      d.onclick = () => { const e = d.querySelector('input'); if (e) e.focus(); surlignerNum(n); };
+      d.ondblclick = () => basculerCouleur(ch, d);
+    } else {
+      d.onclick = () => basculerCouleur(ch, d);
+    }
     z.appendChild(d);
   }
 }
