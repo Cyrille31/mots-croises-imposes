@@ -150,7 +150,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">6.1</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">6.2</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -367,6 +367,9 @@
   <p><b>Imprimer corrigé</b> sort la grille avec les lettres, <b>Imprimer à
   remplir</b> seulement les cases noires et les numéros. Les définitions figurent
   dans les deux cas en deux blocs condensés.</p>
+  <p>Sur téléphone, le fichier est déposé dans le dossier <b>Téléchargements</b>.
+  C'est là qu'il faut aller le rechercher avec « Ouvrir » ; le sélecteur Android
+  propose aussi l'appareil photo et d'autres sources, choisissez « Fichiers ».</p>
   <p>Sur Chrome et Edge de bureau, <b>Enregistrer sous</b> ouvre la véritable
   boîte de dialogue du système : vous choisissez le dossier et le nom, et les
   enregistrements suivants réécrivent ce fichier sans rien redemander. Ailleurs —
@@ -388,7 +391,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 6.1, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 6.2, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -649,7 +652,10 @@ function dessiner(g) {
           const suiv = cases[i + 1];
           if (w && suiv) { const e = suiv.querySelector('input.js'); if (e) e.focus(); }
         };
+        inp.addEventListener('pointerdown', ev => ev.stopPropagation());
+        inp.addEventListener('touchstart', ev => ev.stopPropagation(), { passive: true });
         d.appendChild(inp);
+        d.onclick = () => inp.focus();
       }
       else {
         const s = document.createElement('span');
@@ -1180,22 +1186,16 @@ async function enregistrerVers(nom, texte, demanderNom) {
 }
 
 async function telecharger(nom, texte) {
+  // pas de partage natif ici : le fichier doit se retrouver de façon
+  // prévisible dans le dossier Téléchargements
   const blob = new Blob([texte], { type: 'application/json' });
-  try {
-    const f = new File([blob], nom, { type: 'application/json' });
-    if (navigator.canShare && navigator.canShare({ files: [f] })) {
-      await navigator.share({ files: [f], title: nom });
-      $('#etat').textContent = 'Fichier partagé : ' + nom;
-      return;
-    }
-  } catch (e) { /* on retombe sur le téléchargement classique */ }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = nom; a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
-  $('#etat').textContent = 'Fichier enregistré : ' + nom;
+  $('#etat').textContent = 'Enregistré dans vos téléchargements : ' + nom;
 }
 
 function construireImpression() {
@@ -1291,9 +1291,11 @@ $('#fgrille').onchange = async ev => {
     const actif = !!derniere;
     nomCourant = f.name || null;
     if (o.joueur && !modeJoueur) $('#joueur').click();
+    afficherLegende(derniere);       // après le basculement du mode
     for (const b of ['#imprimer', '#imprvierge', '#definitions', '#sauver', '#sauversous'])
       $(b).disabled = !actif;
-    if (actif) afficherDefs(derniere);
+    if (actif && typeCourant() !== 'codes') afficherDefs(derniere);
+    else $('#defs').innerHTML = '';
     afficherLegende(derniere);
     $('#etat').textContent = `Grille rechargée (${nl}×${nc}).`;
   } catch (e) { $('#etat').textContent = 'Ouverture impossible : ' + e.message; }
@@ -1353,6 +1355,7 @@ $('#joueur').onclick = () => {
   document.body.classList.toggle('joueur', modeJoueur);
   dessiner(derniere); afficherLegende(derniere);
   if (modeJoueur && derniere && typeCourant() !== 'codes') afficherDefs(derniere);
+  if (typeCourant() === 'codes') $('#defs').innerHTML = '';
   $('#etat').textContent = modeJoueur
     ? 'Mode joueur : cliquez une case de la grille des lettres pour la colorer, '
       + 'ou tapez-y une lettre — elle apparaîtra dans les deux grilles.'
