@@ -32,6 +32,15 @@
   .groupe { display:flex; flex-direction:column; gap:3px;
             border-left:2px solid #e2e7ee; padding-left:7px; }
   .groupe button { width:100%; }
+  details.menu { background:transparent; border:0; padding:0; margin:0; }
+  details.menu summary { font:12.5px inherit; padding:6px 10px; border-radius:6px;
+      background:#fff; color:var(--bleu); border:1px solid #b9c6d8; text-align:center;
+      list-style:none; cursor:pointer; }
+  details.menu summary::-webkit-details-marker { display:none; }
+  details.menu .pan { position:absolute; z-index:5; background:#fff; border:1px solid #b9c6d8;
+      border-radius:8px; padding:5px; display:flex; flex-direction:column; gap:3px;
+      box-shadow:0 4px 14px rgba(20,32,46,.18); }
+  .c.avecdef { box-shadow:inset 0 0 0 2px #8fd0a8; }
   button { font:12.5px/1.1 inherit; padding:6px 10px; border:0; border-radius:6px;
            background:var(--bleu); color:#fff; width:auto; }
   button.sec { background:#fff; color:var(--bleu); border:1px solid #b9c6d8; }
@@ -159,7 +168,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">6.6</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">7.0</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -203,23 +212,27 @@
 
 <div class="barre">
   <div class="groupe"><button id="go">Générer</button>
-    <button id="definitions" class="sec" disabled>Définitions</button></div>
+    <button id="razgrille" class="sec">RAZ mots</button></div>
   <div class="groupe"><button id="explorer" class="sec">Explorer</button>
     <button id="arreter" class="sec" disabled>Arrêter</button></div>
+  <div class="groupe"><button id="definitions" class="sec" disabled>Mode définition : off</button>
+    <button id="toutchercher" class="sec" style="display:none">Chercher toutes les définitions</button></div>
   <div class="groupe"><button id="joueur" class="sec">Mode joueur : off</button>
-    <button id="razjoueur" class="sec">Effacer mes lettres</button></div>
-  <div class="groupe"><button id="aide" class="sec">Aide : une lettre</button>
-    <button id="vide" class="sec" style="visibility:hidden">.</button></div>
-  <div class="groupe"><button id="razgrille" class="sec">RAZ mots</button>
-    <button id="razdessin" class="sec">RAZ dessin</button></div>
+    <button id="aide" class="sec" style="display:none">Aide : une lettre</button>
+    <button id="razjoueur" class="sec" style="display:none">Effacer mes lettres</button></div>
   <div class="groupe"><button id="imprimer" class="sec" disabled>Imprimer corrigé</button>
     <button id="imprvierge" class="sec" disabled>Imprimer à remplir</button></div>
   <div class="groupe"><button id="sauver" class="sec" disabled>Enregistrer</button>
     <button id="sauversous" class="sec" disabled>Enregistrer sous</button></div>
   <div class="groupe"><button id="ouvrir" class="sec">Ouvrir</button>
-    <button id="vide2" class="sec" style="visibility:hidden">.</button></div>
-  <div class="groupe"><button id="exporter" class="sec">Exporter le dessin</button>
-    <button id="importer" class="sec">Importer le dessin</button></div>
+    <details class="menu"><summary>Dessin ▾</summary>
+      <div class="pan">
+        <button id="dessinonoff" class="sec">Dessin : ON</button>
+        <button id="undo" class="sec">Annuler (0)</button>
+        <button id="razdessin" class="sec">RAZ dessin</button>
+        <button id="exporter" class="sec">Exporter</button>
+        <button id="importer" class="sec">Importer</button>
+      </div></details></div>
 </div>
 <input type="file" id="fgrille" style="display:none">
 <input type="file" id="fichier" style="display:none">
@@ -305,6 +318,8 @@
   la saisie. Un nouvel appui retire la couleur sans quitter la saisie.</p>
   <p>Quand toutes les lettres du code sont justes, le même feu d'artifice vous
   félicite qu'en mots croisés.</p>
+  <p>Les boutons <b>Aide : une lettre</b> et <b>Effacer mes lettres</b>
+  n'apparaissent qu'en mode joueur sur une grille de mots codés.</p>
   <p>Le bouton <b>Aide : une lettre</b> dévoile une lettre à chaque clic, en
   choisissant la plus utile : au moins deux occurrences — en dessous cela
   n'apprend rien — mais moins de 9 % des lettres de la grille, ce qui écarte le
@@ -407,7 +422,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 6.6, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 7.0, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -427,7 +442,9 @@ const props = new Map();      // numero -> lettre proposee par le joueur
 const saisies = new Map();    // case -> lettre saisie par le joueur
 let motsDeCase = null;        // case -> [{cle, cells}] pour l'eclairage croise
 let cleActive = null;         // definition mise en evidence
-let modeJoueur = false;
+let modeJoueur = false, modeDef = false, modeDessin = true;
+const histo = [];             // pile d'annulation du dessin (3 niveaux)
+let clicPrec = -1, sensPrec = 'V';
 const PALETTE = ['#ffd6d6', '#d6ecff', '#d9f7d6', '#fff3c4', '#e8dbff',
                  '#ffe0c2', '#d3fbf1', '#f7d9f0'];
 let nl = 10, nc = 10, etat = null, ref = null, derniere = null,
@@ -726,6 +743,9 @@ function dessiner(g) {
       }
     }
     d.dataset.i = i;
+    if (g && modeDef && motsDeCase && (motsDeCase.get(i) || [])
+        .some(m => (defsChoisies.get(m.cle) || '').trim())) d.classList.add('avecdef');
+    if (g && modeDef) d.onclick = () => clicDefinition(i);
     cases[i] = d;
     boite.appendChild(d);
   }
@@ -738,6 +758,14 @@ function caseSous(ev) {
   const el = document.elementFromPoint(ev.clientX, ev.clientY);
   return (el && el.classList.contains('c')) ? +el.dataset.i : -1;
 }
+function memoHisto() {
+  if (peinture !== null) return;              // une seule fois par tracé
+  histo.push(etat ? Uint8Array.from(etat) : null);
+  while (histo.length > 3) histo.shift();
+  majUndo();
+}
+function majUndo() { $('#undo').textContent = `Annuler (${histo.length})`; }
+
 function terminer() {
   if (peinture === null) return;
   peinture = null;
@@ -748,7 +776,7 @@ function terminer() {
   dessiner(derniere);
 }
 function peindre(i, v) {
-  if (modeJoueur || i < 0 || !etat || etat[i] === v || borde(i)) return;
+  if (modeJoueur || !modeDessin || i < 0 || !etat || etat[i] === v || borde(i)) return;
   etat[i] = v;
   const el = cases[i];
   if (el) { el.className = 'c' + (v === 1 ? ' hors' : v === 2 ? ' noirimp' : ''); el.textContent = ''; }
@@ -811,11 +839,12 @@ function installerDessin() {
   //     exploitable pendant un glissement ; on double avec les evenements touch
   let tactile = false;
   boite.addEventListener('touchstart', ev => {
-    if (modeJoueur) return;          // la saisie doit pouvoir prendre le focus
+    if (modeJoueur || !modeDessin) return;   // la saisie doit pouvoir prendre le focus
     tactile = true;
     if (!etat) etat = new Uint8Array(nl * nc);
     const i = caseSous(ev.touches[0]);
     if (i < 0 || borde(i)) return;
+    memoHisto();
     ev.preventDefault();
     peinture = (etat[i] + 1) % 3;
     peindre(i, peinture);
@@ -834,7 +863,8 @@ function installerDessin() {
     ev.preventDefault();
     if (!etat) etat = new Uint8Array(nl * nc);
     const i = caseSous(ev);
-    if (modeJoueur || i < 0 || borde(i)) return;
+    if (modeJoueur || !modeDessin || i < 0 || borde(i)) return;
+    memoHisto();
     peinture = (etat[i] + 1) % 3;
     peindre(i, peinture);
     try { boite.setPointerCapture(ev.pointerId); } catch (e) {}
@@ -887,6 +917,26 @@ function eclairerMot(cle) {
   for (const [c, liste] of motsDeCase)
     for (const m of liste) if (m.cle === cle) cases[c] && cases[c].classList.add('vise');
 }
+// en mode définition : 1er clic = la définition horizontale, 2e = la verticale
+function clicDefinition(i) {
+  const liste = motsDeCase && motsDeCase.get(i);
+  if (!liste || !liste.length) return;
+  const h1 = liste.find(m => m.cle[0] === 'H'), v1 = liste.find(m => m.cle[0] === 'V');
+  let choisi;
+  if (i === clicPrec) { choisi = (sensPrec === 'H' ? v1 : h1) || h1 || v1; }
+  else { choisi = h1 || v1; }
+  clicPrec = i; sensPrec = choisi.cle[0];
+  eclairerMot(choisi.cle);
+  const l = document.querySelector(`[data-cle="${choisi.cle}"]`);
+  if (l) {
+    l.scrollIntoView({ block: 'center' });
+    const champ = l.querySelector('input');
+    if (champ) champ.focus();
+  }
+  $('#etat').textContent = (sensPrec === 'H' ? 'Horizontal' : 'Vertical') + ' — ligne '
+    + choisi.cle.slice(1).split('.')[0];
+}
+
 function verifierVictoireCode() {
   if (!derniere || !modeJoueur || !codeNum) return;
   for (const [ch, n] of codeNum) if (props.get(String(n)) !== ch) return;
@@ -1233,6 +1283,11 @@ function afficherDefs(g) {
 
 $('#definitions').onclick = () => {
   if (!derniere) return;
+  modeDef = !modeDef;
+  if (modeDef && modeJoueur) { modeJoueur = false; document.body.classList.remove('joueur'); }
+  majBoutons();
+  if (!modeDef) { $('#defs').innerHTML = ''; dessiner(derniere);
+    $('#etat').textContent = 'Mode définition désactivé.'; return; }
   if (typeCourant() === 'codes') {
     $('#etat').textContent = 'Les mots codés n\u2019ont pas de définitions : '
       + 'le jeu consiste à retrouver le code.';
@@ -1240,6 +1295,7 @@ $('#definitions').onclick = () => {
     return;
   }
   afficherDefs(derniere);
+  dessiner(derniere);
   $('#etat').textContent = navigator.onLine
     ? 'Définitions : « Chercher » interroge le Wiktionnaire pour chaque mot.'
     : 'Hors ligne : les propositions du Wiktionnaire ne sont pas accessibles, la saisie reste possible.';
@@ -1445,8 +1501,56 @@ $('#razgrille').onclick = () => {
 $('#razdessin').onclick = () => {
   etat = null; ref = null; $('#etat').textContent = 'Dessin remis à zéro.'; dessiner(derniere);
 };
+function majBoutons() {
+  const codeJoueur = modeJoueur && typeCourant() === 'codes';
+  $('#aide').style.display = codeJoueur ? '' : 'none';
+  $('#razjoueur').style.display = codeJoueur ? '' : 'none';
+  $('#toutchercher').style.display = modeDef ? '' : 'none';
+  $('#definitions').textContent = 'Mode définition : ' + (modeDef ? 'ON' : 'off');
+  $('#joueur').textContent = 'Mode joueur : ' + (modeJoueur ? 'ON' : 'off');
+  $('#dessinonoff').textContent = 'Dessin : ' + (modeDessin ? 'ON' : 'off');
+  majUndo();
+}
+$('#toutchercher').onclick = async () => {
+  if (!derniere) return;
+  const b = $('#toutchercher'); b.disabled = true;
+  const par = motsParLigne(derniere);
+  const taches = [];
+  for (const sens of ['H', 'V'])
+    for (const e of par[sens])
+      e.mots.forEach((mot, k) => {
+        const cle = sens + e.n + '.' + k;
+        if (!(defsChoisies.get(cle) || '').trim()) taches.push({ cle, mot });
+      });
+  let ok = 0;
+  for (let i = 0; i < taches.length; i++) {
+    const t = taches[i];
+    b.textContent = `Recherche ${i + 1}/${taches.length}…`;
+    try {
+      const props = await chercherDefs(t.mot);
+      if (props.length) {
+        defsChoisies.set(t.cle, props[Math.floor(Math.random() * props.length)]);
+        ok++;
+      }
+    } catch (e) { /* mot suivant */ }
+  }
+  b.textContent = 'Chercher toutes les définitions'; b.disabled = false;
+  afficherDefs(derniere); dessiner(derniere);
+  $('#etat').textContent = `${ok} définition(s) trouvée(s) sur ${taches.length} mots sans définition.`;
+};
+
+$('#dessinonoff').onclick = () => { modeDessin = !modeDessin; majBoutons(); };
+$('#undo').onclick = () => {
+  if (!histo.length) { $('#etat').textContent = 'Rien à annuler.'; return; }
+  etat = histo.pop();
+  if (etat) etat = Uint8Array.from(etat);
+  memoriser(); dessiner(derniere); majUndo();
+  $('#etat').textContent = 'Dernier tracé annulé.';
+};
+
 $('#joueur').onclick = () => {
   modeJoueur = !modeJoueur;
+  if (modeJoueur && modeDef) { modeDef = false; }
   $('#joueur').textContent = 'Mode joueur : ' + (modeJoueur ? 'ON' : 'off');
   document.body.classList.toggle('joueur', modeJoueur);
   dessiner(derniere); afficherLegende(derniere);
@@ -1512,6 +1616,7 @@ $('#nl').onchange = $('#nc').onchange = () => {
 
 majTitre();
 appliquerType();
+majBoutons();
 dessiner(null);
 afficherLegende(null);
 installerDessin();

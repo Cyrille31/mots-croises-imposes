@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '6.6';
+const VERSION = '7.0';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
