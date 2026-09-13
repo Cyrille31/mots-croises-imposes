@@ -40,7 +40,10 @@
   details.menu .pan { position:absolute; z-index:5; background:#fff; border:1px solid #b9c6d8;
       border-radius:8px; padding:5px; display:flex; flex-direction:column; gap:3px;
       box-shadow:0 4px 14px rgba(20,32,46,.18); }
-  .c.avecdef { box-shadow:inset 0 0 0 2px #8fd0a8; }
+  .c.defh { box-shadow:inset 0 3px 0 #6fc38d, inset 0 -3px 0 #6fc38d; }
+  .c.defv { box-shadow:inset 3px 0 0 #7fa8e0, inset -3px 0 0 #7fa8e0; }
+  .c.defh.defv { box-shadow:inset 0 3px 0 #6fc38d, inset 0 -3px 0 #6fc38d,
+                             inset 3px 0 0 #7fa8e0, inset -3px 0 0 #7fa8e0; }
   button { font:12.5px/1.1 inherit; padding:6px 10px; border:0; border-radius:6px;
            background:var(--bleu); color:#fff; width:auto; }
   button.sec { background:#fff; color:var(--bleu); border:1px solid #b9c6d8; }
@@ -168,7 +171,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">7.0</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">7.1</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -422,7 +425,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 7.0, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 7.1, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -743,8 +746,6 @@ function dessiner(g) {
       }
     }
     d.dataset.i = i;
-    if (g && modeDef && motsDeCase && (motsDeCase.get(i) || [])
-        .some(m => (defsChoisies.get(m.cle) || '').trim())) d.classList.add('avecdef');
     if (g && modeDef) d.onclick = () => clicDefinition(i);
     cases[i] = d;
     boite.appendChild(d);
@@ -918,6 +919,20 @@ function eclairerMot(cle) {
     for (const m of liste) if (m.cle === cle) cases[c] && cases[c].classList.add('vise');
 }
 // en mode définition : 1er clic = la définition horizontale, 2e = la verticale
+// bandes vertes en haut/bas pour un mot horizontal défini, bleues à gauche et
+// à droite pour un mot vertical : mise à jour en place, sans redessiner
+function majDecor() {
+  if (!cases.length) return;
+  for (const c of cases) if (c) c.classList.remove('defh', 'defv');
+  if (!modeDef || !motsDeCase) return;
+  for (const [cell, liste] of motsDeCase)
+    for (const m of liste) {
+      if (!(defsChoisies.get(m.cle) || '').trim()) continue;
+      const el = cases[cell];
+      if (el) el.classList.add(m.cle[0] === 'H' ? 'defh' : 'defv');
+    }
+}
+
 function clicDefinition(i) {
   const liste = motsDeCase && motsDeCase.get(i);
   if (!liste || !liste.length) return;
@@ -1156,9 +1171,12 @@ async function chercherDefs(mot) {
       if (!/^#[^#*:]/.test(ligne)) continue;        // # = definition, #* = exemple
       const t = nettoyerWiki(ligne.replace(/^#\s*/, ''));
       if (t.length < 8) continue;
-      const court = t.length > 220 ? t.slice(0, 217) + '…' : t;
-      const f = formater(court) + (titres.length > 1 ? '  [' + titre + ']' : '');
-      if (!out.includes(f)) out.push(f);
+      let court = t.length > 220 ? t.slice(0, 217) + '…' : t;
+      // on retire un rappel du mot en fin de ligne : « … (patte) » ou « … [patte] »
+      court = court.replace(/[\s]*[([][^()\[\]]{0,40}[)\]][\s.]*$/, (m) =>
+        norm(m).replace(/[^A-Z]/g, '') === mot ? '' : m).trim();
+      const f = formater(court);
+      if (f && !out.some(x => x.texte === f)) out.push({ texte: f, source: titre });
       if (out.length >= 12) break;
     }
     if (out.length >= 12) break;
@@ -1226,13 +1244,15 @@ function afficherDefs(g) {
         inp.value = defsChoisies.get(cle) || '';
         inp.placeholder = 'définition';
         if (modeJoueur) inp.readOnly = true;
-        inp.oninput = () => defsChoisies.set(cle, inp.value);
+        inp.oninput = () => { defsChoisies.set(cle, inp.value); majDecor(); };
         inp.onfocus = () => d.scrollIntoView({ block: 'nearest' });
         inp.onblur = () => { inp.value = formater(inp.value); defsChoisies.set(cle, inp.value); };
         const sel = document.createElement('select');
         sel.innerHTML = '<option value="">— propositions —</option>';
         sel.onchange = () => {
-          if (sel.value) { inp.value = formater(sel.value); defsChoisies.set(cle, inp.value); }
+          if (sel.value) {
+            inp.value = formater(sel.value); defsChoisies.set(cle, inp.value); majDecor();
+          }
         };
         const m = mot.toLowerCase();
         for (const [nom, url] of [
@@ -1270,7 +1290,10 @@ function afficherDefs(g) {
           try {
             const props = await chercherDefs(mot);
             sel.innerHTML = '<option value="">— ' + (props.length || 'aucune') + ' proposition(s) —</option>'
-              + props.map(p => `<option>${p.replace(/</g, '&lt;')}</option>`).join('');
+              + props.map(p => `<option value="${p.texte.replace(/"/g, '&quot;')}">`
+                  + `${p.texte.replace(/</g, '&lt;')}`
+                  + (new Set(props.map(x => x.source)).size > 1 ? ` — ${p.source}` : '')
+                  + '</option>').join('');
           } catch (err) { sel.innerHTML = '<option value="">réseau indisponible</option>'; }
           b.disabled = false; b.textContent = 'Wiktionnaire';
         };
@@ -1296,6 +1319,7 @@ $('#definitions').onclick = () => {
   }
   afficherDefs(derniere);
   dessiner(derniere);
+  majDecor();
   $('#etat').textContent = navigator.onLine
     ? 'Définitions : « Chercher » interroge le Wiktionnaire pour chaque mot.'
     : 'Hors ligne : les propositions du Wiktionnaire ne sont pas accessibles, la saisie reste possible.';
@@ -1444,8 +1468,7 @@ $('#fgrille').onchange = async ev => {
     nomCourant = f.name || null;
     if (o.joueur && !modeJoueur) $('#joueur').click();
     afficherLegende(derniere);       // après le basculement du mode
-    for (const b of ['#imprimer', '#imprvierge', '#definitions', '#sauver', '#sauversous'])
-      $(b).disabled = !actif;
+    majBoutons();
     if (actif && typeCourant() !== 'codes') afficherDefs(derniere);
     else $('#defs').innerHTML = '';
     afficherLegende(derniere);
@@ -1502,13 +1525,21 @@ $('#razdessin').onclick = () => {
   etat = null; ref = null; $('#etat').textContent = 'Dessin remis à zéro.'; dessiner(derniere);
 };
 function majBoutons() {
-  const codeJoueur = modeJoueur && typeCourant() === 'codes';
-  $('#aide').style.display = codeJoueur ? '' : 'none';
-  $('#razjoueur').style.display = codeJoueur ? '' : 'none';
+  const codes = typeCourant() === 'codes', g = !!derniere;
+  $('#aide').style.display = (codes && g) ? '' : 'none';
+  $('#razjoueur').style.display = (codes && g && modeJoueur) ? '' : 'none';
   $('#toutchercher').style.display = modeDef ? '' : 'none';
   $('#definitions').textContent = 'Mode définition : ' + (modeDef ? 'ON' : 'off');
   $('#joueur').textContent = 'Mode joueur : ' + (modeJoueur ? 'ON' : 'off');
   $('#dessinonoff').textContent = 'Dessin : ' + (modeDessin ? 'ON' : 'off');
+  // on grise ce qui n'a pas de sens dans le contexte
+  $('#definitions').disabled = !g || codes || modeJoueur;
+  $('#joueur').disabled = !g || modeDef;
+  $('#dessinonoff').disabled = modeJoueur;
+  $('#undo').disabled = modeJoueur || !histo.length;
+  $('#razdessin').disabled = modeJoueur;
+  $('#imprimer').disabled = !g; $('#imprvierge').disabled = !g;
+  $('#sauver').disabled = !g; $('#sauversous').disabled = !g;
   majUndo();
 }
 $('#toutchercher').onclick = async () => {
@@ -1529,13 +1560,13 @@ $('#toutchercher').onclick = async () => {
     try {
       const props = await chercherDefs(t.mot);
       if (props.length) {
-        defsChoisies.set(t.cle, props[Math.floor(Math.random() * props.length)]);
+        defsChoisies.set(t.cle, props[Math.floor(Math.random() * props.length)].texte);
         ok++;
       }
     } catch (e) { /* mot suivant */ }
   }
   b.textContent = 'Chercher toutes les définitions'; b.disabled = false;
-  afficherDefs(derniere); dessiner(derniere);
+  afficherDefs(derniere); dessiner(derniere); majDecor();
   $('#etat').textContent = `${ok} définition(s) trouvée(s) sur ${taches.length} mots sans définition.`;
 };
 
@@ -1556,6 +1587,7 @@ $('#joueur').onclick = () => {
   dessiner(derniere); afficherLegende(derniere);
   if (modeJoueur && derniere && typeCourant() !== 'codes') afficherDefs(derniere);
   if (typeCourant() === 'codes') $('#defs').innerHTML = '';
+  majDecor();
   $('#etat').textContent = modeJoueur
     ? 'Mode joueur : cliquez une case de la grille des lettres pour la colorer, '
       + 'ou tapez-y une lettre — elle apparaîtra dans les deux grilles.'
@@ -1596,6 +1628,7 @@ $('#razjoueur').onclick = () => {
 
 $('#type').onchange = () => {
   majTitre();
+  if (typeCourant() === 'codes') { modeDef = false; $('#defs').innerHTML = ''; }
   if (typeCourant() === 'fleches') appliquerType();
   if (typeCourant() !== 'codes') { codeNum = null; }
   else if (derniere) construireCode(derniere);
