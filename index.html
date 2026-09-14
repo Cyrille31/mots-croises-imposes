@@ -40,10 +40,14 @@
   details.menu .pan { position:absolute; z-index:5; background:#fff; border:1px solid #b9c6d8;
       border-radius:8px; padding:5px; display:flex; flex-direction:column; gap:3px;
       box-shadow:0 4px 14px rgba(20,32,46,.18); }
-  .c.defh { box-shadow:inset 0 3px 0 #f2b705, inset 0 -3px 0 #f2b705; }
-  .c.defv { box-shadow:inset 3px 0 0 #2f6fb5, inset -3px 0 0 #2f6fb5; }
-  .c.defh.defv { box-shadow:inset 0 3px 0 #f2b705, inset 0 -3px 0 #f2b705,
-                             inset 3px 0 0 #2f6fb5, inset -3px 0 0 #2f6fb5; }
+  .c.defh { background-image:linear-gradient(to bottom, transparent 36%,
+       #fdf0bf 36%, #fdf0bf 64%, transparent 64%); }
+  .c.defv { background-image:linear-gradient(to right, transparent 36%,
+       #d8e8fb 36%, #d8e8fb 64%, transparent 64%); }
+  .c.defh.defv { background-image:
+       linear-gradient(to bottom, transparent 36%, #fdf0bf 36%, #fdf0bf 64%, transparent 64%),
+       linear-gradient(to right, transparent 36%, #d8e8fb 36%, #d8e8fb 64%, transparent 64%); }
+  .c span { position:relative; z-index:1; }
   details.menu[data-off] summary { opacity:.45; pointer-events:none; }
   button { font:12.5px/1.1 inherit; padding:6px 10px; border:0; border-radius:6px;
            background:var(--bleu); color:#fff; width:auto; }
@@ -172,7 +176,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">7.2</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">7.3</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -316,7 +320,9 @@
     <tr><th style="text-align:left">Bouton</th><th style="text-align:left">Actif quand</th></tr>
     <tr><td>Générer, Ouvrir</td><td>toujours</td></tr>
     <tr><td>RAZ mots, Imprimer, Enregistrer</td><td>une grille existe</td></tr>
-    <tr><td>Explorer</td><td>mode auteur</td></tr>
+    <tr><td>Explorer</td><td>mode auteur, hors recherche en cours</td></tr>
+    <tr><td>Arrêter</td><td>uniquement pendant une exploration</td></tr>
+    <tr><td>Générer, RAZ mots, Ouvrir</td><td>grisés pendant une recherche</td></tr>
     <tr><td>Mode définition</td><td>grille présente, hors mots codés, hors mode joueur</td></tr>
     <tr><td>Chercher toutes les définitions</td><td>visible en mode définition seulement</td></tr>
     <tr><td>Mode joueur</td><td>grille présente, hors mode définition</td></tr>
@@ -449,7 +455,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 7.2, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 7.3, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -1025,15 +1031,15 @@ let derniereDensite = -1;
 function lancer(affiner, mode) {
   const affinage = affiner;
   imposesNorm = lignes('#imposes');
-  $('#go').disabled = $('#explorer').disabled = true;
-  $('#arreter').disabled = mode !== 'explorer';
+  recherche = true; exploration = (mode === 'explorer');
+  majBoutons();
   $('#etat').textContent = mode === 'explorer' ? 'Exploration…'
     : (affiner ? 'Recherche d\u2019une meilleure grille…' : 'Recherche…');
   if (worker) worker.terminate();
   worker = new Worker('./worker.js');
   worker.onmessageerror = () => { $('#etat').textContent = 'Message illisible du worker.'; };
   worker.onerror = ev => {
-    $('#go').disabled = false;
+    recherche = false; exploration = false; majBoutons();
     $('#etat').textContent = 'Erreur worker : ' + (ev.message || 'voir la console');
   };
   worker.onmessage = e => {
@@ -1042,10 +1048,10 @@ function lancer(affiner, mode) {
     if (m.type === 'info') { $('#etat').textContent = m.texte; return; }
     if (m.type === 'fini') {
       $('#etat').textContent = m.texte;
-      $('#go').disabled = false; $('#explorer').disabled = false; $('#arreter').disabled = true;
+      recherche = false; exploration = false; majBoutons();
       return;
     }
-    if (!m.provisoire) { $('#go').disabled = false; $('#explorer').disabled = false; }
+    if (!m.provisoire) { recherche = false; exploration = false; }
     if (m.type === 'grille') {
       derniere = Int8Array.from(m.grille);
       derniereDensite = m.densite;
@@ -1511,7 +1517,7 @@ $('#fgrille').onchange = async ev => {
 $('#explorer').onclick = () => lancer(false, 'explorer');
 $('#arreter').onclick = () => {
   if (worker) worker.postMessage({ mode: 'stop' });
-  $('#arreter').disabled = true;
+  exploration = false; majBoutons();
 };
 $('#exporter').onclick = () => {
   const obj = { format: 'mots-croises-cgexcel', v: 1, nl, nc,
@@ -1557,6 +1563,7 @@ $('#razdessin').onclick = () => {
 };
 // ---- table d'états : une seule source de vérité pour tous les boutons ----
 // Situation = (type, grille présente ?, mode) où mode ∈ auteur | définition | joueur
+let recherche = false, exploration = false;
 function majBoutons() {
   const codes = typeCourant() === 'codes';
   const g = !!derniere;
@@ -1565,9 +1572,10 @@ function majBoutons() {
   const mode = modeJoueur ? 'joueur' : (modeDef ? 'definition' : 'auteur');
 
   const regles = {
-    '#go':         { actif: true },
-    '#razgrille':  { actif: g },
-    '#explorer':   { actif: mode === 'auteur' },
+    '#go':         { actif: !recherche },
+    '#razgrille':  { actif: g && !recherche },
+    '#explorer':   { actif: mode === 'auteur' && !recherche },
+    '#arreter':    { actif: exploration },
     '#definitions':{ visible: !codes, actif: g && mode !== 'joueur',
                      texte: 'Mode définition : ' + (modeDef ? 'ON' : 'off') },
     '#toutchercher': { visible: mode === 'definition' },
@@ -1579,7 +1587,7 @@ function majBoutons() {
     '#imprvierge': { actif: g },
     '#sauver':     { actif: g },
     '#sauversous': { actif: g },
-    '#ouvrir':     { actif: true },
+    '#ouvrir':     { actif: !recherche },
     '#dessinonoff':{ actif: mode !== 'joueur',
                      texte: 'Dessin : ' + (modeDessin ? 'ON' : 'off') },
     '#undo':       { actif: mode !== 'joueur' && histo.length > 0,

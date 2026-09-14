@@ -104,10 +104,11 @@ self.onmessage = async (e) => {
     self.postMessage({ type: 'info', texte: 'Recherche…' });
     const masque = p.masque ? Uint8Array.from(p.masque) : null;
     const noirsImposes = p.noirsImposes ? Uint8Array.from(p.noirsImposes) : null;
+    let injectes = [];      // mots du theme traites comme imposes facultatifs
     const faire = (densite, polissage, enrich) => new M.Generateur(index, p.nl, p.nc, {
       polissageMs: polissage || 0,
       themeMs: enrich || 0,
-      motsImposes: imposes,
+      motsImposes: imposes.concat(injectes),
       motsThemes: theme,
       masque, noirsImposes,
       densiteNoirs: densite,
@@ -124,8 +125,10 @@ self.onmessage = async (e) => {
       const dedans = masque ? masque.reduce((a, x) => a + (x ? 0 : 1), 0) : p.nl * p.nc;
       const nImp = noirsImposes ? noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
       const base = Math.max(p.densite, nImp / dedans);
+      // le temps accorde a un essai tient compte des mots du theme injectes
       const court = Math.round(Math.max(2500, (p.duree || 8000) / 3
                     * (1 + dedans / 400 + imposes.length / 10)));
+      const pas = Math.max(0.02, 1 / dedans);   // au moins une case noire
       let meilleurD = 2, d = base, essais = 0;
       while (!stop) {
         essais++;
@@ -150,10 +153,12 @@ self.onmessage = async (e) => {
               version: M.VERSION || '?'
             });
           }
-          d = Math.max(0.02, meilleurD - 0.02);
+          d = Math.max(0, meilleurD - pas);
+          if (Math.round(d * dedans) >= Math.round(meilleurD * dedans))
+            d = Math.max(0, (Math.round(meilleurD * dedans) - 1) / dedans);
         } else {
-          d = meilleurD < 2 ? Math.min(meilleurD - 0.005, 0.5)
-                            : Math.min(d + 0.02, 0.5);
+          d = meilleurD < 2 ? Math.min(meilleurD - pas / 2, 0.5)
+                            : Math.min(d + pas, 0.5);
           if (meilleurD === 2 && d >= 0.499) d = base;
         }
         await pause();
@@ -177,24 +182,49 @@ self.onmessage = async (e) => {
       const dedans = masque ? masque.reduce((a, x) => a + (x ? 0 : 1), 0) : p.nl * p.nc;
       const nImp = noirsImposes ? noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
       const base = Math.max(p.densite, nImp / dedans);
-      const facteur = 1 + dedans / 400 + imposes.length / 10;
-      const court = Math.round(Math.max(2500, (p.duree || 8000) / 3 * facteur));
-      const t0 = Date.now(), budgetTotal = court * 8;
+      const court = () => Math.round(Math.max(3000, (p.duree || 8000) / 3
+                    * (1 + dedans / 400 + (imposes.length + injectes.length) / 8)));
+      const t0 = Date.now(), budgetTotal = court() * 8;
       const reste = () => Date.now() - t0 < budgetTotal;
 
       const essai = (d) => {
         self.postMessage({ type: 'info',
-          texte: `Essai avec ${(100 * d).toFixed(0)} % de cases noires…` });
-        const g = faire(d, 0);
+          texte: `Essai à ${(100 * d).toFixed(0)} % de cases noires`
+                 + (injectes.length ? ` avec ${injectes.length} mots du thème imposés…` : '…') });
+        const g = faire(d, 0, 0);
         G = g;
-        return g.generer(1e9, 20000, court);
+        return g.generer(1e9, 20000, court());
       };
 
-      let trouve = essai(base), dTrouve = base;
+      // Le thème rapporte peu en substitution après coup, alors que le
+      // placement de mots imposés fonctionne bien : on injecte donc une
+      // poignée de mots du thème COMME imposés, quitte à réduire leur nombre
+      // tant que la grille ne boucle pas.
+      let trouve = null, dTrouve = base;
+      if (theme.length) {
+        const courts = theme.filter(m => m.length >= 3 && m.length <= 7);
+        for (let i = courts.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [courts[i], courts[j]] = [courts[j], courts[i]];
+        }
+        let k = Math.min(courts.length, Math.max(4, Math.min(18, Math.round(dedans / 14))));
+        while (k >= 2 && !trouve) {
+          injectes = courts.slice(0, k);
+          for (const dd of [base, base + 0.03, base + 0.06, base + 0.10]) {
+            if (dd > 0.5) break;
+            trouve = essai(dd);
+            if (trouve) { dTrouve = dd; break; }
+          }
+          if (!trouve) k = Math.floor(k * 0.7);
+        }
+        if (!trouve) injectes = [];
+      }
+      if (!trouve) { trouve = essai(base); dTrouve = base; }
       if (trouve) {
-        // ça passe du premier coup : on essaie de faire mieux
-        while (reste() && dTrouve > 0.06) {
-          const d = dTrouve - 0.02;
+        // on essaie ensuite de faire mieux en densite, sans perdre le theme
+        const pasFin = Math.max(0.02, 1 / dedans);
+        while (reste() && dTrouve > pasFin) {
+          const d = Math.max(0, (Math.round(dTrouve * dedans) - 1) / dedans);
           const res = essai(d);
           if (!res) break;
           trouve = res; dTrouve = d;
@@ -202,7 +232,7 @@ self.onmessage = async (e) => {
       } else {
         let echec = base;
         for (let d = base; d <= 0.501 && reste(); ) {
-          d += d < 0.30 ? 0.02 : 0.05;      // petits pas tant qu'on est bas
+          d += Math.max(d < 0.30 ? 0.02 : 0.05, 1 / dedans);
           const res = essai(d);
           if (res) { trouve = res; dTrouve = d; break; }
           echec = d;
@@ -227,6 +257,8 @@ self.onmessage = async (e) => {
         // ne plaçait qu'un ou deux mots du theme.
         self.postMessage({ type: 'info', texte: 'Polissage des cases noires…' });
         gr = outil.polir(gr, null, Math.max(3000, (p.duree || 8000) / 2));
+        self.postMessage({ type: 'info',
+          texte: `${injectes.length} mot(s) du thème placés d'office, affinage…` });
         if (theme.length) {
           self.postMessage({ type: 'info', texte: 'Enrichissement du thème…' });
           gr = outil.enrichirTheme(gr, Math.max(12000, (p.duree || 8000) * 2.5));
