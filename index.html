@@ -176,7 +176,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">7.3</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">7.4</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -235,7 +235,7 @@
   <div class="groupe"><button id="ouvrir" class="sec">Ouvrir</button>
     <details class="menu"><summary>Dessin ▾</summary>
       <div class="pan">
-        <button id="dessinonoff" class="sec">Dessin : ON</button>
+        <button id="dessinonoff" class="sec">Dessin : off</button>
         <button id="undo" class="sec">Annuler (0)</button>
         <button id="razdessin" class="sec">RAZ dessin</button>
         <button id="exporter" class="sec">Exporter</button>
@@ -322,7 +322,8 @@
     <tr><td>RAZ mots, Imprimer, Enregistrer</td><td>une grille existe</td></tr>
     <tr><td>Explorer</td><td>mode auteur, hors recherche en cours</td></tr>
     <tr><td>Arrêter</td><td>uniquement pendant une exploration</td></tr>
-    <tr><td>Générer, RAZ mots, Ouvrir</td><td>grisés pendant une recherche</td></tr>
+    <tr><td>Générer, RAZ mots</td><td>grisés pendant une recherche et en mode joueur</td></tr>
+    <tr><td>Ouvrir</td><td>grisé pendant une recherche</td></tr>
     <tr><td>Mode définition</td><td>grille présente, hors mots codés, hors mode joueur</td></tr>
     <tr><td>Chercher toutes les définitions</td><td>visible en mode définition seulement</td></tr>
     <tr><td>Mode joueur</td><td>grille présente, hors mode définition</td></tr>
@@ -369,6 +370,8 @@
   <p>Les définitions sont présentées comme sur la feuille « à remplir » : deux
   blocs continus, <i>Horizontalement</i> et <i>Verticalement</i>, sans les mots
   de la solution ni les liens de recherche. Chaque définition reste cliquable.</p>
+  <p>Un second clic sur la même définition, ou un clic n'importe où hors de la
+  grille et du bloc des définitions, éteint l'éclairage.</p>
   <p>Un clic dans une case met en évidence ses deux définitions, l'horizontale et
   la verticale. Inversement, un clic sur une définition colore les cases du mot
   correspondant. Quand la grille est entièrement juste, un petit feu d'artifice
@@ -455,7 +458,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 7.3, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 7.4, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -475,7 +478,7 @@ const props = new Map();      // numero -> lettre proposee par le joueur
 const saisies = new Map();    // case -> lettre saisie par le joueur
 let motsDeCase = null;        // case -> [{cle, cells}] pour l'eclairage croise
 let cleActive = null;         // definition mise en evidence
-let modeJoueur = false, modeDef = false, modeDessin = true;
+let modeJoueur = false, modeDef = false, modeDessin = false;
 const histo = [];             // pile d'annulation du dessin (3 niveaux)
 let clicPrec = -1, sensPrec = 'V';
 const PALETTE = ['#ffd6d6', '#d6ecff', '#d9f7d6', '#fff3c4', '#e8dbff',
@@ -931,6 +934,7 @@ function eclairer(i) {
   document.querySelectorAll('.c.vise').forEach(e => e.classList.remove('vise'));
   document.querySelectorAll('.def.vise, .undef.vise').forEach(e => e.classList.remove('vise'));
   if (!motsDeCase) return;
+  cleActive = null;
   let premier = true;
   for (const m of motsDeCase.get(i) || []) {
     const l = document.querySelector(`[data-cle="${m.cle}"]`);
@@ -939,15 +943,27 @@ function eclairer(i) {
     if (premier) { l.scrollIntoView({ block: 'nearest' }); premier = false; }
   }
 }
+function effacerEclairage() {
+  document.querySelectorAll('.c.vise, .def.vise, .undef.vise')
+    .forEach(e => e.classList.remove('vise'));
+  cleActive = null; clicPrec = -1;
+}
 function eclairerMot(cle) {
-  document.querySelectorAll('.c.vise').forEach(e => e.classList.remove('vise'));
-  document.querySelectorAll('.def.vise').forEach(e => e.classList.remove('vise'));
+  if (cleActive === cle) { effacerEclairage(); return; }   // second clic : on éteint
+  effacerEclairage();
+  cleActive = cle;
   const l = document.querySelector(`[data-cle="${cle}"]`);
   if (l) l.classList.add('vise');
   if (!motsDeCase) return;
   for (const [c, liste] of motsDeCase)
     for (const m of liste) if (m.cle === cle) cases[c] && cases[c].classList.add('vise');
 }
+
+// un clic hors de la grille et hors des définitions éteint l'éclairage
+document.addEventListener('click', ev => {
+  if (ev.target.closest('#grille') || ev.target.closest('#defs')) return;
+  if (document.querySelector('.c.vise, .def.vise, .undef.vise')) effacerEclairage();
+});
 // en mode définition : 1er clic = la définition horizontale, 2e = la verticale
 // bandes vertes en haut/bas pour un mot horizontal défini, bleues à gauche et
 // à droite pour un mot vertical : mise à jour en place, sans redessiner
@@ -970,8 +986,12 @@ function clicDefinition(i) {
   let choisi;
   if (i === clicPrec) { choisi = (sensPrec === 'H' ? v1 : h1) || h1 || v1; }
   else { choisi = h1 || v1; }
+  const memePlace = (i === clicPrec);
   clicPrec = i; sensPrec = choisi.cle[0];
+  const dejaLa = (cleActive === choisi.cle);
   eclairerMot(choisi.cle);
+  if (dejaLa) { clicPrec = -1; $('#etat').textContent = 'Éclairage retiré.'; return; }
+  clicPrec = i;
   const l = document.querySelector(`[data-cle="${choisi.cle}"]`);
   if (l) {
     l.scrollIntoView({ block: 'center' });
@@ -1051,7 +1071,7 @@ function lancer(affiner, mode) {
       recherche = false; exploration = false; majBoutons();
       return;
     }
-    if (!m.provisoire) { recherche = false; exploration = false; }
+    if (!m.provisoire) { recherche = false; exploration = false; majBoutons(); }
     if (m.type === 'grille') {
       derniere = Int8Array.from(m.grille);
       derniereDensite = m.densite;
@@ -1572,8 +1592,8 @@ function majBoutons() {
   const mode = modeJoueur ? 'joueur' : (modeDef ? 'definition' : 'auteur');
 
   const regles = {
-    '#go':         { actif: !recherche },
-    '#razgrille':  { actif: g && !recherche },
+    '#go':         { actif: !recherche && mode !== 'joueur' },
+    '#razgrille':  { actif: g && !recherche && mode !== 'joueur' },
     '#explorer':   { actif: mode === 'auteur' && !recherche },
     '#arreter':    { actif: exploration },
     '#definitions':{ visible: !codes, actif: g && mode !== 'joueur',
