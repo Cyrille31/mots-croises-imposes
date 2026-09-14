@@ -89,6 +89,11 @@
        font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
        padding:0; color:#1a3a6b; }
   #legende .c input:focus { outline:2px solid #6b8bb5; }
+  .c .fl { position:absolute; inset:0; color:#fff; font-size:7px; line-height:1.1;
+       font-weight:400; padding:1px 2px; text-align:left; overflow:hidden;
+       display:flex; flex-direction:column; justify-content:flex-start; }
+  .c .fl i { font-style:normal; display:block; }
+  .c .fl i + i { border-top:1px solid rgba(255,255,255,.35); margin-top:1px; padding-top:1px; }
   .c u { position:absolute; top:0; left:1px; font-size:8px; text-decoration:none;
          font-weight:400; color:#8a96a4; line-height:1; }
   #legende { display:grid; gap:0; width:max-content; margin:8px auto;
@@ -102,13 +107,18 @@
   @media print {
     body.vierge #defs { display:none; }
     body.codes #defs, body.codes #impression { display:none; }
+    body.fleches #defs { display:none; }
     body.vierge #legende span { visibility:hidden; }
     body.vierge #legende .c.revelee span { visibility:visible; }
     body.codes .c { background:#fff !important; }
     body.codes .c.noir { background:#243447 !important; }
     body.vierge .c.impose, body.vierge .c.themeq {
       background:#fff !important; border-color:#b9c2ce !important; }
-    #impression { display:block; font-size:11.5px; }
+    #impression { display:block; font-size:13.5px; line-height:1.6; }
+    #impression h3 { font-size:15px; }
+    #legende .c { font-size:16px !important; }
+    #legende .c u { font-size:10px !important; }
+    .c u { font-size:10px !important; }
     #legende { page-break-inside:avoid; }
     #impression h3 { font-size:12px; color:#000; margin:8px 0 3px; }
     #impression p { margin:2px 0; }
@@ -176,7 +186,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">7.4</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">7.5</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -300,8 +310,13 @@
 
   <h4>Les trois types de grille</h4>
   <p><b>Mots croisés</b> — le fonctionnement habituel.</p>
-  <p><b>Mots fléchés</b> — le programme impose des cases noires en première
-  ligne et en première colonne, une sur deux, en commençant par le coin
+  <p><b>Mots fléchés</b> — à l'impression, la définition de chaque mot est
+  écrite <b>dans la case noire</b> d'où il part : celles de la première ligne
+  portent la définition du mot vertical, celles de la première colonne celle du
+  mot horizontal, et le coin supérieur gauche porte les deux. Les cases sont
+  alors imprimées nettement plus grandes pour que le texte tienne, et la liste
+  des définitions n'est pas reproduite. Le programme impose des cases noires en
+  première ligne et en première colonne, une sur deux, en commençant par le coin
   supérieur gauche. Vous pouvez toujours dessiner une forme, mais ces deux
   bandes ne sont plus modifiables.</p>
   <p><b>Mots codés</b> — pas de définitions : le jeu consiste à retrouver le
@@ -321,7 +336,8 @@
     <tr><td>Générer, Ouvrir</td><td>toujours</td></tr>
     <tr><td>RAZ mots, Imprimer, Enregistrer</td><td>une grille existe</td></tr>
     <tr><td>Explorer</td><td>mode auteur, hors recherche en cours</td></tr>
-    <tr><td>Arrêter</td><td>uniquement pendant une exploration</td></tr>
+    <tr><td>Arrêter</td><td>uniquement pendant une exploration — pendant
+        laquelle tous les autres boutons sont grisés</td></tr>
     <tr><td>Générer, RAZ mots</td><td>grisés pendant une recherche et en mode joueur</td></tr>
     <tr><td>Ouvrir</td><td>grisé pendant une recherche</td></tr>
     <tr><td>Mode définition</td><td>grille présente, hors mots codés, hors mode joueur</td></tr>
@@ -458,7 +474,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 7.4, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 7.5, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -713,9 +729,10 @@ function afficherLegende(g) {
   }
 }
 
-function dessiner(g) {
+function dessiner(g, tailleForcee) {
   const boite = $('#grille');
-  const taille = Math.min(30, Math.floor(Math.min(window.innerWidth - 40, 560) / (nc + 1)));
+  const taille = tailleForcee
+    || Math.min(30, Math.floor(Math.min(window.innerWidth - 40, 560) / (nc + 1)));
   const marge = Math.round(taille * 0.7);
   boite.style.gridTemplateColumns = `${marge}px repeat(${nc}, ${taille}px)`;
   boite.style.border = 'none';
@@ -1430,9 +1447,43 @@ async function telecharger(nom, texte) {
   $('#etat').textContent = 'Enregistré dans vos téléchargements : ' + nom;
 }
 
+// Mots fléchés : la définition du mot qui part d'une case noire est écrite
+// dans cette case. Ligne 0 -> mot vertical de la colonne, colonne 0 -> mot
+// horizontal de la ligne.
+function remplirFleches() {
+  if (!derniere) return;
+  for (let i = 0; i < nl * nc; i++) {
+    const el = cases[i];
+    if (!el || derniere[i] !== -2) continue;
+    const r = (i / nc) | 0, c = i % nc;
+    const textes = [];
+    if (r === 0 && c % 2 === 0) {
+      const t = defsChoisies.get('V' + (c + 1) + '.0');
+      if (t) textes.push(t);
+    }
+    if (c === 0 && r % 2 === 0) {
+      const t = defsChoisies.get('H' + (r + 1) + '.0');
+      if (t) textes.push(t);
+    }
+    if (!textes.length) continue;
+    const d = document.createElement('div');
+    d.className = 'fl';
+    for (const t of textes) {
+      const s = document.createElement('i');
+      s.textContent = t;
+      d.appendChild(s);
+    }
+    el.appendChild(d);
+  }
+}
+
 function construireImpression() {
   document.body.classList.toggle('codes', typeCourant() === 'codes');
-  if (!derniere || typeCourant() === 'codes') { $('#impression').innerHTML = ''; return; }
+  document.body.classList.toggle('fleches', typeCourant() === 'fleches');
+  // en mots fléchés les définitions vont dans les cases, pas en liste
+  if (!derniere || typeCourant() === 'codes' || typeCourant() === 'fleches') {
+    $('#impression').innerHTML = ''; return;
+  }
   const par = motsParLigne(derniere), z = $('#impression');
   z.innerHTML = '';
   for (const [sens, titre] of [['H', 'Horizontalement'], ['V', 'Verticalement']]) {
@@ -1444,13 +1495,23 @@ function construireImpression() {
     z.appendChild(p);
   }
 }
-$('#imprimer').onclick = () => { construireImpression(); window.print(); };
-$('#imprvierge').onclick = () => {
+function imprimer(vierge) {
   construireImpression();
-  document.body.classList.add('vierge');
+  const fleche = typeCourant() === 'fleches';
+  const grand = fleche ? Math.max(56, Math.floor(620 / (nc + 1)))
+                       : Math.max(30, Math.floor(700 / (nc + 1)));
+  dessiner(derniere, grand);
+  if (fleche) remplirFleches();
+  if (vierge) document.body.classList.add('vierge');
   window.print();
-  setTimeout(() => document.body.classList.remove('vierge'), 300);
-};
+  setTimeout(() => {
+    document.body.classList.remove('vierge');
+    dessiner(derniere);
+    if (modeDef) majDecor();
+  }, 400);
+}
+$('#imprimer').onclick = () => imprimer(false);
+$('#imprvierge').onclick = () => imprimer(true);
 
 // ---------- sauvegarde et reprise du mot croise en cours ----------
 let nomCourant = null;
@@ -1621,11 +1682,13 @@ function majBoutons() {
     if (!e) continue;
     if (r.texte !== undefined) e.textContent = r.texte;
     e.style.display = (r.visible === false) ? 'none' : '';
-    if (r.actif !== undefined) e.disabled = !r.actif;
+    let actif = (r.actif === undefined) ? true : r.actif;
+    if (exploration && sel !== '#arreter') actif = false;   // exploration en cours
+    e.disabled = !actif;
   }
   const menu = document.querySelector('details.menu');
   if (menu) {
-    if (mode === 'joueur') { menu.setAttribute('data-off', ''); menu.open = false; }
+    if (mode === 'joueur' || exploration) { menu.setAttribute('data-off', ''); menu.open = false; }
     else menu.removeAttribute('data-off');
   }
 }
