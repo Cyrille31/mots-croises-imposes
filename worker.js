@@ -87,6 +87,9 @@ self.onmessage = async (e) => {
       const mots = await chargerLexique();
       // le lexique garde ses accents : on normalise comme le moteur
       const ens = new Set(mots.map(m => M.normaliser(m)));
+      for (const m of (p.imposes || [])) {
+        for (const x of String(m).split(/\s+/)) if (x) ens.add(M.normaliser(x));
+      }
       const lire = (suite) => suite.length > 1 ? suite : null;
       const mauvais = [];
       const ajoute = (mot, ou) => { if (mot && !ens.has(mot)) mauvais.push(mot + ' (' + ou + ')'); };
@@ -227,7 +230,9 @@ self.onmessage = async (e) => {
       const t0 = Date.now(), budgetTotal = court() * 8;
       const reste = () => Date.now() - t0 < budgetTotal;
 
-      const essai = (d) => {
+      const essai = async (d) => {
+        if (stop) return null;
+        await pause();
         self.postMessage({ type: 'info',
           texte: `Essai à ${(100 * d).toFixed(0)} % de cases noires`
                  + (injectes.length ? ` avec ${injectes.length} mots du thème imposés…` : '…') });
@@ -241,39 +246,39 @@ self.onmessage = async (e) => {
       // poignée de mots du thème COMME imposés, quitte à réduire leur nombre
       // tant que la grille ne boucle pas.
       let trouve = null, dTrouve = base;
-      if (theme.length) {
+      if (theme.length && !stop) {
         const courts = theme.filter(m => m.length >= 3 && m.length <= 7);
         for (let i = courts.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [courts[i], courts[j]] = [courts[j], courts[i]];
         }
         let k = Math.min(courts.length, Math.max(4, Math.min(18, Math.round(dedans / 14))));
-        while (k >= 2 && !trouve) {
+        while (k >= 2 && !trouve && !stop) {
           injectes = courts.slice(0, k);
           for (const dd of [base, base + 0.03, base + 0.06, base + 0.10]) {
             if (dd > 0.5) break;
-            trouve = essai(dd);
+            trouve = await essai(dd);
             if (trouve) { dTrouve = dd; break; }
           }
           if (!trouve) k = Math.floor(k * 0.7);
         }
         if (!trouve) injectes = [];
       }
-      if (!trouve) { trouve = essai(base); dTrouve = base; }
+      if (!trouve && !stop) { trouve = await essai(base); dTrouve = base; }
       if (trouve) {
         // on essaie ensuite de faire mieux en densite, sans perdre le theme
         const pasFin = Math.max(0.02, 1 / dedans);
-        while (reste() && dTrouve > pasFin) {
+        while (reste() && !stop && dTrouve > pasFin) {
           const d = Math.max(0, (Math.round(dTrouve * dedans) - 1) / dedans);
-          const res = essai(d);
+          const res = await essai(d);
           if (!res) break;
           trouve = res; dTrouve = d;
         }
       } else {
         let echec = base;
-        for (let d = base; d <= 0.501 && reste(); ) {
+        for (let d = base; d <= 0.501 && reste() && !stop; ) {
           d += Math.max(d < 0.30 ? 0.02 : 0.05, 1 / dedans);
-          const res = essai(d);
+          const res = await essai(d);
           if (res) { trouve = res; dTrouve = d; break; }
           echec = d;
         }

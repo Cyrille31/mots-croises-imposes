@@ -31,7 +31,10 @@
   .barre { display:flex; flex-wrap:wrap; gap:4px 10px; margin-bottom:5px; align-items:start; }
   .groupe { display:flex; flex-direction:column; gap:3px;
             border-left:2px solid #e2e7ee; padding-left:7px; }
-  .groupe button { width:100%; }
+  .groupe button, .groupe .modesel { width:100%; }
+  .modesel { padding:6px 8px; font:12.5px inherit; border:1px solid var(--bleu);
+      border-radius:6px; background:var(--bleu); color:#fff; font-weight:600; }
+  .modesel:disabled { opacity:.45; }
   details.menu { background:transparent; border:0; padding:0; margin:0; }
   details.menu summary { font:12.5px inherit; padding:6px 10px; border-radius:6px;
       background:#fff; color:var(--bleu); border:1px solid #b9c6d8; text-align:center;
@@ -61,12 +64,12 @@
        border:1px solid #b9c2ce; background:#fff; user-select:none;
        touch-action:none; -webkit-user-select:none; }
   body.joueur .c input.js { pointer-events:auto; }
-  .c.noir { background:var(--trait); }
-  .c.hors { background:#e9edf2; border-color:#dfe4ea; }
+  .c.noir { background-color:var(--trait); }
+  .c.hors { background-color:#e9edf2; border-color:#dfe4ea; }
   .c.noirimp { background:var(--trait); box-shadow:inset 0 0 0 2px #6b8bb5; }
-  .c.impose { background:#cfe4f7; }
-  .c.themeq { background:#ffdcb0; }
-  .c.vise { background:#ffe9a8 !important; }
+  .c.impose { background-color:#cfe4f7; }
+  .c.themeq { background-color:#ffdcb0; }
+  .c.vise { background-color:#ffe9a8 !important; }
   .c input.js { width:100%; height:100%; border:0; text-align:center; padding:0;
        font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
        color:#14202e; }
@@ -196,7 +199,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">7.8</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">8.0</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -240,21 +243,25 @@
 
 <div class="barre">
   <div class="groupe"><button id="go">Générer</button>
+    <button id="arreter" class="sec" disabled>Arrêter</button>
     <button id="razgrille" class="sec">RAZ mots</button></div>
-  <div class="groupe"><button id="explorer" class="sec">Explorer</button>
-    <button id="arreter" class="sec" disabled>Arrêter</button></div>
-  <div class="groupe"><button id="definitions" class="sec" disabled>Mode définition : off</button>
-    <button id="toutchercher" class="sec" style="display:none">Chercher toutes les définitions</button></div>
-  <div class="groupe"><button id="edition" class="sec" disabled>Mode édition : off</button>
-    <button id="verifier" class="sec" style="display:none">Vérifier les mots</button></div>
-  <div class="groupe"><button id="joueur" class="sec">Mode joueur : off</button>
-    <button id="aide" class="sec" style="display:none">Aide : une lettre</button>
+  <div class="groupe">
+    <select id="mode" class="modesel">
+      <option value="generation" selected>Mode : génération</option>
+      <option value="definition">Mode : définition</option>
+      <option value="edition">Mode : édition</option>
+      <option value="joueur">Mode : joueur</option>
+    </select>
+    <button id="toutchercher" class="sec" style="display:none">Chercher les définitions</button>
+    <button id="verifier" class="sec" style="display:none">Vérifier les mots</button>
+    <button id="aide" class="sec" style="display:none">Aide</button>
     <button id="razjoueur" class="sec" style="display:none">Effacer mes lettres</button></div>
   <div class="groupe"><button id="imprimer" class="sec" disabled>Imprimer corrigé</button>
     <button id="imprvierge" class="sec" disabled>Imprimer à remplir</button></div>
   <div class="groupe"><button id="sauver" class="sec" disabled>Enregistrer</button>
-    <button id="sauversous" class="sec" disabled>Enregistrer sous</button></div>
-  <div class="groupe"><button id="ouvrir" class="sec">Ouvrir</button>
+    <button id="sauversous" class="sec" disabled>Enregistrer sous</button>
+    <button id="ouvrir" class="sec">Ouvrir</button></div>
+  <div class="groupe">
     <details class="menu"><summary>Dessin ▾</summary>
       <div class="pan">
         <button id="dessinonoff" class="sec">Dessin : off</button>
@@ -346,25 +353,31 @@
   présence ou non d'une <b>grille produite</b>, et le <b>mode</b> — auteur,
   définition ou joueur, les deux derniers s'excluant. Une table unique dans le
   programme en déduit l'état de chaque bouton, ce qui évite les incohérences.</p>
+  <p>Les quatre modes sont exclusifs et tiennent dans un seul menu :
+  <b>génération</b> (l'état de départ, où l'on fabrique la grille),
+  <b>définition</b>, <b>édition</b> et <b>joueur</b>. Changer de mode suffit ;
+  il n'y a plus de bascules séparées qui pouvaient se contredire.</p>
+  <p><b>Générer</b> produit une première grille ; si une grille existe déjà, le
+  même bouton lance une exploration qui cherche mieux sans limite de temps et
+  remplace la grille à chaque amélioration. <b>Arrêter</b> est actif pendant
+  toute recherche, la première comme les suivantes.</p>
   <table style="font-size:11.5px;border-collapse:collapse;width:100%">
     <tr><th style="text-align:left">Bouton</th><th style="text-align:left">Actif quand</th></tr>
-    <tr><td>Générer, Ouvrir</td><td>toujours</td></tr>
-    <tr><td>RAZ mots, Imprimer, Enregistrer</td><td>une grille existe</td></tr>
-    <tr><td>Explorer</td><td>mode auteur, hors recherche en cours</td></tr>
-    <tr><td>Arrêter</td><td>uniquement pendant une exploration — pendant
-        laquelle tous les autres boutons sont grisés</td></tr>
-    <tr><td>Générer, RAZ mots</td><td>grisés pendant une recherche et en mode joueur</td></tr>
-    <tr><td>Ouvrir</td><td>grisé pendant une recherche</td></tr>
-    <tr><td>Mode définition</td><td>grille présente, hors mots codés, hors mode joueur</td></tr>
-    <tr><td>Chercher toutes les définitions</td><td>visible en mode définition seulement</td></tr>
-    <tr><td>Mode joueur</td><td>grille présente, hors modes définition et édition</td></tr>
-    <tr><td>Mode édition</td><td>grille présente, hors modes joueur et définition</td></tr>
-    <tr><td>Vérifier les mots</td><td>visible en mode édition seulement</td></tr>
-    <tr><td>Aide : une lettre</td><td>visible en mots codés avec une grille</td></tr>
-    <tr><td>Effacer mes lettres</td><td>visible en mode joueur avec une grille</td></tr>
-    <tr><td>Menu Dessin et son contenu</td><td>hors mode joueur ; Annuler si la pile n'est pas vide</td></tr>
+    <tr><td>Générer, RAZ mots</td><td>mode génération, hors recherche</td></tr>
+    <tr><td>Arrêter</td><td>pendant toute recherche</td></tr>
+    <tr><td>Menu des modes</td><td>une grille existe et aucune recherche ; l'entrée
+        « définition » est grisée en mots codés</td></tr>
+    <tr><td>Chercher les définitions</td><td>visible en mode définition</td></tr>
+    <tr><td>Vérifier les mots</td><td>visible en mode édition</td></tr>
+    <tr><td>Aide</td><td>visible en mots codés, ou en mode joueur</td></tr>
+    <tr><td>Effacer mes lettres</td><td>visible en mode joueur</td></tr>
+    <tr><td>Imprimer, Enregistrer</td><td>une grille existe, hors recherche</td></tr>
+    <tr><td>Ouvrir</td><td>hors recherche</td></tr>
+    <tr><td>Menu Dessin et son contenu</td><td>hors mode joueur et hors recherche ;
+        Annuler si la pile n'est pas vide</td></tr>
   </table>
-  <p>Les transitions emportent leurs effets : <i>Générer</i> efface définitions,
+  <p>Si la grille disparaît, le mode revient d'office à génération. Les
+  transitions emportent leurs effets : <i>Générer</i> efface définitions,
   propositions et saisies ; <i>RAZ mots</i> supprime la grille et ramène au mode
   auteur ; passer en <i>mots codés</i> ferme le bloc des définitions et sort du
   mode définition ; changer de taille efface la grille mais reporte le dessin ;
@@ -503,7 +516,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 7.8, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 8.0, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -804,6 +817,10 @@ function dessiner(g, tailleForcee) {
       inp.addEventListener('pointerdown', ev => ev.stopPropagation());
       d.appendChild(inp);
       d.onclick = () => inp.focus();
+      if (v >= 0) {
+        if (cellulesImposees.has(i)) d.classList.add('impose');
+        else if (cellulesTheme.has(i)) d.classList.add('themeq');
+      }
     }
     else if (g) {
       const v = g[i];
@@ -1035,7 +1052,7 @@ document.addEventListener('click', ev => {
 function majDecor() {
   if (!cases.length) return;
   for (const c of cases) if (c) c.classList.remove('defh', 'defv');
-  if (!modeDef || !motsDeCase) return;
+  if (modeJoueur || !motsDeCase) return;
   for (const [cell, liste] of motsDeCase)
     for (const m of liste) {
       if (!(defsChoisies.get(m.cle) || '').trim()) continue;
@@ -1119,7 +1136,7 @@ function lancer(affiner, mode) {
   recherche = true; exploration = (mode === 'explorer');
   majBoutons();
   $('#etat').textContent = mode === 'explorer' ? 'Exploration…'
-    : (affiner ? 'Recherche d\u2019une meilleure grille…' : 'Recherche…');
+    : 'Recherche…';
   if (worker) worker.terminate();
   worker = new Worker('./worker.js');
   worker.onmessageerror = () => { $('#etat').textContent = 'Message illisible du worker.'; };
@@ -1145,10 +1162,9 @@ function lancer(affiner, mode) {
       saisies.clear(); propositions.clear(); indexerMots(derniere);
       dessiner(derniere);
       afficherLegende(derniere);
-      $('#imprimer').disabled = false;
-      $('#imprvierge').disabled = false; $('#definitions').disabled = false;
-      $('#sauver').disabled = false; $('#sauversous').disabled = false;
+      majDecor();
       $('#defs').innerHTML = '';
+      majBoutons();
       $('#vmot').textContent = m.version || '?';
       const cx = m.croisements || [];
       const nImp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean)).size;
@@ -1184,7 +1200,10 @@ function lancer(affiner, mode) {
   });
 }
 
-$('#go').onclick = () => { appliquerType(); lancer(false); };
+$('#go').onclick = () => {
+  appliquerType();
+  lancer(false, derniere ? 'explorer' : undefined);
+};
 // ---------- definitions ----------
 const defsChoisies = new Map();          // cle -> texte retenu
 const propositions = new Map();          // cle -> propositions déjà trouvées
@@ -1425,26 +1444,6 @@ function afficherDefs(g) {
   }
 }
 
-$('#definitions').onclick = () => {
-  if (!derniere) return;
-  modeDef = !modeDef;
-  if (modeDef && modeJoueur) { modeJoueur = false; document.body.classList.remove('joueur'); }
-  majBoutons();
-  if (!modeDef) { $('#defs').innerHTML = ''; dessiner(derniere);
-    $('#etat').textContent = 'Mode définition désactivé.'; return; }
-  if (typeCourant() === 'codes') {
-    $('#etat').textContent = 'Les mots codés n\u2019ont pas de définitions : '
-      + 'le jeu consiste à retrouver le code.';
-    $('#defs').innerHTML = '';
-    return;
-  }
-  afficherDefs(derniere);
-  dessiner(derniere);
-  majDecor();
-  $('#etat').textContent = navigator.onLine
-    ? 'Définitions : « Chercher » interroge le Wiktionnaire pour chaque mot.'
-    : 'Hors ligne : les propositions du Wiktionnaire ne sont pas accessibles, la saisie reste possible.';
-};
 
 // Sur Android, un lien de téléchargement détaché du document est ignoré :
 // il faut l'insérer, cliquer, puis le retirer. On propose aussi le partage
@@ -1639,7 +1638,7 @@ $('#fgrille').onchange = async ev => {
     dessiner(derniere);
     const actif = !!derniere;
     nomCourant = f.name || null;
-    if (o.joueur && !modeJoueur) $('#joueur').click();
+    if (o.joueur) changerMode('joueur');
     afficherLegende(derniere);       // après le basculement du mode
     majBoutons();
     if (actif && typeCourant() !== 'codes') afficherDefs(derniere);
@@ -1651,7 +1650,7 @@ $('#fgrille').onchange = async ev => {
 };
 
 // ---------- exploration longue ----------
-$('#explorer').onclick = () => lancer(false, 'explorer');
+
 $('#arreter').onclick = () => {
   if (worker) worker.postMessage({ mode: 'stop' });
   exploration = false; majBoutons();
@@ -1701,59 +1700,83 @@ $('#razdessin').onclick = () => {
 // ---- table d'états : une seule source de vérité pour tous les boutons ----
 // Situation = (type, grille présente ?, mode) où mode ∈ auteur | définition | joueur
 let recherche = false, exploration = false;
+function modeCourant() {
+  return modeJoueur ? 'joueur' : (modeDef ? 'definition' : (modeEdit ? 'edition' : 'generation'));
+}
+
+// ---- table d'états : une seule source de vérité ----
+// Situation = (type, grille présente ?, mode, recherche en cours ?)
 function majBoutons() {
   const codes = typeCourant() === 'codes';
   const g = !!derniere;
-  if (!g && modeJoueur) { modeJoueur = false; document.body.classList.remove('joueur'); }
-  if (!g && modeDef) modeDef = false;
-  if (!g && modeEdit) modeEdit = false;
-  const mode = modeJoueur ? 'joueur' : (modeDef ? 'definition'
-             : (modeEdit ? 'edition' : 'auteur'));
+  if (!g) { modeJoueur = false; modeDef = false; modeEdit = false;
+            document.body.classList.remove('joueur'); }
+  const mode = modeCourant();
+  const occupe = recherche;                 // une génération ou exploration tourne
+
+  const sel = $('#mode');
+  sel.value = mode;
+  sel.disabled = !g || occupe;
+  for (const o of sel.options) {
+    if (o.value === 'definition') o.disabled = codes;
+    else o.disabled = false;
+  }
 
   const regles = {
-    '#razgrille':  { actif: g && !recherche && mode !== 'joueur' },
-    '#explorer':   { actif: mode === 'auteur' && !recherche },
-    '#go':         { actif: !recherche && mode !== 'joueur' },
-    '#arreter':    { actif: exploration },
-    '#edition':    { actif: g && mode !== 'joueur' && mode !== 'definition',
-                     texte: 'Mode édition : ' + (modeEdit ? 'ON' : 'off') },
-    '#verifier':   { visible: mode === 'edition' },
-    '#definitions':{ visible: !codes, actif: g && mode !== 'joueur' && mode !== 'edition',
-                     texte: 'Mode définition : ' + (modeDef ? 'ON' : 'off') },
-    '#toutchercher': { visible: mode === 'definition' },
-    '#joueur':     { actif: g && mode !== 'definition' && mode !== 'edition',
-                     texte: 'Mode joueur : ' + (modeJoueur ? 'ON' : 'off') },
+    '#go':         { actif: !occupe && mode === 'generation' },
+    '#arreter':    { actif: occupe },
+    '#razgrille':  { actif: g && !occupe && mode === 'generation' },
+    '#toutchercher': { visible: mode === 'definition', actif: !occupe },
+    '#verifier':   { visible: mode === 'edition', actif: !occupe },
     '#aide':       { visible: g && (codes || mode === 'joueur'),
                      texte: codes ? 'Aide : une lettre' : 'Aide : cette case' },
     '#razjoueur':  { visible: g && mode === 'joueur' },
-    '#imprimer':   { actif: g },
-    '#imprvierge': { actif: g },
-    '#sauver':     { actif: g },
-    '#sauversous': { actif: g },
-    '#ouvrir':     { actif: !recherche },
-    '#dessinonoff':{ actif: mode !== 'joueur',
+    '#imprimer':   { actif: g && !occupe },
+    '#imprvierge': { actif: g && !occupe },
+    '#sauver':     { actif: g && !occupe },
+    '#sauversous': { actif: g && !occupe },
+    '#ouvrir':     { actif: !occupe },
+    '#dessinonoff':{ actif: mode !== 'joueur' && !occupe,
                      texte: 'Dessin : ' + (modeDessin ? 'ON' : 'off') },
-    '#undo':       { actif: mode !== 'joueur' && histo.length > 0,
+    '#undo':       { actif: mode !== 'joueur' && !occupe && histo.length > 0,
                      texte: `Annuler (${histo.length})` },
-    '#razdessin':  { actif: mode !== 'joueur' },
-    '#exporter':   { actif: mode !== 'joueur' },
-    '#importer':   { actif: mode !== 'joueur' }
+    '#razdessin':  { actif: mode !== 'joueur' && !occupe },
+    '#exporter':   { actif: mode !== 'joueur' && !occupe },
+    '#importer':   { actif: mode !== 'joueur' && !occupe }
   };
-  for (const [sel, r] of Object.entries(regles)) {
-    const e = $(sel);
+  for (const [s, r] of Object.entries(regles)) {
+    const e = $(s);
     if (!e) continue;
     if (r.texte !== undefined) e.textContent = r.texte;
     e.style.display = (r.visible === false) ? 'none' : '';
-    let actif = (r.actif === undefined) ? true : r.actif;
-    if (exploration && sel !== '#arreter') actif = false;   // exploration en cours
-    e.disabled = !actif;
+    e.disabled = (r.actif === undefined) ? false : !r.actif;
   }
   const menu = document.querySelector('details.menu');
   if (menu) {
-    if (mode === 'joueur' || exploration) { menu.setAttribute('data-off', ''); menu.open = false; }
+    if (mode === 'joueur' || occupe) { menu.setAttribute('data-off', ''); menu.open = false; }
     else menu.removeAttribute('data-off');
   }
 }
+
+function changerMode(nouveau) {
+  modeDef = (nouveau === 'definition');
+  modeEdit = (nouveau === 'edition');
+  modeJoueur = (nouveau === 'joueur');
+  document.body.classList.toggle('joueur', modeJoueur);
+  if (!modeDef && !modeJoueur) $('#defs').innerHTML = '';
+  majBoutons();
+  if (modeDef && derniere) afficherDefs(derniere);
+  if (modeJoueur && derniere && typeCourant() !== 'codes') afficherDefs(derniere);
+  dessiner(derniere);
+  afficherLegende(derniere);
+  majDecor();
+  const txt = { generation: 'Mode génération.',
+    definition: 'Mode définition : cliquez une case pour atteindre sa définition.',
+    edition: 'Mode édition : tapez une lettre ; videz une case pour la noircir.',
+    joueur: 'Mode joueur : remplissez la grille.' };
+  $('#etat').textContent = txt[nouveau] || '';
+}
+$('#mode').onchange = e => changerMode(e.target.value);
 
 // le menu Dessin se referme dès qu'on clique ailleurs
 document.addEventListener('click', ev => {
@@ -1791,15 +1814,6 @@ $('#toutchercher').onclick = async () => {
     : 'Tous les mots ont déjà une définition.';
 };
 
-$('#edition').onclick = () => {
-  modeEdit = !modeEdit;
-  if (modeEdit) { modeDef = false; modeJoueur = false; document.body.classList.remove('joueur');
-                  $('#defs').innerHTML = ''; }
-  majBoutons(); dessiner(derniere);
-  $('#etat').textContent = modeEdit
-    ? 'Mode édition : tapez une lettre dans une case ; videz-la pour en faire une case noire.'
-    : 'Mode édition désactivé.';
-};
 $('#verifier').onclick = () => {
   if (!derniere) return;
   if (worker) worker.terminate();
@@ -1812,7 +1826,8 @@ $('#verifier').onclick = () => {
       : 'Tous les mots de la grille sont dans le lexique.';
   };
   $('#etat').textContent = 'Vérification…';
-  worker.postMessage({ mode: 'verifier', nl, nc, grille: Array.from(derniere) });
+  worker.postMessage({ mode: 'verifier', nl, nc, grille: Array.from(derniere),
+                       imposes: lignes('#imposes') });
 };
 
 $('#dessinonoff').onclick = () => { modeDessin = !modeDessin; majBoutons(); };
@@ -1824,20 +1839,6 @@ $('#undo').onclick = () => {
   $('#etat').textContent = 'Dernier tracé annulé.';
 };
 
-$('#joueur').onclick = () => {
-  modeJoueur = !modeJoueur;
-  if (modeJoueur && modeDef) { modeDef = false; }
-  $('#joueur').textContent = 'Mode joueur : ' + (modeJoueur ? 'ON' : 'off');
-  document.body.classList.toggle('joueur', modeJoueur);
-  dessiner(derniere); afficherLegende(derniere);
-  if (modeJoueur && derniere && typeCourant() !== 'codes') afficherDefs(derniere);
-  if (typeCourant() === 'codes') $('#defs').innerHTML = '';
-  majDecor();
-  $('#etat').textContent = modeJoueur
-    ? 'Mode joueur : cliquez une case de la grille des lettres pour la colorer, '
-      + 'ou tapez-y une lettre — elle apparaîtra dans les deux grilles.'
-    : 'Mode auteur.';
-};
 // Une lettre utile : ni trop rare (une seule occurrence n'aide pas), ni trop
 // répandue (E ou S se devinent seuls et éventent la grille).
 // mots croisés : on dévoile la lettre de la case sélectionnée
