@@ -97,8 +97,9 @@
        font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
        padding:0; color:#1a3a6b; }
   #legende .c input:focus { outline:2px solid #6b8bb5; }
-  .c.flcase { background:#e9edf2 !important; border-color:#b9c2ce !important; }
+  .c.flcase { background-color:#f2f5f9 !important; border-color:#c3ccd8 !important; }
   .c.flcase .fl { color:#14202e; }
+  .c .fl b { font-weight:700; font-size:9px; margin-right:1px; }
   .c .fl { position:absolute; inset:0; color:#14202e; font-size:7px; line-height:1.1;
        font-weight:400; padding:1px 2px; text-align:left; overflow:hidden;
        display:flex; flex-direction:column; justify-content:flex-start; }
@@ -118,7 +119,7 @@
     body.vierge #defs { display:none; }
     body.codes #defs, body.codes #impression { display:none; }
     body.fleches #defs { display:none; }
-    .c.flcase { background:#e9edf2 !important; }
+    .c.flcase { background-color:#f2f5f9 !important; }
     .c.flcase .fl { color:#000 !important; }
     body.vierge .c.flcase .fl { visibility:visible; }
     body.vierge #legende span { visibility:hidden; }
@@ -199,7 +200,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">8.0</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">8.1</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -331,11 +332,16 @@
   <p><b>Mots croisés</b> — le fonctionnement habituel.</p>
   <p><b>Mots fléchés</b> — à l'impression, la définition de chaque mot est
   écrite <b>dans la case noire</b> d'où il part : celles de la première ligne
-  portent la définition du mot vertical, celles de la première colonne celle du
-  mot horizontal, et le coin supérieur gauche porte les deux. Ces cases passent
-  alors sur fond gris clair avec un texte noir, comme dans les grilles du
-  commerce — un texte blanc sur fond noir disparaît dès que l'impression des
-  fonds est désactivée. Les cases sont
+  portent la définition du mot qui part vers la droite, précédée de ►, et celle
+  du mot qui part vers le bas, précédée de ▼. Toute case noire de la grille en
+  bénéficie, pas seulement celles du bord. Ces cases passent sur fond gris très
+  clair avec un texte noir, comme dans les grilles du commerce.</p>
+  <p>Une réserve : une case noire ne peut porter que la définition d'un mot qui
+  <i>commence</i> juste à sa droite ou juste en dessous. Avec le damier en
+  quinconce de la première ligne et de la première colonne, les mots des lignes
+  et colonnes impaires démarrent au bord de la grille et n'ont donc aucune case
+  noire pour les annoncer — leurs définitions restent dans la liste. La case du
+  coin supérieur gauche, en particulier, n'annonce aucun mot : elle reste vide. Les cases sont
   alors imprimées nettement plus grandes pour que le texte tienne, et la liste
   des définitions n'est pas reproduite. Le programme impose des cases noires en
   première ligne et en première colonne, une sur deux, en commençant par le coin
@@ -516,7 +522,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 8.0, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 8.1, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -1499,30 +1505,41 @@ async function telecharger(nom, texte) {
 // horizontal de la ligne.
 function remplirFleches() {
   if (!derniere) return 0;
+  // on repère la première case de chaque mot, dans les deux sens
+  const par = motsParLigne2(derniere);
+  const debutH = new Map(), debutV = new Map();
+  for (const e of par.H)
+    e.mots.forEach((m, k) => debutH.set(m.cells[0], 'H' + e.n + '.' + k));
+  for (const e of par.V)
+    e.mots.forEach((m, k) => debutV.set(m.cells[0], 'V' + e.n + '.' + k));
+
   let ecrites = 0;
   for (let i = 0; i < nl * nc; i++) {
     const el = cases[i];
     if (!el || derniere[i] !== -2) continue;
     const r = (i / nc) | 0, c = i % nc;
-    const textes = [];
-    if (r === 0 && c % 2 === 0) {
-      const t = defsChoisies.get('V' + (c + 1) + '.0');
-      if (t) textes.push(t);
+    const lignes = [];
+    if (c + 1 < nc && debutH.has(i + 1)) {
+      const t = defsChoisies.get(debutH.get(i + 1));
+      if (t) lignes.push(['►', t]);
     }
-    if (c === 0 && r % 2 === 0) {
-      const t = defsChoisies.get('H' + (r + 1) + '.0');
-      if (t) textes.push(t);
+    if (r + 1 < nl && debutV.has(i + nc)) {
+      const t = defsChoisies.get(debutV.get(i + nc));
+      if (t) lignes.push(['▼', t]);
     }
-    if (!textes.length) continue;
+    if (!lignes.length) continue;
     const d = document.createElement('div');
     d.className = 'fl';
-    for (const t of textes) {
+    for (const [fleche, t] of lignes) {
       const s = document.createElement('i');
-      s.textContent = t;
+      const b = document.createElement('b');
+      b.textContent = fleche;
+      s.appendChild(b);
+      s.appendChild(document.createTextNode(t));
       d.appendChild(s);
     }
     el.appendChild(d);
-    el.classList.add('flcase');       // fond clair, texte lisible
+    el.classList.add('flcase');
     ecrites++;
   }
   return ecrites;
@@ -1553,6 +1570,7 @@ function imprimer(vierge) {
                        : Math.max(30, Math.floor(700 / (nc + 1)));
   dessiner(derniere, grand);
   if (fleche) {
+    indexerMots(derniere);
     const n = remplirFleches();
     if (!n) $('#etat').textContent = 'Aucune définition saisie : les cases de '
       + 'définition resteront vides. Passez en mode définition pour les rédiger.';
