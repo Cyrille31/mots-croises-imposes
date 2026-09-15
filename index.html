@@ -200,7 +200,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">8.1</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">8.3</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -330,18 +330,22 @@
 
   <h4>Les trois types de grille</h4>
   <p><b>Mots croisés</b> — le fonctionnement habituel.</p>
-  <p><b>Mots fléchés</b> — à l'impression, la définition de chaque mot est
-  écrite <b>dans la case noire</b> d'où il part : celles de la première ligne
-  portent la définition du mot qui part vers la droite, précédée de ►, et celle
-  du mot qui part vers le bas, précédée de ▼. Toute case noire de la grille en
-  bénéficie, pas seulement celles du bord. Ces cases passent sur fond gris très
+  <p><b>Mots fléchés</b> — des cases de définition sont posées une sur deux en
+  première ligne et en première colonne, comme dans les grilles du commerce. À
+  l'impression, la définition de chaque mot est écrite <b>dans une case de
+  définition</b>, avec une flèche indiquant où le trouver : celles de la première ligne
+  <b>►</b> le mot part de la case de droite et court horizontalement,
+  <b>▼</b> il part de la case du dessous et court verticalement,
+  <b>►▼</b> il part de la case de droite mais court vers le bas,
+  <b>▼►</b> il part de la case du dessous mais court vers la droite. Ce sont les
+  flèches coudées des grilles imprimées, et ce sont elles qui permettent
+  d'annoncer les mots qui démarrent au bord. Toute case noire de la grille en
+  bénéficie, pas seulement celles du bord, et chacune porte jusqu'à deux
+  définitions. Ces cases passent sur fond gris très
   clair avec un texte noir, comme dans les grilles du commerce.</p>
-  <p>Une réserve : une case noire ne peut porter que la définition d'un mot qui
-  <i>commence</i> juste à sa droite ou juste en dessous. Avec le damier en
-  quinconce de la première ligne et de la première colonne, les mots des lignes
-  et colonnes impaires démarrent au bord de la grille et n'ont donc aucune case
-  noire pour les annoncer — leurs définitions restent dans la liste. La case du
-  coin supérieur gauche, en particulier, n'annonce aucun mot : elle reste vide. Les cases sont
+  <p>Chaque case porte au plus deux définitions. Si toutes les cases candidates
+  d'un mot sont déjà pleines, sa définition reste dans la liste imprimée et
+  l'application vous indique combien de mots sont dans ce cas. Les cases sont
   alors imprimées nettement plus grandes pour que le texte tienne, et la liste
   des définitions n'est pas reproduite. Le programme impose des cases noires en
   première ligne et en première colonne, une sur deux, en commençant par le coin
@@ -522,7 +526,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 8.1, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 8.3, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -657,11 +661,15 @@ function majTitre() {
   $('#titre').textContent = NOMS[typeCourant()];
   document.title = NOMS[typeCourant()] + ' — CGExcel';
 }
+// Mots fléchés : la première ligne et la première colonne sont entièrement
+// des cases de définition. Ainsi tout mot commence après une case noire —
+// celle qui portera sa définition — et aucun mot n'est laissé sans flèche.
 function appliquerType() {
   if (typeCourant() !== 'fleches') return;
   if (!etat) etat = new Uint8Array(nl * nc);
   for (let c = 0; c < nc; c++) etat[c] = (c % 2 === 0) ? 2 : (etat[c] === 2 ? 0 : etat[c]);
-  for (let r = 0; r < nl; r++) etat[r * nc] = (r % 2 === 0) ? 2 : (etat[r * nc] === 2 ? 0 : etat[r * nc]);
+  for (let r = 0; r < nl; r++)
+    etat[r * nc] = (r % 2 === 0) ? 2 : (etat[r * nc] === 2 ? 0 : etat[r * nc]);
   memoriser();
 }
 function borde(i) {                       // case de la première ligne ou colonne
@@ -1503,34 +1511,49 @@ async function telecharger(nom, texte) {
 // Mots fléchés : la définition du mot qui part d'une case noire est écrite
 // dans cette case. Ligne 0 -> mot vertical de la colonne, colonne 0 -> mot
 // horizontal de la ligne.
+// Attribution des définitions aux cases noires, comme dans les grilles du
+// commerce : flèche droite quand le mot part de la case voisine, flèche coudée
+// quand il part de la case voisine mais court dans l'autre sens.
 function remplirFleches() {
   if (!derniere) return 0;
-  // on repère la première case de chaque mot, dans les deux sens
   const par = motsParLigne2(derniere);
-  const debutH = new Map(), debutV = new Map();
+  const mots = [];
   for (const e of par.H)
-    e.mots.forEach((m, k) => debutH.set(m.cells[0], 'H' + e.n + '.' + k));
+    e.mots.forEach((m, k) => mots.push({ cle: 'H' + e.n + '.' + k, sens: 'H', debut: m.cells[0] }));
   for (const e of par.V)
-    e.mots.forEach((m, k) => debutV.set(m.cells[0], 'V' + e.n + '.' + k));
+    e.mots.forEach((m, k) => mots.push({ cle: 'V' + e.n + '.' + k, sens: 'V', debut: m.cells[0] }));
+
+  const noir = i => i >= 0 && i < nl * nc && derniere[i] === -2;
+  const charge = new Map();                  // case -> [[flèche, texte]]
+  const place = (case_, fleche, texte) => {
+    const l = charge.get(case_) || [];
+    if (l.length >= 2) return false;
+    l.push([fleche, texte]); charge.set(case_, l); return true;
+  };
+
+  let orphelins = 0;
+  for (const m of mots) {
+    const texte = defsChoisies.get(m.cle);
+    if (!texte) continue;
+    const r = (m.debut / nc) | 0, c = m.debut % nc;
+    let pose = false;
+    if (m.sens === 'H') {
+      if (c > 0 && noir(m.debut - 1)) pose = place(m.debut - 1, '►', texte);
+      if (!pose && r > 0 && noir(m.debut - nc)) pose = place(m.debut - nc, '▼►', texte);
+    } else {
+      if (r > 0 && noir(m.debut - nc)) pose = place(m.debut - nc, '▼', texte);
+      if (!pose && c > 0 && noir(m.debut - 1)) pose = place(m.debut - 1, '►▼', texte);
+    }
+    if (!pose) orphelins++;
+  }
 
   let ecrites = 0;
-  for (let i = 0; i < nl * nc; i++) {
+  for (const [i, liste] of charge) {
     const el = cases[i];
-    if (!el || derniere[i] !== -2) continue;
-    const r = (i / nc) | 0, c = i % nc;
-    const lignes = [];
-    if (c + 1 < nc && debutH.has(i + 1)) {
-      const t = defsChoisies.get(debutH.get(i + 1));
-      if (t) lignes.push(['►', t]);
-    }
-    if (r + 1 < nl && debutV.has(i + nc)) {
-      const t = defsChoisies.get(debutV.get(i + nc));
-      if (t) lignes.push(['▼', t]);
-    }
-    if (!lignes.length) continue;
+    if (!el) continue;
     const d = document.createElement('div');
     d.className = 'fl';
-    for (const [fleche, t] of lignes) {
+    for (const [fleche, t] of liste) {
       const s = document.createElement('i');
       const b = document.createElement('b');
       b.textContent = fleche;
@@ -1542,6 +1565,7 @@ function remplirFleches() {
     el.classList.add('flcase');
     ecrites++;
   }
+  remplirFleches.orphelins = orphelins;
   return ecrites;
 }
 
@@ -1574,6 +1598,9 @@ function imprimer(vierge) {
     const n = remplirFleches();
     if (!n) $('#etat').textContent = 'Aucune définition saisie : les cases de '
       + 'définition resteront vides. Passez en mode définition pour les rédiger.';
+    else if (remplirFleches.orphelins) $('#etat').textContent =
+      remplirFleches.orphelins + ' définition(s) n\u2019ont pas trouvé de case : '
+      + 'elles restent dans la liste imprimée.';
   }
   if (vierge) document.body.classList.add('vierge');
   window.print();
