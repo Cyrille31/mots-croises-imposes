@@ -80,6 +80,40 @@ self.onmessage = async (e) => {
   const p = e.data;
   if (p && p.mode === 'stop') { stop = true; return; }
   stop = false;
+
+  // vérification d'une grille retouchée à la main
+  if (p && p.mode === 'verifier') {
+    try {
+      const mots = await chargerLexique();
+      // le lexique garde ses accents : on normalise comme le moteur
+      const ens = new Set(mots.map(m => M.normaliser(m)));
+      const lire = (suite) => suite.length > 1 ? suite : null;
+      const mauvais = [];
+      const ajoute = (mot, ou) => { if (mot && !ens.has(mot)) mauvais.push(mot + ' (' + ou + ')'); };
+      for (let r = 0; r < p.nl; r++) {
+        let s = '';
+        for (let c = 0; c < p.nc; c++) {
+          const v = p.grille[r * p.nc + c];
+          if (v < 0) { ajoute(lire(s), 'ligne ' + (r + 1)); s = ''; }
+          else s += String.fromCharCode(65 + v);
+        }
+        ajoute(lire(s), 'ligne ' + (r + 1));
+      }
+      for (let c = 0; c < p.nc; c++) {
+        let s = '';
+        for (let r = 0; r < p.nl; r++) {
+          const v = p.grille[r * p.nc + c];
+          if (v < 0) { ajoute(lire(s), 'colonne ' + (c + 1)); s = ''; }
+          else s += String.fromCharCode(65 + v);
+        }
+        ajoute(lire(s), 'colonne ' + (c + 1));
+      }
+      self.postMessage({ type: 'verif', mauvais });
+    } catch (err) {
+      self.postMessage({ type: 'erreur', message: String((err && err.message) || err) });
+    }
+    return;
+  }
   try {
     if (!pret) throw new Error('moteur non charge');
     self.postMessage({ type: 'version', v: M.VERSION || '?' });
@@ -152,6 +186,12 @@ self.onmessage = async (e) => {
               themesPlaces: compterThemes(res.grille, p.nl, p.nc, theme),
               version: M.VERSION || '?'
             });
+          }
+          if (noirs === 0) {          // on ne fera pas mieux qu'une grille pleine
+            self.postMessage({ type: 'fini',
+              texte: `Grille sans aucune case noire trouvée après ${essais} essais : `
+                     + `impossible de faire mieux.` });
+            return;
           }
           d = Math.max(0, meilleurD - pas);
           if (Math.round(d * dedans) >= Math.round(meilleurD * dedans))

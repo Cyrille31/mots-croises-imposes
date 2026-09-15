@@ -71,6 +71,11 @@
        font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
        color:#14202e; }
   .c input.js:focus { outline:2px solid #1a3a6b; outline-offset:-2px; background:#fff6d5; }
+  .c input.ed { width:100%; height:100%; border:0; text-align:center; padding:0;
+       font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
+       color:#14202e; }
+  .c.noir input.ed { color:#fff; }
+  .c input.ed:focus { outline:2px solid #c0392b; outline-offset:-2px; }
   .def.vise { background:#fff6d5; border-radius:4px; }
   .blocdef { font-size:12.5px; line-height:1.7; margin:2px 0 8px; }
   .undef { cursor:pointer; padding:1px 2px; border-radius:3px; }
@@ -89,11 +94,13 @@
        font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
        padding:0; color:#1a3a6b; }
   #legende .c input:focus { outline:2px solid #6b8bb5; }
-  .c .fl { position:absolute; inset:0; color:#fff; font-size:7px; line-height:1.1;
+  .c.flcase { background:#e9edf2 !important; border-color:#b9c2ce !important; }
+  .c.flcase .fl { color:#14202e; }
+  .c .fl { position:absolute; inset:0; color:#14202e; font-size:7px; line-height:1.1;
        font-weight:400; padding:1px 2px; text-align:left; overflow:hidden;
        display:flex; flex-direction:column; justify-content:flex-start; }
   .c .fl i { font-style:normal; display:block; }
-  .c .fl i + i { border-top:1px solid rgba(255,255,255,.35); margin-top:1px; padding-top:1px; }
+  .c .fl i + i { border-top:1px solid #aab4c2; margin-top:1px; padding-top:1px; }
   .c u { position:absolute; top:0; left:1px; font-size:8px; text-decoration:none;
          font-weight:400; color:#8a96a4; line-height:1; }
   #legende { display:grid; gap:0; width:max-content; margin:8px auto;
@@ -108,6 +115,9 @@
     body.vierge #defs { display:none; }
     body.codes #defs, body.codes #impression { display:none; }
     body.fleches #defs { display:none; }
+    .c.flcase { background:#e9edf2 !important; }
+    .c.flcase .fl { color:#000 !important; }
+    body.vierge .c.flcase .fl { visibility:visible; }
     body.vierge #legende span { visibility:hidden; }
     body.vierge #legende .c.revelee span { visibility:visible; }
     body.codes .c { background:#fff !important; }
@@ -186,7 +196,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">7.5</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">7.8</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -235,6 +245,8 @@
     <button id="arreter" class="sec" disabled>Arrêter</button></div>
   <div class="groupe"><button id="definitions" class="sec" disabled>Mode définition : off</button>
     <button id="toutchercher" class="sec" style="display:none">Chercher toutes les définitions</button></div>
+  <div class="groupe"><button id="edition" class="sec" disabled>Mode édition : off</button>
+    <button id="verifier" class="sec" style="display:none">Vérifier les mots</button></div>
   <div class="groupe"><button id="joueur" class="sec">Mode joueur : off</button>
     <button id="aide" class="sec" style="display:none">Aide : une lettre</button>
     <button id="razjoueur" class="sec" style="display:none">Effacer mes lettres</button></div>
@@ -313,7 +325,10 @@
   <p><b>Mots fléchés</b> — à l'impression, la définition de chaque mot est
   écrite <b>dans la case noire</b> d'où il part : celles de la première ligne
   portent la définition du mot vertical, celles de la première colonne celle du
-  mot horizontal, et le coin supérieur gauche porte les deux. Les cases sont
+  mot horizontal, et le coin supérieur gauche porte les deux. Ces cases passent
+  alors sur fond gris clair avec un texte noir, comme dans les grilles du
+  commerce — un texte blanc sur fond noir disparaît dès que l'impression des
+  fonds est désactivée. Les cases sont
   alors imprimées nettement plus grandes pour que le texte tienne, et la liste
   des définitions n'est pas reproduite. Le programme impose des cases noires en
   première ligne et en première colonne, une sur deux, en commençant par le coin
@@ -342,7 +357,9 @@
     <tr><td>Ouvrir</td><td>grisé pendant une recherche</td></tr>
     <tr><td>Mode définition</td><td>grille présente, hors mots codés, hors mode joueur</td></tr>
     <tr><td>Chercher toutes les définitions</td><td>visible en mode définition seulement</td></tr>
-    <tr><td>Mode joueur</td><td>grille présente, hors mode définition</td></tr>
+    <tr><td>Mode joueur</td><td>grille présente, hors modes définition et édition</td></tr>
+    <tr><td>Mode édition</td><td>grille présente, hors modes joueur et définition</td></tr>
+    <tr><td>Vérifier les mots</td><td>visible en mode édition seulement</td></tr>
     <tr><td>Aide : une lettre</td><td>visible en mots codés avec une grille</td></tr>
     <tr><td>Effacer mes lettres</td><td>visible en mode joueur avec une grille</td></tr>
     <tr><td>Menu Dessin et son contenu</td><td>hors mode joueur ; Annuler si la pile n'est pas vide</td></tr>
@@ -368,8 +385,9 @@
   la saisie. Un nouvel appui retire la couleur sans quitter la saisie.</p>
   <p>Quand toutes les lettres du code sont justes, le même feu d'artifice vous
   félicite qu'en mots croisés.</p>
-  <p>Les boutons <b>Aide : une lettre</b> et <b>Effacer mes lettres</b>
-  n'apparaissent qu'en mode joueur sur une grille de mots codés.</p>
+  <p>En mots croisés et fléchés, le bouton <b>Aide : cette case</b> apparaît en
+  mode joueur et dévoile la lettre de la case où vous venez de cliquer. En mots
+  codés, <b>Aide : une lettre</b> dévoile une lettre entière du code.</p>
   <p>Le bouton <b>Aide : une lettre</b> dévoile une lettre à chaque clic, en
   choisissant la plus utile : au moins deux occurrences — en dessous cela
   n'apprend rien — mais moins de 9 % des lettres de la grille, ce qui écarte le
@@ -378,6 +396,17 @@
   <p>Le codage est enregistré dans le fichier : le joueur voit exactement la même
   numérotation que l'auteur. Le dessin de la grille n'est pas modifiable tant que
   le mode joueur est actif.</p>
+
+  <h4>Le mode édition</h4>
+  <p>Il permet de retoucher une grille produite : tapez une lettre dans une case
+  pour la remplacer, videz une case pour en faire une case noire, tapez une
+  lettre dans une case noire pour la rendre blanche. Le contour rouge signale la
+  case en cours de modification.</p>
+  <p>Ces retouches ne sont pas contrôlées à la volée — c'est le but, vous pouvez
+  vouloir un mot que le lexique ignore. Le bouton <b>Vérifier les mots</b>,
+  visible dans ce mode, confronte toute la grille au lexique et liste les suites
+  de lettres qui n'y figurent pas, avec leur ligne ou colonne.</p>
+  <p>Le mode édition exclut les modes définition et joueur.</p>
 
   <h4>Le mode joueur, grilles classiques</h4>
   <p>Ouvrez le fichier reçu et activez le mode joueur : la grille apparaît vide,
@@ -474,7 +503,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 7.5, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 7.8, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -491,10 +520,11 @@ let cases = [];      // element DOM de chaque case, indexe par numero de case
 let codeNum = null;  // lettre -> numero, pour les mots codés
 const revelees = new Map();   // lettre -> couleur d'aide, pour les mots codés
 const props = new Map();      // numero -> lettre proposee par le joueur
+let caseActive = -1;          // case de la grille ayant le focus, en mode joueur
 const saisies = new Map();    // case -> lettre saisie par le joueur
 let motsDeCase = null;        // case -> [{cle, cells}] pour l'eclairage croise
 let cleActive = null;         // definition mise en evidence
-let modeJoueur = false, modeDef = false, modeDessin = false;
+let modeJoueur = false, modeDef = false, modeDessin = false, modeEdit = false;
 const histo = [];             // pile d'annulation du dessin (3 niveaux)
 let clicPrec = -1, sensPrec = 'V';
 const PALETTE = ['#ffd6d6', '#d6ecff', '#d9f7d6', '#fff3c4', '#e8dbff',
@@ -757,6 +787,24 @@ function dessiner(g, tailleForcee) {
     d.style.fontSize = Math.round(taille * 0.55) + 'px';
     if (etat && etat[i] === 1) d.classList.add('hors');
     else if (etat && etat[i] === 2 && !g) d.classList.add('noirimp');
+    else if (g && modeEdit) {
+      const v = g[i];
+      if (v === -2) d.classList.add('noir');
+      const inp = document.createElement('input');
+      inp.className = 'ed'; inp.maxLength = 1;
+      inp.value = v >= 0 ? String.fromCharCode(65 + v) : '';
+      inp.oninput = () => {
+        const t = norm(inp.value).slice(0, 1);
+        if (/^[A-Z]$/.test(t)) { derniere[i] = t.charCodeAt(0) - 65; inp.value = t; }
+        else { derniere[i] = -2; inp.value = ''; }
+        d.classList.toggle('noir', derniere[i] === -2);
+        indexerMots(derniere);
+        $('#etat').textContent = 'Grille retouchée — pensez à vérifier les mots.';
+      };
+      inp.addEventListener('pointerdown', ev => ev.stopPropagation());
+      d.appendChild(inp);
+      d.onclick = () => inp.focus();
+    }
     else if (g) {
       const v = g[i];
       if (v === -2) d.classList.add('noir');
@@ -764,7 +812,7 @@ function dessiner(g, tailleForcee) {
         const inp = document.createElement('input');
         inp.className = 'js'; inp.maxLength = 1;
         inp.value = saisies.get(i) || '';
-        inp.onfocus = () => { cleActive = null; eclairer(i); };
+        inp.onfocus = () => { cleActive = null; caseActive = i; eclairer(i); };
         inp.oninput = () => {
           const w = norm(inp.value).slice(0, 1);
           inp.value = w;
@@ -1451,7 +1499,8 @@ async function telecharger(nom, texte) {
 // dans cette case. Ligne 0 -> mot vertical de la colonne, colonne 0 -> mot
 // horizontal de la ligne.
 function remplirFleches() {
-  if (!derniere) return;
+  if (!derniere) return 0;
+  let ecrites = 0;
   for (let i = 0; i < nl * nc; i++) {
     const el = cases[i];
     if (!el || derniere[i] !== -2) continue;
@@ -1474,7 +1523,10 @@ function remplirFleches() {
       d.appendChild(s);
     }
     el.appendChild(d);
+    el.classList.add('flcase');       // fond clair, texte lisible
+    ecrites++;
   }
+  return ecrites;
 }
 
 function construireImpression() {
@@ -1501,7 +1553,11 @@ function imprimer(vierge) {
   const grand = fleche ? Math.max(56, Math.floor(620 / (nc + 1)))
                        : Math.max(30, Math.floor(700 / (nc + 1)));
   dessiner(derniere, grand);
-  if (fleche) remplirFleches();
+  if (fleche) {
+    const n = remplirFleches();
+    if (!n) $('#etat').textContent = 'Aucune définition saisie : les cases de '
+      + 'définition resteront vides. Passez en mode définition pour les rédiger.';
+  }
   if (vierge) document.body.classList.add('vierge');
   window.print();
   setTimeout(() => {
@@ -1650,19 +1706,25 @@ function majBoutons() {
   const g = !!derniere;
   if (!g && modeJoueur) { modeJoueur = false; document.body.classList.remove('joueur'); }
   if (!g && modeDef) modeDef = false;
-  const mode = modeJoueur ? 'joueur' : (modeDef ? 'definition' : 'auteur');
+  if (!g && modeEdit) modeEdit = false;
+  const mode = modeJoueur ? 'joueur' : (modeDef ? 'definition'
+             : (modeEdit ? 'edition' : 'auteur'));
 
   const regles = {
-    '#go':         { actif: !recherche && mode !== 'joueur' },
     '#razgrille':  { actif: g && !recherche && mode !== 'joueur' },
     '#explorer':   { actif: mode === 'auteur' && !recherche },
+    '#go':         { actif: !recherche && mode !== 'joueur' },
     '#arreter':    { actif: exploration },
-    '#definitions':{ visible: !codes, actif: g && mode !== 'joueur',
+    '#edition':    { actif: g && mode !== 'joueur' && mode !== 'definition',
+                     texte: 'Mode édition : ' + (modeEdit ? 'ON' : 'off') },
+    '#verifier':   { visible: mode === 'edition' },
+    '#definitions':{ visible: !codes, actif: g && mode !== 'joueur' && mode !== 'edition',
                      texte: 'Mode définition : ' + (modeDef ? 'ON' : 'off') },
     '#toutchercher': { visible: mode === 'definition' },
-    '#joueur':     { actif: g && mode !== 'definition',
+    '#joueur':     { actif: g && mode !== 'definition' && mode !== 'edition',
                      texte: 'Mode joueur : ' + (modeJoueur ? 'ON' : 'off') },
-    '#aide':       { visible: codes && g },
+    '#aide':       { visible: g && (codes || mode === 'joueur'),
+                     texte: codes ? 'Aide : une lettre' : 'Aide : cette case' },
     '#razjoueur':  { visible: g && mode === 'joueur' },
     '#imprimer':   { actif: g },
     '#imprvierge': { actif: g },
@@ -1705,7 +1767,10 @@ $('#toutchercher').onclick = async () => {
   const taches = [];
   for (const sens of ['H', 'V'])
     for (const e of par[sens])
-      e.mots.forEach((mot, k) => taches.push({ cle: sens + e.n + '.' + k, mot }));
+      e.mots.forEach((mot, k) => {
+        const cle = sens + e.n + '.' + k;
+        if (!(defsChoisies.get(cle) || '').trim()) taches.push({ cle, mot });
+      });
   let ok = 0;
   for (let i = 0; i < taches.length; i++) {
     const t = taches[i];
@@ -1713,17 +1778,41 @@ $('#toutchercher').onclick = async () => {
     try {
       const props = await chercherDefs(t.mot);
       if (props.length) {
-        propositions.set(t.cle, props);          // le menu sera rempli d'office
-        if (!(defsChoisies.get(t.cle) || '').trim()) {
-          defsChoisies.set(t.cle, props[Math.floor(Math.random() * props.length)].texte);
-          ok++;
-        }
+        propositions.set(t.cle, props);
+        defsChoisies.set(t.cle, props[Math.floor(Math.random() * props.length)].texte);
+        ok++;
       }
     } catch (e) { /* mot suivant */ }
   }
   b.textContent = 'Chercher toutes les définitions'; b.disabled = false;
   afficherDefs(derniere); dessiner(derniere); majDecor();
-  $('#etat').textContent = `${ok} définition(s) posée(s) ; propositions chargées pour ${taches.length} mots.`;
+  $('#etat').textContent = taches.length
+    ? `${ok} définition(s) trouvée(s) sur ${taches.length} mots sans définition.`
+    : 'Tous les mots ont déjà une définition.';
+};
+
+$('#edition').onclick = () => {
+  modeEdit = !modeEdit;
+  if (modeEdit) { modeDef = false; modeJoueur = false; document.body.classList.remove('joueur');
+                  $('#defs').innerHTML = ''; }
+  majBoutons(); dessiner(derniere);
+  $('#etat').textContent = modeEdit
+    ? 'Mode édition : tapez une lettre dans une case ; videz-la pour en faire une case noire.'
+    : 'Mode édition désactivé.';
+};
+$('#verifier').onclick = () => {
+  if (!derniere) return;
+  if (worker) worker.terminate();
+  worker = new Worker('./worker.js');
+  worker.onmessage = e => {
+    const m = e.data;
+    if (m.type !== 'verif') return;
+    $('#etat').textContent = m.mauvais.length
+      ? m.mauvais.length + ' mot(s) hors lexique : ' + m.mauvais.join(', ')
+      : 'Tous les mots de la grille sont dans le lexique.';
+  };
+  $('#etat').textContent = 'Vérification…';
+  worker.postMessage({ mode: 'verifier', nl, nc, grille: Array.from(derniere) });
 };
 
 $('#dessinonoff').onclick = () => { modeDessin = !modeDessin; majBoutons(); };
@@ -1751,6 +1840,23 @@ $('#joueur').onclick = () => {
 };
 // Une lettre utile : ni trop rare (une seule occurrence n'aide pas), ni trop
 // répandue (E ou S se devinent seuls et éventent la grille).
+// mots croisés : on dévoile la lettre de la case sélectionnée
+function aideCaseCourante() {
+  if (!derniere) return;
+  if (caseActive < 0 || derniere[caseActive] < 0) {
+    $('#etat').textContent = 'Cliquez d\u2019abord dans une case de la grille.';
+    return;
+  }
+  const ch = String.fromCharCode(65 + derniere[caseActive]);
+  saisies.set(caseActive, ch);
+  const inp = cases[caseActive] && cases[caseActive].querySelector('input.js');
+  if (inp) inp.value = ch;
+  cases[caseActive].classList.add('revelee');
+  cases[caseActive].style.background = PALETTE[0];
+  verifierVictoire();
+  $('#etat').textContent = 'Lettre révélée : ' + ch;
+}
+
 function lettreUtile() {
   if (!derniere || !codeNum) return null;
   const n = new Map();
@@ -1765,6 +1871,7 @@ function lettreUtile() {
   return cands.length ? cands[0][0] : null;
 }
 $('#aide').onclick = () => {
+  if (typeCourant() !== 'codes') return aideCaseCourante();
   const ch = lettreUtile();
   if (!ch) { $('#etat').textContent = 'Plus de lettre utile à révéler.'; return; }
   const prises = new Set(revelees.values());
