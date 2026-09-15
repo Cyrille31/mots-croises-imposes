@@ -97,9 +97,14 @@
        font:inherit; font-weight:600; text-transform:uppercase; background:transparent;
        padding:0; color:#1a3a6b; }
   #legende .c input:focus { outline:2px solid #6b8bb5; }
-  .c.flcase { background-color:#f2f5f9 !important; border-color:#c3ccd8 !important; }
+  body.fleches .c.noir, .c.flcase {
+       background-color:#f4f7fa !important; border-color:#c3ccd8 !important; }
+  body.fleches .c.noir span { display:none; }
   .c.flcase .fl { color:#14202e; }
-  .c .fl b { font-weight:700; font-size:9px; margin-right:1px; }
+  .c .fA { position:absolute; font-size:12px; line-height:1; color:#14202e;
+       z-index:3; font-weight:700; }
+  .c .fA.dr { right:-6px; top:50%; transform:translateY(-50%); }
+  .c .fA.db { bottom:-7px; left:50%; transform:translateX(-50%); }
   .c .fl { position:absolute; inset:0; color:#14202e; font-size:7px; line-height:1.1;
        font-weight:400; padding:1px 2px; text-align:left; overflow:hidden;
        display:flex; flex-direction:column; justify-content:flex-start; }
@@ -119,7 +124,8 @@
     body.vierge #defs { display:none; }
     body.codes #defs, body.codes #impression { display:none; }
     body.fleches #defs { display:none; }
-    .c.flcase { background-color:#f2f5f9 !important; }
+    body.fleches .c.noir, .c.flcase { background-color:#f4f7fa !important;
+       border-color:#c3ccd8 !important; }
     .c.flcase .fl { color:#000 !important; }
     body.vierge .c.flcase .fl { visibility:visible; }
     body.vierge #legende span { visibility:hidden; }
@@ -200,7 +206,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">8.3</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">8.4</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -334,10 +340,12 @@
   première ligne et en première colonne, comme dans les grilles du commerce. À
   l'impression, la définition de chaque mot est écrite <b>dans une case de
   définition</b>, avec une flèche indiquant où le trouver : celles de la première ligne
-  <b>►</b> le mot part de la case de droite et court horizontalement,
-  <b>▼</b> il part de la case du dessous et court verticalement,
-  <b>►▼</b> il part de la case de droite mais court vers le bas,
-  <b>▼►</b> il part de la case du dessous mais court vers la droite. Ce sont les
+  <b>►</b> sur le bord droit, le mot part de la case de droite et court
+  horizontalement ; <b>▼</b> sur le bord inférieur, il part de la case du dessous
+  et court verticalement ; <b>⤵</b> sur le bord droit, il part de la case de
+  droite mais court vers le bas ; <b>⤷</b> sur le bord inférieur, il part de la
+  case du dessous mais court vers la droite. Les flèches sont posées sur le bord
+  de la case, à cheval sur la séparation, comme dans les grilles imprimées. Ce sont les
   flèches coudées des grilles imprimées, et ce sont elles qui permettent
   d'annoncer les mots qui démarrent au bord. Toute case noire de la grille en
   bénéficie, pas seulement celles du bord, et chacune porte jusqu'à deux
@@ -526,7 +534,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 8.3, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 8.4, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -1555,11 +1563,13 @@ function remplirFleches() {
     d.className = 'fl';
     for (const [fleche, t] of liste) {
       const s = document.createElement('i');
-      const b = document.createElement('b');
-      b.textContent = fleche;
-      s.appendChild(b);
-      s.appendChild(document.createTextNode(t));
+      s.textContent = t;
       d.appendChild(s);
+      // la flèche est posée sur le bord de la case, tournée vers le mot
+      const a = document.createElement('span');
+      a.className = 'fA ' + (fleche === '►' || fleche === '►▼' ? 'dr' : 'db');
+      a.textContent = { '►': '►', '▼': '▼', '►▼': '⤵', '▼►': '⤷' }[fleche];
+      el.appendChild(a);
     }
     el.appendChild(d);
     el.classList.add('flcase');
@@ -1937,6 +1947,7 @@ $('#razjoueur').onclick = () => {
 
 $('#type').onchange = () => {
   majTitre();
+  document.body.classList.toggle('fleches', typeCourant() === 'fleches');
   if (typeCourant() === 'codes') { modeDef = false; $('#defs').innerHTML = ''; }
   if (typeCourant() === 'fleches') appliquerType();
   if (typeCourant() !== 'codes') { codeNum = null; }
@@ -1958,6 +1969,7 @@ $('#nl').onchange = $('#nc').onchange = () => {
 };
 
 majTitre();
+document.body.classList.toggle('fleches', typeCourant() === 'fleches');
 appliquerType();
 majBoutons();
 dessiner(null);
