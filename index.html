@@ -2,7 +2,8 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5,
+      user-scalable=yes, viewport-fit=cover">
 <title>Mots croisés — CGExcel</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1a3a6b">
@@ -57,12 +58,12 @@
   button.sec { background:#fff; color:var(--bleu); border:1px solid #b9c6d8; }
   button:disabled { opacity:.45; }
   #etat { font-size:11.5px; color:#6b7887; margin:5px 0; min-height:15px; }
-  body.joueur #grille, body.joueur .c { touch-action:manipulation; }
+  body.joueur #grille, body.joueur .c { touch-action:pinch-zoom; }
   #grille { display:grid; gap:0; margin:6px auto; touch-action:none;
             border:2px solid var(--trait); width:max-content; max-width:100%; }
   .c { display:flex; align-items:center; justify-content:center; font-weight:600;
        border:1px solid #b9c2ce; background:#fff; user-select:none;
-       touch-action:none; -webkit-user-select:none; }
+       -webkit-user-select:none; }
   body.joueur .c input.js { pointer-events:auto; }
   .c.noir { background-color:var(--trait); }
   .c.hors { background-color:#e9edf2; border-color:#dfe4ea; }
@@ -105,7 +106,9 @@
        z-index:3; font-weight:700; visibility:visible; }
   .c .fA.dr { right:-6px; top:50%; transform:translateY(-50%); }
   .c .fA.db { bottom:-7px; left:50%; transform:translateX(-50%); }
-  .c .fl { position:absolute; inset:0; color:#14202e; font-size:7px; line-height:1.1;
+  .c.deux .fA.dr { top:27%; }
+  .c .fl i { flex:1 1 auto; display:flex; align-items:center; }
+  .c .fl { position:absolute; inset:0; color:#14202e; font-size:8px; line-height:1.12;
        font-weight:400; padding:1px 2px; text-align:left; overflow:hidden;
        display:flex; flex-direction:column; justify-content:flex-start; }
   .c .fl i { font-style:normal; display:block; }
@@ -155,7 +158,9 @@
   .note { color:#6b7887; font-style:italic; }
   #defs { margin:8px 0; max-height:34vh; overflow-y:auto; overscroll-behavior:contain;
           border:1px solid #e2e7ee; border-radius:8px; padding:2px 8px; background:#fff; }
-  #grille { position:sticky; top:0; background:var(--fond); z-index:2; padding:2px 0; }
+  #grille { position:sticky; top:0; background:var(--fond); z-index:2; padding:2px 0;
+            max-width:100%; }
+  @media (max-width:700px) { #grille { position:static; } }
   #defs h3 { font-size:12px; color:var(--bleu); margin:8px 0 4px; }
   .def { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin:3px 0;
          font-size:12px; }
@@ -208,7 +213,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">8.5</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">8.6</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -536,7 +541,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 8.5, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 8.6, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -798,8 +803,9 @@ function afficherLegende(g) {
 
 function dessiner(g, tailleForcee) {
   const boite = $('#grille');
+  // la grille doit tenir entièrement à l'écran, avec un minimum lisible
   const taille = tailleForcee
-    || Math.min(30, Math.floor(Math.min(window.innerWidth - 40, 560) / (nc + 1)));
+    || Math.max(11, Math.min(30, Math.floor(Math.min(window.innerWidth - 30, 560) / (nc + 1))));
   const marge = Math.round(taille * 0.7);
   boite.style.gridTemplateColumns = `${marge}px repeat(${nc}, ${taille}px)`;
   boite.style.border = 'none';
@@ -1561,8 +1567,20 @@ function remplirFleches() {
   for (const [i, liste] of charge) {
     const el = cases[i];
     if (!el) continue;
+    // la définition dont la flèche sort à droite est placée au-dessus,
+    // celle dont la flèche sort en bas est placée au-dessous
+    liste.sort((a, b) => (a[0] === '►' || a[0] === '►▼' ? 0 : 1)
+                       - (b[0] === '►' || b[0] === '►▼' ? 0 : 1));
+    if (liste.length > 1) el.classList.add('deux');
+    // on agrandit le texte tant qu'il tient dans la case
+    const cote = parseInt(el.style.width, 10) || 30;
+    const plusLong = Math.max(...liste.map(x => x[1].length));
+    const aire = (cote * cote) / liste.length * 0.72;
+    let corps = Math.floor(Math.sqrt(aire / Math.max(1, plusLong * 0.62)));
+    corps = Math.max(6, Math.min(Math.floor(cote / 4), corps));
     const d = document.createElement('div');
     d.className = 'fl';
+    d.style.fontSize = corps + 'px';
     for (const [fleche, t] of liste) {
       const s = document.createElement('i');
       s.textContent = t;
