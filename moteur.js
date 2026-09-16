@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '8.6';
+const VERSION = '8.8';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -631,7 +631,9 @@ class Generateur {
       const mot = s.map(i => String.fromCharCode(65 + grille[i])).join('');
       const rg = ix.rang.get(s.length);
       const n = (emploiInit.get(mot) || 0) + 1;
-      const repMax = Math.max(maxRepet(s.length), this.repImp.get(mot) || 0);
+      const besoinI = this.repImp.get(mot) || 0;
+      const repMax = this.theme.has(mot) ? Math.max(1, besoinI)
+                                         : Math.max(maxRepet(s.length), besoinI);
       if (!rg || !rg.has(mot) || n > repMax) {
         for (const i of s) grille[i] = VIDE;
       } else emploiInit.set(mot, n);
@@ -730,8 +732,11 @@ class Generateur {
       libre[best] = 0;
       for (let t = 0; t < Math.min(cands.length, 50); t++) {
         const k = cands[t][1], mot = mots[k];
-        let rep = Math.max(maxRepet(L), this.repImp.get(mot) || 0);
-        if (this.theme.has(mot) && !this.repImp.has(mot)) rep = 1;
+        // un mot du thème ne se répète jamais, même injecté comme imposé :
+        // maxRepet ne doit pas relever son plafond
+        const besoin = this.repImp.get(mot) || 0;
+        const rep = this.theme.has(mot) ? Math.max(1, besoin)
+                                        : Math.max(maxRepet(L), besoin);
         if ((emploi.get(mot) || 0) >= rep) continue;
         const sauve = [];
         for (let p = 0; p < L; p++) {
