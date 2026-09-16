@@ -99,10 +99,10 @@
   #legende .c input:focus { outline:2px solid #6b8bb5; }
   body.fleches .c.noir, .c.flcase {
        background-color:#f4f7fa !important; border-color:#c3ccd8 !important; }
-  body.fleches .c.noir span { display:none; }
+  body.fleches .c.noir span:not(.fA) { display:none; }
   .c.flcase .fl { color:#14202e; }
   .c .fA { position:absolute; font-size:12px; line-height:1; color:#14202e;
-       z-index:3; font-weight:700; }
+       z-index:3; font-weight:700; visibility:visible; }
   .c .fA.dr { right:-6px; top:50%; transform:translateY(-50%); }
   .c .fA.db { bottom:-7px; left:50%; transform:translateX(-50%); }
   .c .fl { position:absolute; inset:0; color:#14202e; font-size:7px; line-height:1.1;
@@ -117,7 +117,7 @@
   #legende .c { position:relative; cursor:pointer; }
   .hdr { display:flex; align-items:center; justify-content:center; font-size:10px;
          color:#6b7887; font-weight:600; border:0; background:transparent; }
-  body.vierge .c span { visibility:hidden; }
+  body.vierge .c span:not(.fA) { visibility:hidden; }
   body.vierge .c.impose, body.vierge .c.themeq { background:#fff !important; }
   #impression { display:none; }
   @media print {
@@ -128,6 +128,8 @@
        border-color:#c3ccd8 !important; }
     .c.flcase .fl { color:#000 !important; }
     body.vierge .c.flcase .fl { visibility:visible; }
+    .c .fA { visibility:visible !important; display:block !important; }
+    #grille, .c { overflow:visible; }
     body.vierge #legende span { visibility:hidden; }
     body.vierge #legende .c.revelee span { visibility:visible; }
     body.codes .c { background:#fff !important; }
@@ -206,7 +208,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">8.4</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">8.5</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -534,7 +536,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 8.4, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 8.5, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
