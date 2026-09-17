@@ -215,7 +215,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">9.2</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">9.3</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -549,7 +549,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 9.2, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 9.3, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -2010,7 +2010,8 @@ $('#type').onchange = () => {
   if (typeCourant() === 'fleches') appliquerType();
   if (typeCourant() !== 'codes') { codeNum = null; }
   else if (derniere) construireCode(derniere);
-  dessiner(derniere); afficherLegende(derniere);
+  majBoutons();                       // le libellé de l'aide suit le type
+  dessiner(derniere); afficherLegende(derniere); majDecor();
   $('#etat').textContent = typeCourant() === 'fleches'
     ? 'Mots fléchés : cases noires imposées en première ligne et première colonne.'
     : (typeCourant() === 'codes'
