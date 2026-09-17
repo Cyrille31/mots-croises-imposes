@@ -215,7 +215,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">8.8</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">9.2</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -392,8 +392,8 @@
     <tr><th style="text-align:left">Bouton</th><th style="text-align:left">Actif quand</th></tr>
     <tr><td>Générer, RAZ mots</td><td>mode génération, hors recherche</td></tr>
     <tr><td>Arrêter</td><td>pendant toute recherche</td></tr>
-    <tr><td>Menu des modes</td><td>une grille existe et aucune recherche ; l'entrée
-        « définition » est grisée en mots codés</td></tr>
+    <tr><td>Menu des modes</td><td>hors recherche ; « définition » et « édition »
+        exigent une grille, « joueur » non — il peut en demander une</td></tr>
     <tr><td>Chercher les définitions</td><td>visible en mode définition</td></tr>
     <tr><td>Vérifier les mots</td><td>visible en mode édition</td></tr>
     <tr><td>Aide</td><td>visible en mots codés, ou en mode joueur</td></tr>
@@ -403,7 +403,8 @@
     <tr><td>Menu Dessin et son contenu</td><td>hors mode joueur et hors recherche ;
         Annuler si la pile n'est pas vide</td></tr>
   </table>
-  <p>Si la grille disparaît, le mode revient d'office à génération. Les
+  <p>Si la grille disparaît, les modes définition et édition s'éteignent, mais le
+  mode joueur reste disponible : il suffit de demander une nouvelle grille. Les
   transitions emportent leurs effets : <i>Générer</i> efface définitions,
   propositions et saisies ; <i>RAZ mots</i> supprime la grille et ramène au mode
   auteur ; passer en <i>mots codés</i> ferme le bloc des définitions et sort du
@@ -449,6 +450,11 @@
   <p>Le mode édition exclut les modes définition et joueur.</p>
 
   <h4>Le mode joueur, grilles classiques</h4>
+  <p>En mode joueur, le bouton devient <b>Nouvelle grille</b> : il fabrique une
+  grille neuve sans jamais en montrer la solution, efface la tentative en cours,
+  puis va chercher automatiquement les définitions de tous les mots auprès du
+  Wiktionnaire. Vous pouvez donc jouer sans passer par le mode auteur — le temps
+  d'une recherche par mot, dont la progression s'affiche.</p>
   <p>Ouvrez le fichier reçu et activez le mode joueur : la grille apparaît vide,
   avec les définitions en dessous, et chaque case blanche devient saisissable —
   la saisie avance toute seule vers la case suivante.</p>
@@ -463,7 +469,7 @@
   vous félicite.</p>
 
   <h4>Les réglages</h4>
-  <p><b>Grille</b> — de 2 à 30 lignes et colonnes. Le format confortable est
+  <p><b>Grille</b> — de 2 à 30 lignes et colonnes, 7×7 au démarrage. Le format confortable est
   12×12 à 15×15 ; en deçà de 11×11 les mots imposés manquent de place.</p>
   <p><b>Noires</b> — un point de départ, pas une limite. Le programme essaie
   cette valeur, puis descend tant qu'il trouve, ou monte s'il ne trouve pas, en
@@ -543,7 +549,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 8.8, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 9.2, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -570,7 +576,7 @@ const histo = [];             // pile d'annulation du dessin (3 niveaux)
 let clicPrec = -1, sensPrec = 'V';
 const PALETTE = ['#ffd6d6', '#d6ecff', '#d9f7d6', '#fff3c4', '#e8dbff',
                  '#ffe0c2', '#d3fbf1', '#f7d9f0'];
-let nl = 10, nc = 10, etat = null, ref = null, derniere = null,
+let nl = 7, nc = 7, etat = null, ref = null, derniere = null,
     imposesNorm = [], worker = null;
 
 for (let d = 0; d <= 45; d += 5) {
@@ -640,7 +646,7 @@ $('#exemples').onchange = e => {
 for (const id of ['#nl', '#nc']) {
   for (let v = 2; v <= 30; v++) {
     const o = document.createElement('option');
-    o.value = v; o.textContent = v; if (v === 10) o.selected = true;
+    o.value = v; o.textContent = v; if (v === 7) o.selected = true;
     $(id).appendChild(o);
   }
 }
@@ -1172,8 +1178,13 @@ function lancer(affiner, mode) {
   majBoutons();
   $('#etat').textContent = mode === 'explorer' ? 'Exploration…'
     : 'Recherche…';
-  if (worker) worker.terminate();
-  worker = new Worker('./worker.js');
+  // on garde le même worker d'une génération à l'autre : l'index du lexique
+  // y est conservé et n'est pas reconstruit à chaque fois
+  if (!worker || worker.__usage === 'verif') {
+    if (worker) worker.terminate();
+    worker = new Worker('./worker.js');
+    worker.__usage = 'gen';
+  }
   worker.onmessageerror = () => { $('#etat').textContent = 'Message illisible du worker.'; };
   worker.onerror = ev => {
     recherche = false; exploration = false; majBoutons();
@@ -1194,12 +1205,19 @@ function lancer(affiner, mode) {
       derniereDensite = m.densite;
       defsChoisies.clear();               // la grille change : les definitions ne valent plus
       if (typeCourant() === 'codes') construireCode(derniere); else codeNum = null;
-      saisies.clear(); propositions.clear(); indexerMots(derniere);
+      saisies.clear(); propositions.clear(); props.clear(); revelees.clear();
+      indexerMots(derniere);
+      if (modeJoueur) defsChoisies.clear();
       dessiner(derniere);
       afficherLegende(derniere);
       majDecor();
       $('#defs').innerHTML = '';
       majBoutons();
+      if (modeJoueur) {
+        // le joueur reçoit une grille vierge ; on lui prépare les définitions
+        if (typeCourant() === 'codes') afficherLegende(derniere);
+        else chercherToutes(true).then(() => afficherDefs(derniere));
+      }
       $('#vmot').textContent = m.version || '?';
       const cx = m.croisements || [];
       const nImp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean)).size;
@@ -1237,7 +1255,8 @@ function lancer(affiner, mode) {
 
 $('#go').onclick = () => {
   appliquerType();
-  lancer(false, derniere ? 'explorer' : undefined);
+  // en mode joueur on veut une grille neuve, pas une exploration
+  lancer(false, (derniere && !modeJoueur) ? 'explorer' : undefined);
 };
 // ---------- definitions ----------
 const defsChoisies = new Map();          // cle -> texte retenu
@@ -1793,21 +1812,24 @@ function modeCourant() {
 function majBoutons() {
   const codes = typeCourant() === 'codes';
   const g = !!derniere;
-  if (!g) { modeJoueur = false; modeDef = false; modeEdit = false;
-            document.body.classList.remove('joueur'); }
+  // le mode joueur reste accessible sans grille : « Nouvelle grille » est
+  // précisément le point d'entrée d'un joueur qui part de rien
+  if (!g) { modeDef = false; modeEdit = false; }
   const mode = modeCourant();
   const occupe = recherche;                 // une génération ou exploration tourne
 
   const sel = $('#mode');
   sel.value = mode;
-  sel.disabled = !g || occupe;
+  sel.disabled = occupe;
   for (const o of sel.options) {
-    if (o.value === 'definition') o.disabled = codes;
+    if (o.value === 'definition') o.disabled = codes || !g;
+    else if (o.value === 'edition') o.disabled = !g;
     else o.disabled = false;
   }
 
   const regles = {
-    '#go':         { actif: !occupe && mode === 'generation' },
+    '#go':         { actif: !occupe && (mode === 'generation' || mode === 'joueur'),
+                     texte: mode === 'joueur' ? 'Nouvelle grille' : 'Générer' },
     '#arreter':    { actif: occupe },
     '#razgrille':  { actif: g && !occupe && mode === 'generation' },
     '#toutchercher': { visible: mode === 'definition', actif: !occupe },
@@ -1867,9 +1889,11 @@ document.addEventListener('click', ev => {
   const m = document.querySelector('details.menu');
   if (m && m.open && !m.contains(ev.target)) m.open = false;
 }, true);
-$('#toutchercher').onclick = async () => {
-  if (!derniere) return;
-  const b = $('#toutchercher'); b.disabled = true;
+async function chercherToutes(auto) {
+  if (!derniere) return 0;
+  const b = $('#toutchercher');
+  const libelle = b.textContent;
+  b.disabled = true;
   const par = motsParLigne(derniere);
   const taches = [];
   for (const sens of ['H', 'V'])
@@ -1882,6 +1906,8 @@ $('#toutchercher').onclick = async () => {
   for (let i = 0; i < taches.length; i++) {
     const t = taches[i];
     b.textContent = `Recherche ${i + 1}/${taches.length}…`;
+    if (auto) $('#etat').textContent =
+      `Recherche des définitions : ${i + 1}/${taches.length}…`;
     try {
       const props = await chercherDefs(t.mot);
       if (props.length) {
@@ -1891,17 +1917,20 @@ $('#toutchercher').onclick = async () => {
       }
     } catch (e) { /* mot suivant */ }
   }
-  b.textContent = 'Chercher toutes les définitions'; b.disabled = false;
+  b.textContent = libelle; b.disabled = false;
   afficherDefs(derniere); dessiner(derniere); majDecor();
   $('#etat').textContent = taches.length
-    ? `${ok} définition(s) trouvée(s) sur ${taches.length} mots sans définition.`
+    ? `${ok} définition(s) trouvée(s) sur ${taches.length} mots${auto ? '' : ' sans définition'}.`
     : 'Tous les mots ont déjà une définition.';
-};
+  return ok;
+}
+$('#toutchercher').onclick = () => chercherToutes(false);
 
 $('#verifier').onclick = () => {
   if (!derniere) return;
   if (worker) worker.terminate();
   worker = new Worker('./worker.js');
+  worker.__usage = 'verif';
   worker.onmessage = e => {
     const m = e.data;
     if (m.type !== 'verif') return;
