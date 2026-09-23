@@ -86,11 +86,19 @@
   .undef:hover { background:#f0f4f9; }
   .undef.vise { background:#fff6d5; }
   #bravo { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-           background:rgba(255,255,255,.82); z-index:99; font-size:26px; color:var(--bleu);
+           background:rgba(255,255,255,.7); z-index:99; font-size:26px; color:var(--bleu);
            font-weight:700; text-align:center; }
   #bravo.on { display:flex; }
-  .conf { position:fixed; top:-30px; font-size:20px; animation:tombe 2.6s linear forwards; z-index:98; }
-  @keyframes tombe { to { transform:translateY(105vh) rotate(540deg); opacity:.2; } }
+  .conf { position:fixed; top:-50px; font-size:30px; z-index:100; will-change:transform;
+          filter:saturate(1.7) contrast(1.35) drop-shadow(0 2px 3px rgba(20,32,46,.45));
+          animation:tourbillon 4.2s cubic-bezier(.35,0,.55,1) forwards; }
+  @keyframes tourbillon {
+    0%   { transform:translate(0,0) rotate(0deg) scale(1); opacity:1; }
+    40%  { transform:translate(calc(var(--dx) * .12), 78vh) rotate(420deg) scale(1); opacity:1; }
+    58%  { transform:translate(calc(var(--dx) * .45), 62vh) rotate(760deg) scale(.92); opacity:1; }
+    78%  { transform:translate(calc(var(--dx) * .85), 18vh) rotate(1240deg) scale(.6); opacity:.9; }
+    100% { transform:translate(var(--dx), -130vh) rotate(2000deg) scale(.15); opacity:0; }
+  }
   @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.12); } }
   #bravo span { animation:pulse 1s ease-in-out infinite; display:inline-block; }
   .c { position:relative; }
@@ -120,10 +128,17 @@
   #colgauche button { font:12px inherit; padding:6px 8px; white-space:nowrap; }
   #blocleg { display:flex; gap:12px; align-items:center; justify-content:center;
              flex-wrap:wrap; margin:8px 0; }
-  #restantes { font:14px/1.7 ui-monospace,monospace; letter-spacing:.22em;
-               color:var(--bleu); max-width:44%; }
-  #restantes b { display:block; font:11px/1.4 system-ui; letter-spacing:0;
-                 color:#6b7887; font-weight:400; }
+  #restantes { margin-top:6px; }
+  #restantes b { display:block; font:10.5px/1.3 system-ui; color:#6b7887;
+                 font-weight:400; margin-bottom:3px; }
+  .chips { display:grid; grid-template-columns:repeat(4, 22px); gap:3px; }
+  .chip { width:22px; height:22px; padding:0; margin:0; font:12px/1 inherit;
+          font-weight:600; border:1px solid #b9c6d8; border-radius:4px;
+          background:#fff; color:var(--bleu); cursor:pointer; }
+  .chip:hover { background:#eef3f9; }
+  .chip.vide { grid-column:1 / -1; width:auto; color:#8a96a4; letter-spacing:.2em; }
+  .c.faux { background-color:#ffd2d2 !important; color:#8b1a1a; }
+  #legende .c.vise { outline:2px solid #1a3a6b; outline-offset:-2px; }
   @media print { #colgauche { display:none; } #restantes { display:none; } }
   #legende { display:grid; gap:0; width:max-content; margin:0;
              border:2px solid var(--trait); }
@@ -225,7 +240,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">9.5</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">9.6</span> — © 2026 Cyrille Gindre</p>
   </div>
 </header>
 
@@ -300,7 +315,11 @@
 <input type="file" id="fichier" style="display:none">
 <div id="etat">Prêt.</div>
 <div id="zone">
-  <div id="colgauche"><button id="aide" class="sec" style="display:none">Aide</button></div>
+  <div id="colgauche">
+    <button id="aide" class="sec" style="display:none">Aide</button>
+    <button id="test" class="sec" style="display:none">Aide : test</button>
+    <div id="restantes"></div>
+  </div>
   <div id="grille"></div>
 </div>
 <div id="defs"></div>
@@ -308,7 +327,7 @@
   Grille de correspondance</p>
 <div id="bravo"><div><span>🎉 Bravo ! 🎉</span><br>
   <small style="font-size:14px;font-weight:400">Grille entièrement juste</small></div></div>
-<div id="blocleg"><div id="legende"></div><div id="restantes"></div></div>
+<div id="blocleg"><div id="legende"></div></div>
 <div id="impression"></div>
 
 <details>
@@ -427,20 +446,30 @@
   <p>Destiné à celui qui <i>résout</i> une grille de mots codés, et non à celui
   qui la fabrique. Ouvrez le fichier que quelqu'un vous a transmis : vous voyez
   la grille telle qu'elle serait imprimée, numéros seuls.</p>
-  <p>Vous pouvez taper une lettre dans la grille des lettres ou
-  <b>directement dans une case de la grille</b> : elle se répercute aussitôt
-  partout où le même numéro apparaît. Un appui surligne au passage les cases
-  concernées, sans leur donner de couleur.</p>
-  <p>À droite de la grille des lettres, la liste des <b>lettres non placées</b>
-  se met à jour à chaque saisie : c'est l'aide au raisonnement d'un mot codé,
-  plus utile qu'un code de couleurs. « Effacer mes lettres » remet tout à zéro.</p>
+  <p>Le jeu se mène à la souris ou au doigt, depuis la colonne de gauche. Un
+  appui sur une case de la grille la <b>sélectionne</b> — elle et toutes celles
+  portant le même numéro se colorent, sans passer en saisie. Il ne reste qu'à
+  appuyer sur une des <b>lettres non placées</b>, listées sous les boutons
+  d'aide, pour la poser d'un coup sur toutes ces cases. Un second appui sur la
+  même case annule la sélection.</p>
+  <p>La touche <b>— vider —</b>, en tête de cette liste, retire la lettre de la
+  case sélectionnée ; la lettre revient alors dans la liste et redevient
+  disponible. Vous pouvez aussi taper directement au clavier dans le tableau des
+  lettres, si vous préférez.</p>
+  <p><b>Aide : une lettre</b> dévoile une lettre entière du code ; elle reste
+  colorée en permanence dans le tableau des lettres, pour que vous sachiez
+  toujours ce qui vous a été donné. <b>Aide : test</b> vérifie la case
+  sélectionnée : si la lettre posée est fausse, les cases de ce numéro passent
+  en rouge ; sinon l'application vous le confirme. « Effacer mes lettres » remet
+  tout à zéro.</p>
   <p>En <b>mode auteur</b>, un appui sur une case de la grille des lettres
   change sa couleur : c'est ainsi que vous révélez une lettre au joueur. En
   <b>mode joueur</b>, un seul appui fait les deux à la fois — la case et toutes
   celles portant le même numéro prennent la couleur, et le clavier s'ouvre pour
   la saisie. Un nouvel appui retire la couleur sans quitter la saisie.</p>
   <p>Quand toutes les lettres du code sont justes, le même feu d'artifice vous
-  félicite qu'en mots croisés.</p>
+  félicite qu'en mots croisés : les confettis tombent, puis remontent en
+  tourbillon et s'échappent par le haut de l'écran.</p>
   <p>Le bouton d'aide est placé à gauche de la grille, à portée du doigt.
   En mots croisés et fléchés, le bouton <b>Aide : cette case</b> apparaît en
   mode joueur et dévoile la lettre de la case où vous venez de cliquer. En mots
@@ -565,7 +594,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 9.5, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 9.6, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -584,6 +613,8 @@ let codeNum = null;  // lettre -> numero, pour les mots codés
 const revelees = new Map();   // lettre -> couleur d'aide, pour les mots codés
 const props = new Map();      // numero -> lettre proposee par le joueur
 let caseActive = -1;          // case de la grille ayant le focus, en mode joueur
+let numSelect = -1;           // numéro de code sélectionné, en mode joueur codé
+const faux = new Set();       // numéros dont la lettre a été testée et refusée
 const saisies = new Map();    // case -> lettre saisie par le joueur
 let motsDeCase = null;        // case -> [{cle, cells}] pour l'eclairage croise
 let cleActive = null;         // definition mise en evidence
@@ -772,7 +803,45 @@ function propagerCode(n, lettre) {
   majRestantes();
 }
 
-// lettres de l'alphabet que le joueur n'a pas encore attribuées
+// sélection d'un numéro dans la grille : on met en évidence toutes ses cases
+function choisirNum(n) {
+  numSelect = (numSelect === n) ? -1 : n;
+  faux.clear();
+  majSelection();
+  $('#etat').textContent = numSelect > 0
+    ? `Case n° ${numSelect} choisie — cliquez une lettre à gauche pour la poser.`
+    : 'Sélection annulée.';
+}
+
+function majSelection() {
+  for (const c of cases) if (c) c.classList.remove('vise', 'faux');
+  document.querySelectorAll('#legende .c').forEach(e => e.classList.remove('vise'));
+  if (!derniere || !codeNum) return;
+  for (let i = 0; i < nl * nc; i++) {
+    const v = derniere[i];
+    if (v < 0 || !cases[i]) continue;
+    const n = codeNum.get(String.fromCharCode(65 + v));
+    if (n === numSelect) cases[i].classList.add('vise');
+    if (faux.has(n)) cases[i].classList.add('faux');
+  }
+  const leg = document.querySelector('#legende .c[data-n="' + numSelect + '"]');
+  if (leg) leg.classList.add('vise');
+}
+
+// pose (ou retire, si lettre vide) la lettre sur le numéro sélectionné
+function poserLettre(ch) {
+  if (numSelect < 0) {
+    $('#etat').textContent = 'Choisissez d\u2019abord une case de la grille.';
+    return;
+  }
+  if (ch) props.set(String(numSelect), ch); else props.delete(String(numSelect));
+  faux.clear();
+  propagerCode(numSelect, ch);
+  majSelection();
+  verifierVictoireCode();
+}
+
+// lettres de l'alphabet que le joueur n'a pas encore attribuées, cliquables
 function majRestantes() {
   const z = $('#restantes');
   if (!z) return;
@@ -780,12 +849,25 @@ function majRestantes() {
     z.innerHTML = ''; return;
   }
   const prises = new Set([...props.values()].filter(Boolean));
-  const reste = [];
+  z.innerHTML = '<b>Lettres non placées</b>';
+  const box = document.createElement('div');
+  box.className = 'chips';
+  const vide = document.createElement('button');
+  vide.className = 'chip vide';
+  vide.textContent = '\u2014 vider \u2014';
+  vide.title = 'Retirer la lettre de la case choisie';
+  vide.onclick = () => poserLettre('');
+  box.appendChild(vide);
   for (let k = 0; k < 26; k++) {
     const ch = String.fromCharCode(65 + k);
-    if (!prises.has(ch)) reste.push(ch);
+    if (prises.has(ch)) continue;
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = ch;
+    b.onclick = () => poserLettre(ch);
+    box.appendChild(b);
   }
-  z.innerHTML = '<b>Lettres non placées</b>' + reste.join(' ');
+  z.appendChild(box);
 }
 
 // surligne provisoirement les cases portant un numéro donné
@@ -832,7 +914,9 @@ function afficherLegende(g) {
         const v = norm(inp.value).slice(0, 1);
         inp.value = v;
         if (v) props.set(String(n), v); else props.delete(String(n));
+        faux.delete(n);
         propagerCode(n, v);
+        majSelection();
         verifierVictoireCode();
       };
       d.appendChild(inp);
@@ -913,24 +997,18 @@ function dessiner(g, tailleForcee) {
       const v = g[i];
       if (v === -2) d.classList.add('noir');
       else if (modeJoueur && typeCourant() === 'codes' && codeNum) {
+        // un clic sélectionne le numéro ; la lettre se choisit dans la
+        // colonne de gauche, il n'y a pas de saisie dans la case
         const ch = String.fromCharCode(65 + v), n = codeNum.get(ch);
         const u = document.createElement('u'); u.textContent = n;
         d.appendChild(u);
-        const inp = document.createElement('input');
-        inp.className = 'js'; inp.maxLength = 1;
-        inp.value = props.get(String(n)) || '';
-        inp.onfocus = () => surlignerNum(n);
-        inp.oninput = () => {
-          const t = norm(inp.value).slice(0, 1);
-          inp.value = t;
-          if (t) props.set(String(n), t); else props.delete(String(n));
-          propagerCode(n, t);
-          verifierVictoireCode();
-        };
-        inp.addEventListener('pointerdown', ev => ev.stopPropagation());
-        inp.addEventListener('touchstart', ev => ev.stopPropagation(), { passive: true });
-        d.appendChild(inp);
-        d.onclick = () => inp.focus();
+        const s = document.createElement('span');
+        s.textContent = props.get(String(n)) || '';
+        d.appendChild(s);
+        d.dataset.n = n;
+        if (n === numSelect) d.classList.add('vise');
+        if (faux.has(n)) d.classList.add('faux');
+        d.onclick = () => choisirNum(n);
       }
       else if (modeJoueur) {
         const inp = document.createElement('input');
@@ -1208,17 +1286,21 @@ function verifierVictoire() {
 function feter() {
   const b = $('#bravo');
   b.classList.add('on');
-  const emo = ['🎉', '✨', '🎊', '⭐', '🥳', '🏆'];
-  for (let k = 0; k < 40; k++) {
+  const emo = ['🎉', '🎊', '🏆', '🥳', '🔷', '🟠', '🟣', '🔴', '🟢', '⭐'];
+  const centre = window.innerWidth / 2;
+  for (let k = 0; k < 46; k++) {
     const d = document.createElement('div');
     d.className = 'conf';
     d.textContent = emo[k % emo.length];
-    d.style.left = Math.random() * 96 + 'vw';
-    d.style.animationDelay = (Math.random() * 1.2) + 's';
+    const x = Math.random() * (window.innerWidth - 40);
+    d.style.left = x + 'px';
+    // tous convergent vers le centre en remontant : c'est le tourbillon
+    d.style.setProperty('--dx', Math.round((centre - x) * 0.9) + 'px');
+    d.style.animationDelay = (Math.random() * 1.1).toFixed(2) + 's';
     document.body.appendChild(d);
-    setTimeout(() => d.remove(), 4200);
+    setTimeout(() => d.remove(), 5600);
   }
-  setTimeout(() => b.classList.remove('on'), 4000);
+  setTimeout(() => b.classList.remove('on'), 4600);
 }
 
 function reperer(g, imp) {
@@ -1902,6 +1984,7 @@ function majBoutons() {
     '#verifier':   { visible: mode === 'edition', actif: !occupe },
     '#aide':       { visible: g && (codes || mode === 'joueur'),
                      texte: codes ? 'Aide : une lettre' : 'Aide : cette case' },
+    '#test':       { visible: g && codes && mode === 'joueur' },
     '#razjoueur':  { visible: g && mode === 'joueur' },
     '#imprimer':   { actif: g && !occupe },
     '#imprvierge': { actif: g && !occupe },
@@ -2055,21 +2138,43 @@ $('#aide').onclick = () => {
   if (typeCourant() !== 'codes') return aideCaseCourante();
   const ch = lettreUtile();
   if (!ch) { $('#etat').textContent = 'Plus de lettre utile à révéler.'; return; }
-  // en mode auteur on colore la lettre, pour juger de l'aide avant impression ;
-  // en mode joueur on l'inscrit simplement, sans couleur
+  // la lettre révélée reste colorée dans le tableau des lettres, en permanence
+  const prises = new Set(revelees.values());
+  revelees.set(ch, PALETTE.find(c => !prises.has(c)) || PALETTE[revelees.size % PALETTE.length]);
   if (modeJoueur && codeNum) props.set(String(codeNum.get(ch)), ch);
-  else {
-    const prises = new Set(revelees.values());
-    revelees.set(ch, PALETTE.find(c => !prises.has(c)) || PALETTE[revelees.size % PALETTE.length]);
-  }
-  dessiner(derniere); afficherLegende(derniere);
+  faux.clear();
+  dessiner(derniere); afficherLegende(derniere); majSelection();
   let k = 0; for (const v of derniere) if (v >= 0 && String.fromCharCode(65 + v) === ch) k++;
   $('#etat').textContent = `Lettre révélée : ${ch} (${k} occurrences).`
     + (modeJoueur ? '' : ` Total révélé : ${revelees.size}.`);
 };
 
+$('#test').onclick = () => {
+  if (!derniere || !codeNum) return;
+  if (numSelect < 0) {
+    $('#etat').textContent = 'Choisissez d\u2019abord une case de la grille.';
+    return;
+  }
+  const propose = props.get(String(numSelect));
+  if (!propose) {
+    $('#etat').textContent = 'Cette case ne porte encore aucune lettre.';
+    return;
+  }
+  let bonne = null;
+  for (const [ch, n] of codeNum) if (n === numSelect) bonne = ch;
+  if (propose === bonne) {
+    faux.delete(numSelect);
+    $('#etat').textContent = `${propose} est la bonne lettre pour le n° ${numSelect}.`;
+  } else {
+    faux.add(numSelect);
+    $('#etat').textContent = `${propose} n\u2019est pas la bonne lettre : les cases `
+      + `du n° ${numSelect} passent en rouge.`;
+  }
+  majSelection();
+};
+
 $('#razjoueur').onclick = () => {
-  props.clear(); revelees.clear(); majRestantes();
+  props.clear(); revelees.clear(); faux.clear(); numSelect = -1; majRestantes();
   dessiner(derniere); afficherLegende(derniere);
   $('#etat').textContent = 'Vos lettres ont été effacées.';
 };
