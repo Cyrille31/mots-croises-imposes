@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5,
       user-scalable=yes, viewport-fit=cover">
 <title>Mots croisés — CGExcel</title>
+<link rel="icon" href="./icones/192.png">
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1a3a6b">
 <style>
@@ -13,6 +14,17 @@
   body { margin:0; padding:7px 9px; font:13px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;
          background:var(--fond); color:#14202e; }
   header { display:flex; align-items:center; gap:8px; margin:0 0 6px; }
+  .hdroite { margin-left:auto; display:flex; align-items:center; gap:6px; }
+  .rond { width:30px; height:30px; padding:0; border-radius:50%; font:16px/1 inherit;
+          font-weight:700; background:#fff; color:var(--bleu); border:1px solid #b9c6d8;
+          cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .rond:hover { background:#eef3f9; }
+  .panregl { right:9px; min-width:214px; }
+  .panregl .lr { display:flex; align-items:center; justify-content:space-between;
+                 gap:8px; font-size:12px; color:#54616f; margin:0; }
+  .panregl select { font:12px inherit; }
+  .panregl .dim { display:flex; align-items:center; gap:3px; }
+  .panregl hr { border:0; border-top:1px solid #e2e7ee; margin:4px 0 2px; width:100%; }
   .logo { flex:none; border-radius:5px; }
   h1 { font-size:14px; margin:0; color:var(--bleu); }
   h1 small { font-weight:400; color:#6b7887; }
@@ -23,8 +35,6 @@
   label { display:block; font-size:11px; color:#54616f; margin:0 0 2px; }
   textarea { width:100%; min-height:74px; padding:4px 6px; font:12.5px/1.3 inherit;
              border:1px solid #ccd3dc; border-radius:6px; background:#fff; resize:vertical; }
-  .params { display:flex; flex-wrap:wrap; gap:5px 9px; background:#fff; border:1px solid #d7dce3;
-            border-radius:7px; padding:6px 8px; margin-bottom:6px; }
   .p { display:flex; align-items:center; gap:4px; font-size:11.5px; color:#54616f; }
   select, input[type=number] { padding:2px 4px; font:12px inherit; border:1px solid #ccd3dc;
             border-radius:5px; background:#fff; }
@@ -211,7 +221,7 @@
     .c.noir { background:#243447 !important; border-color:#243447 !important; }
     .c.hors { background:#fff !important; border-color:#fff !important; }
     #grille { border-color:#000 !important; }
-    .mots,.params,.barre,#etat,details,footer { display:none; }
+    .mots,.barre,#etat,details,footer,.hdroite,#partager { display:none; }
                  .c.impose { background:#fff; } }
 </style>
 </head>
@@ -240,7 +250,34 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">9.6</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">9.7</span> — © 2026 Cyrille Gindre</p>
+  </div>
+  <div class="hdroite">
+    <button id="bAide" class="rond" title="Mode d'emploi">?</button>
+    <details class="menu" id="mregl"><summary class="rond">⋮</summary>
+      <div class="pan panregl">
+        <label class="lr">Type de grille
+          <select id="type">
+            <option value="croises" selected>mots croisés</option>
+            <option value="fleches">mots fléchés</option>
+            <option value="codes">mots codés</option>
+          </select></label>
+        <label class="lr">Dimensions
+          <span class="dim"><select id="nl"></select> × <select id="nc"></select></span></label>
+        <label class="lr">Cases noires
+          <select id="densite"></select></label>
+        <label class="lr">Vocabulaire
+          <select id="niveau">
+            <option value="3000" selected>très courant</option>
+            <option value="8000">courant</option>
+            <option value="20000">étendu</option>
+            <option value="60000">large</option>
+            <option value="999999">complet</option>
+          </select></label>
+        <hr>
+        <button id="majver" class="sec">Vérifier les mises à jour</button>
+        <button id="installer" class="sec">Ajouter à l'écran d'accueil</button>
+      </div></details>
   </div>
 </header>
 
@@ -261,26 +298,6 @@
 </div>
 </details>
 
-<div class="params">
-  <span class="p">Type
-    <select id="type">
-      <option value="croises" selected>mots croisés</option>
-      <option value="fleches">mots fléchés</option>
-      <option value="codes">mots codés</option>
-    </select></span>
-  <span class="p">Grille
-    <select id="nl"></select> × <select id="nc"></select></span>
-  <span class="p">Noires :
-    <select id="densite"></select></span>
-  <span class="p">Vocabulaire
-    <select id="niveau">
-      <option value="3000" selected>très courant</option>
-      <option value="8000">courant</option>
-      <option value="20000">étendu</option>
-      <option value="60000">large</option>
-      <option value="999999">complet</option>
-    </select></span>
-</div>
 
 <div class="barre">
   <div class="groupe"><button id="go">Générer</button>
@@ -296,13 +313,21 @@
     <button id="toutchercher" class="sec" style="display:none">Chercher les définitions</button>
     <button id="verifier" class="sec" style="display:none">Vérifier les mots</button>
     <button id="razjoueur" class="sec" style="display:none">Effacer mes lettres</button></div>
-  <div class="groupe"><button id="imprimer" class="sec" disabled>Imprimer corrigé</button>
-    <button id="imprvierge" class="sec" disabled>Imprimer à remplir</button></div>
-  <div class="groupe"><button id="sauver" class="sec" disabled>Enregistrer</button>
-    <button id="sauversous" class="sec" disabled>Enregistrer sous</button>
-    <button id="ouvrir" class="sec">Ouvrir</button></div>
   <div class="groupe">
-    <details class="menu"><summary>Dessin ▾</summary>
+    <details class="menu" id="mimpr"><summary>Imprimer ▾</summary>
+      <div class="pan">
+        <button id="imprimer" class="sec" disabled>Imprimer corrigé</button>
+        <button id="imprvierge" class="sec" disabled>Imprimer à remplir</button>
+      </div></details></div>
+  <div class="groupe">
+    <details class="menu" id="menr"><summary>Fichier ▾</summary>
+      <div class="pan">
+        <button id="sauver" class="sec" disabled>Enregistrer</button>
+        <button id="sauversous" class="sec" disabled>Enregistrer sous</button>
+        <button id="ouvrir" class="sec">Ouvrir</button>
+      </div></details></div>
+  <div class="groupe">
+    <details class="menu" id="mdessin"><summary>Dessin ▾</summary>
       <div class="pan">
         <button id="dessinonoff" class="sec">Dessin : off</button>
         <button id="undo" class="sec">Annuler (0)</button>
@@ -330,7 +355,7 @@
 <div id="blocleg"><div id="legende"></div></div>
 <div id="impression"></div>
 
-<details>
+<details id="notice">
   <summary>Mode d'emploi</summary>
 
   <p><b>À quoi sert ce logiciel.</b> Il fabrique des grilles de mots croisés
@@ -594,7 +619,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 9.6, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 9.7, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -2006,11 +2031,16 @@ function majBoutons() {
     e.style.display = (r.visible === false) ? 'none' : '';
     e.disabled = (r.actif === undefined) ? false : !r.actif;
   }
-  const menu = document.querySelector('details.menu');
-  if (menu) {
-    if (mode === 'joueur' || occupe) { menu.setAttribute('data-off', ''); menu.open = false; }
-    else menu.removeAttribute('data-off');
-  }
+  const grise = (sel, off) => {
+    const m = $(sel);
+    if (!m) return;
+    if (off) { m.setAttribute('data-off', ''); m.open = false; }
+    else m.removeAttribute('data-off');
+  };
+  grise('#mdessin', mode === 'joueur' || occupe);
+  grise('#mimpr', !g || occupe);
+  grise('#menr', occupe);
+  grise('#mregl', occupe);
 }
 
 function changerMode(nouveau) {
@@ -2033,10 +2063,11 @@ function changerMode(nouveau) {
 }
 $('#mode').onchange = e => changerMode(e.target.value);
 
-// le menu Dessin se referme dès qu'on clique ailleurs
+// les menus déroulants se referment dès qu'on clique ailleurs
 document.addEventListener('click', ev => {
-  const m = document.querySelector('details.menu');
-  if (m && m.open && !m.contains(ev.target)) m.open = false;
+  document.querySelectorAll('details.menu').forEach(m => {
+    if (m.open && !m.contains(ev.target)) m.open = false;
+  });
 }, true);
 async function chercherToutes(auto) {
   if (!derniere) return 0;
@@ -2201,6 +2232,70 @@ $('#nl').onchange = $('#nc').onchange = () => {
   appliquerType(); majBoutons();
   $('#imprimer').disabled = true;
   dessiner(null);
+};
+
+// ---- bouton « ? » : mode d'emploi -------------------------------------------
+$('#bAide').onclick = () => {
+  document.querySelectorAll('details.menu').forEach(m => m.open = false);
+  const d = $('#notice');
+  if (!d) return;
+  d.open = true;
+  d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+// ---- réglages : vérification de mise à jour ---------------------------------
+$('#majver').onclick = async () => {
+  const dire = t => { $('#etat').textContent = t; };
+  if (location.protocol === 'file:') {
+    dire('Page ouverte en local : les mises \u00e0 jour ne sont g\u00e9r\u00e9es '
+       + 'que sur le site https://cyrille31.github.io/mots-croises-imposes');
+    return;
+  }
+  if (!('serviceWorker' in navigator)) {
+    dire('Ce navigateur ne g\u00e8re pas les mises \u00e0 jour automatiques \u2014 '
+       + 'rechargez la page (Ctrl+Maj+R) pour obtenir la derni\u00e8re version.');
+    return;
+  }
+  dire('Recherche d\u2019une mise \u00e0 jour\u2026');
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) { dire('Application non encore install\u00e9e localement : rechargez la page.'); return; }
+    await reg.update();
+    if (reg.installing || reg.waiting)
+      dire('Nouvelle version trouv\u00e9e : elle s\u2019installe, la page va se recharger toute seule.');
+    else
+      dire('Vous avez d\u00e9j\u00e0 la derni\u00e8re version (interface '
+         + $('#vapp').textContent + ', moteur ' + $('#vmot').textContent + ').');
+  } catch (e) {
+    dire('V\u00e9rification impossible : ' + (e && e.message ? e.message : e));
+  }
+};
+
+// ---- réglages : icône sur l'écran d'accueil ---------------------------------
+let inviteInstall = null;
+window.addEventListener('beforeinstallprompt', ev => {
+  ev.preventDefault();
+  inviteInstall = ev;
+});
+$('#installer').onclick = async () => {
+  const dire = t => { $('#etat').textContent = t; };
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+    dire('L\u2019application est d\u00e9j\u00e0 install\u00e9e : vous l\u2019utilisez depuis son ic\u00f4ne.');
+    return;
+  }
+  if (inviteInstall) {
+    inviteInstall.prompt();
+    let r = null;
+    try { r = await inviteInstall.userChoice; } catch (e) { /* ignoré */ }
+    inviteInstall = null;
+    dire(r && r.outcome === 'accepted'
+      ? 'Ic\u00f4ne ajout\u00e9e \u00e0 l\u2019\u00e9cran d\u2019accueil.'
+      : 'Installation annul\u00e9e \u2014 vous pourrez la relancer plus tard.');
+    return;
+  }
+  dire('Sur Android (Chrome) : menu \u22ee du navigateur \u2192 \u00ab Ajouter \u00e0 l\u2019\u00e9cran '
+     + 'd\u2019accueil \u00bb. Sur iPhone (Safari) : Partager \u2192 \u00ab Sur l\u2019\u00e9cran d\u2019accueil \u00bb. '
+     + 'Sur PC : ic\u00f4ne d\u2019installation dans la barre d\u2019adresse.');
 };
 
 if (window.MotsCroises && window.MotsCroises.VERSION)
