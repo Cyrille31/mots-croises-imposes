@@ -205,6 +205,8 @@
     #impression h3 { font-size:12px; color:#000; margin:8px 0 3px; }
     #impression p { margin:2px 0; }
   }
+  .bal { background:#f2f7ec; border-left:3px solid #7ba05b; border-radius:0 5px 5px 0;
+      padding:6px 9px; margin:6px 0; }
   details.pli { padding:3px 8px 6px; margin:0 0 6px; }
   details.pli summary { font-size:12px; }
   details.pli .mots { margin-top:4px; }
@@ -272,7 +274,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">9.8</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">9.9</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <button id="bAide" class="rond" title="Mode d'emploi">?</button>
@@ -676,6 +678,21 @@
   <p class="note">Aucune donnée ne quitte votre appareil, hormis les requêtes que
   vous déclenchez vous-même vers le Wiktionnaire. L'application fonctionne hors
   ligne une fois installée ; seules les définitions demandent alors le réseau.</p>
+
+  <h4>Licence</h4>
+  <p>Ce logiciel est libre, sous <b>licence MIT</b> : vous pouvez l'utiliser, le
+  copier, le modifier, le distribuer et même le vendre, à la seule condition de
+  conserver l'avis de copyright et le texte de la licence. Il est fourni en
+  l'état, sans garantie d'aucune sorte.</p>
+  <p class="bal"><b>BAL 1.0 — Bonne Action License.</b> En utilisant ce logiciel,
+  vous vous engagez sur l'honneur à faire une bonne action par jour. Cet
+  engagement n'a aucune valeur juridique et ne restreint en rien les droits
+  accordés par la licence MIT : c'est un vœu, pas une obligation.</p>
+  <p>Le texte complet figure dans le fichier <tt>LICENSE</tt> du dépôt. Le
+  lexique est dérivé de ressources lexicales libres et conserve la licence de sa
+  source ; les définitions ne sont pas fournies avec le logiciel — elles sont
+  demandées au Wiktionnaire (CC BY-SA), les autres sites n'étant que des liens
+  sortants.</p>
 </details>
 
 <p style="text-align:center;margin:10px 0">
@@ -683,8 +700,8 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 9.8, moteur <span id="vmot">?</span><br>
-  © 2026 Cyrille Gindre. Tous droits réservés.<br>
+  Mots croisés CGExcel — interface 9.9, moteur <span id="vmot">?</span><br>
+  © 2026 Cyrille Gindre — licence MIT + BAL 1.0 (voir le mode d'emploi).<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
 </footer>
@@ -1446,7 +1463,7 @@ function allerGrille(k) {
   majBoutons();
   $('#etat').textContent = `Grille ${k + 1} sur ${grilles.length} — `
     + `${(100 * e.d).toFixed(1)} % de noires`
-    + (e.th.length ? `, thème : ${e.th.join(', ')}.` : '.');
+    + ((e.th.length && !modeJoueur) ? `, thème : ${e.th.join(', ')}.` : '.');
 }
 $('#grprec').onclick = () => allerGrille(iGrille - 1);
 $('#grsuiv').onclick = () => allerGrille(iGrille + 1);
@@ -1508,13 +1525,20 @@ function lancer(affiner, mode) {
         else chercherToutes(true).then(() => afficherDefs(derniere));
       }
       $('#vmot').textContent = m.version || '?';
-      const cx = m.croisements || [];
-      const nImp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean)).size;
-      $('#etat').textContent = `${(100 * m.densite).toFixed(1)} % de noires, `
-        + `${m.poses}/${nImp} mots imposés, `
-        + (cx.length ? `${cx.length} croisement(s) : ${cx.join(', ')}.` : 'aucun croisement.')
-        + ((m.themesPlaces && m.themesPlaces.length)
-           ? ` Thème : ${m.themesPlaces.join(', ')}.` : '');
+      // En mode joueur le compte rendu ne doit nommer aucun mot : mots du
+      // thème et croisements des mots imposés donneraient la solution.
+      if (modeJoueur) {
+        $('#etat').textContent = `Grille ${nl}×${nc} prête `
+          + `(${(100 * m.densite).toFixed(1)} % de cases noires) — à vous de jouer.`;
+      } else {
+        const cx = m.croisements || [];
+        const nImp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean)).size;
+        $('#etat').textContent = `${(100 * m.densite).toFixed(1)} % de noires, `
+          + `${m.poses}/${nImp} mots imposés, `
+          + (cx.length ? `${cx.length} croisement(s) : ${cx.join(', ')}.` : 'aucun croisement.')
+          + ((m.themesPlaces && m.themesPlaces.length)
+             ? ` Thème : ${m.themesPlaces.join(', ')}.` : '');
+      }
     } else if (m.type === 'echec') {
       const d = m.diag || {};
       $('#etat').textContent = `Aucune grille trouvée (${d.resolution || 0} tentatives). `

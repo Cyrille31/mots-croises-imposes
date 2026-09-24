@@ -5,6 +5,7 @@ grilles de forme libre et optimisation de la densité de cases noires.
 Application web installable, fonctionnant hors ligne.
 
 © 2026 Cyrille Gindre — marque CGExcel
+Licence MIT + BAL 1.0 (voir `LICENSE`)
 
 ## Application en ligne
 
@@ -45,3 +46,18 @@ dossier puis ouvrir http://localhost:8000
 | `masque` | silhouette : 1 = case hors grille |
 | `motsImposes` | mots obligatoires |
 | `motsThemes` | simple préférence, non contraignante |
+
+## Licence
+
+Logiciel libre sous **licence MIT** : usage, copie, modification, distribution
+et vente permis, à condition de conserver l'avis de copyright et le texte de la
+licence. Fourni en l'état, sans garantie.
+
+**BAL 1.0 — Bonne Action License.** En utilisant ce logiciel, vous vous engagez
+sur l'honneur à faire une bonne action par jour. Cet engagement n'a aucune
+valeur juridique et ne restreint en rien les droits accordés par la licence MIT.
+
+Texte complet dans [`LICENSE`](LICENSE). Le lexique est dérivé de ressources
+lexicales libres et conserve la licence de sa source ; les définitions ne sont
+pas fournies — elles sont demandées au Wiktionnaire (CC BY-SA), les autres sites
+n'étant que des liens sortants.
