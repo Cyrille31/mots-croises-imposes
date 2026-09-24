@@ -30,8 +30,8 @@
   h1 small { font-weight:400; color:#6b7887; }
   .sous { margin:1px 0 0; font-size:10.5px; color:#8a96a4; }
 
-  .mots { display:flex; gap:7px; margin-bottom:6px; }
-  .mots > div { flex:1; }
+  .mots { display:flex; flex-direction:column; gap:7px; margin-bottom:6px; }
+  .mots > div { width:100%; }
   label { display:block; font-size:11px; color:#54616f; margin:0 0 2px; }
   textarea { width:100%; min-height:74px; padding:4px 6px; font:12.5px/1.3 inherit;
              border:1px solid #ccd3dc; border-radius:6px; background:#fff; resize:vertical; }
@@ -40,6 +40,24 @@
             border-radius:5px; background:#fff; }
   input[type=number] { width:46px; }
   .barre { display:flex; flex-wrap:wrap; gap:4px 10px; margin-bottom:5px; align-items:start; }
+  .groupe.droite { margin-left:auto; }
+  .ligne { display:flex; gap:3px; align-items:stretch; }
+  .groupe .ligne button { width:auto; }
+  .groupe .ligne #go { flex:1; }
+  .ligne .fl { padding:6px 8px; font-size:12px; line-height:1.15; }
+  #go.stop { background:#a8323a; border-color:#a8323a; }
+  details.menu .pan.tabfic { display:grid; grid-template-columns:repeat(3, auto);
+            gap:3px 4px; align-items:center; }
+  .tabfic button { font-size:11.5px; padding:5px 7px; }
+  /* sur téléphone la table passe à deux colonnes pour rester dans l'écran */
+  @media (max-width:620px) {
+    details.menu .pan.tabfic { grid-template-columns:repeat(2, 108px); }
+    .tabfic button { width:100%; padding:5px 3px; }
+  }
+  .tabfic .ent { grid-column:1 / -1; font-size:11px; color:#7b8794; font-weight:600;
+            margin-top:3px; padding-left:2px; }
+  .tabfic .ent:first-child { margin-top:0; }
+  .tabfic button { margin:0; white-space:nowrap; }
   .groupe { display:flex; flex-direction:column; gap:3px;
             border-left:2px solid #e2e7ee; padding-left:7px; }
   .groupe button, .groupe .modesel { width:100%; }
@@ -51,9 +69,12 @@
       background:#fff; color:var(--bleu); border:1px solid #b9c6d8; text-align:center;
       list-style:none; cursor:pointer; }
   details.menu summary::-webkit-details-marker { display:none; }
+  details.menu { position:relative; }
   details.menu .pan { position:absolute; z-index:5; background:#fff; border:1px solid #b9c6d8;
       border-radius:8px; padding:5px; display:flex; flex-direction:column; gap:3px;
-      box-shadow:0 4px 14px rgba(20,32,46,.18); }
+      box-shadow:0 4px 14px rgba(20,32,46,.18); max-width:calc(100vw - 16px); }
+  /* les menus de droite s'ouvrent vers la gauche : ils restent dans l'écran */
+  #mimpr .pan, #menr .pan, #mdessin .pan { right:0; left:auto; }
   .c.defh { background-image:linear-gradient(to bottom, transparent 36%,
        #fdf0bf 36%, #fdf0bf 64%, transparent 64%); }
   .c.defv { background-image:linear-gradient(to right, transparent 36%,
@@ -149,6 +170,7 @@
   .chip.vide { grid-column:1 / -1; width:auto; color:#8a96a4; letter-spacing:.2em; }
   .c.faux { background-color:#ffd2d2 !important; color:#8b1a1a; }
   #legende .c.vise { outline:2px solid #1a3a6b; outline-offset:-2px; }
+  #legende .c span.pose { color:#16457e; font-weight:600; }
   @media print { #colgauche { display:none; } #restantes { display:none; } }
   #legende { display:grid; gap:0; width:max-content; margin:0;
              border:2px solid var(--trait); }
@@ -250,7 +272,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">9.7</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">9.8</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <button id="bAide" class="rond" title="Mode d'emploi">?</button>
@@ -258,9 +280,9 @@
       <div class="pan panregl">
         <label class="lr">Type de grille
           <select id="type">
-            <option value="croises" selected>mots croisés</option>
+            <option value="croises">mots croisés</option>
             <option value="fleches">mots fléchés</option>
-            <option value="codes">mots codés</option>
+            <option value="codes" selected>mots codés</option>
           </select></label>
         <label class="lr">Dimensions
           <span class="dim"><select id="nl"></select> × <select id="nc"></select></span></label>
@@ -283,11 +305,9 @@
 
 <details class="pli"><summary>Mots imposés et thème</summary>
 <div class="mots">
-  <div><label>Un par ligne ; plusieurs sur une ligne = séparés par une case noire</label><textarea id="imposes"></textarea></div>
-  <div><label>Mots du thème, un par ligne — simple préférence
-      <select id="exemples" style="font:11px inherit;margin-left:4px">
-        <option value="">listes toutes faites…</option>
-      </select></label>
+  <div><label>Mots imposés — un par ligne ; plusieurs sur une ligne = séparés par une case noire</label>
+    <textarea id="imposes"></textarea></div>
+  <div><label>Mots du thème, un par ligne — simple préférence</label>
     <div style="display:flex;gap:4px;margin-bottom:3px">
       <input id="qtheme" placeholder="thème à chercher : marine, cuisine, oiseaux…"
              style="flex:1;padding:3px 5px;font:12px inherit;border:1px solid #ccd3dc;border-radius:5px">
@@ -300,8 +320,12 @@
 
 
 <div class="barre">
-  <div class="groupe"><button id="go">Générer</button>
-    <button id="arreter" class="sec" disabled>Arrêter</button>
+  <div class="groupe">
+    <div class="ligne">
+      <button id="go">Générer</button>
+      <button id="grprec" class="sec fl" title="Grille précédente">&#9664;</button>
+      <button id="grsuiv" class="sec fl" title="Grille suivante">&#9654;</button>
+    </div>
     <button id="razgrille" class="sec">RAZ mots</button></div>
   <div class="groupe">
     <select id="mode" class="modesel">
@@ -313,7 +337,7 @@
     <button id="toutchercher" class="sec" style="display:none">Chercher les définitions</button>
     <button id="verifier" class="sec" style="display:none">Vérifier les mots</button>
     <button id="razjoueur" class="sec" style="display:none">Effacer mes lettres</button></div>
-  <div class="groupe">
+  <div class="groupe droite">
     <details class="menu" id="mimpr"><summary>Imprimer ▾</summary>
       <div class="pan">
         <button id="imprimer" class="sec" disabled>Imprimer corrigé</button>
@@ -321,10 +345,19 @@
       </div></details></div>
   <div class="groupe">
     <details class="menu" id="menr"><summary>Fichier ▾</summary>
-      <div class="pan">
+      <div class="pan tabfic">
+        <span class="ent">Grille et son état</span>
         <button id="sauver" class="sec" disabled>Enregistrer</button>
         <button id="sauversous" class="sec" disabled>Enregistrer sous</button>
         <button id="ouvrir" class="sec">Ouvrir</button>
+        <span class="ent">Mots imposés</span>
+        <button id="impsauver" class="sec">Enregistrer</button>
+        <button id="impsauversous" class="sec">Enregistrer sous</button>
+        <button id="impouvrir" class="sec">Ouvrir</button>
+        <span class="ent">Mots du thème</span>
+        <button id="thsauver" class="sec">Enregistrer</button>
+        <button id="thsauversous" class="sec">Enregistrer sous</button>
+        <button id="thouvrir" class="sec">Ouvrir</button>
       </div></details></div>
   <div class="groupe">
     <details class="menu" id="mdessin"><summary>Dessin ▾</summary>
@@ -337,11 +370,13 @@
       </div></details></div>
 </div>
 <input type="file" id="fgrille" style="display:none">
+<input type="file" id="fliste" style="display:none">
 <input type="file" id="fichier" style="display:none">
 <div id="etat">Prêt.</div>
 <div id="zone">
   <div id="colgauche">
     <button id="aide" class="sec" style="display:none">Aide</button>
+    <button id="aidelettre" class="sec" style="display:none">Aide : cette lettre</button>
     <button id="test" class="sec" style="display:none">Aide : test</button>
     <div id="restantes"></div>
   </div>
@@ -387,8 +422,8 @@
   ressortent <b style="background:#cfe4f7">en bleu</b>.</p>
 
   <p><b>Mots du thème</b> — une liste de mots, un par ligne, et non le nom d'un
-  thème. Trois façons de la remplir : à la main, par le menu des listes toutes
-  faites, ou en tapant un thème dans le champ de recherche et en cliquant
+  thème. Deux façons de la remplir : à la main, ou en tapant un thème dans le
+  champ de recherche et en cliquant
   <b>Wiktionnaire</b>, qui interroge ses catégories thématiques — celle de la
   marine compte à elle seule plus de trois mille mots. Ces mots ne sont pas
   obligatoires ; ceux qui trouvent leur place ressortent
@@ -442,20 +477,37 @@
   il n'y a plus de bascules séparées qui pouvaient se contredire.</p>
   <p><b>Générer</b> produit une première grille ; si une grille existe déjà, le
   même bouton lance une exploration qui cherche mieux sans limite de temps et
-  remplace la grille à chaque amélioration. <b>Arrêter</b> est actif pendant
-  toute recherche, la première comme les suivantes.</p>
+  remplace la grille à chaque amélioration. Pendant toute recherche, ce même
+  bouton devient <b>Arrêter</b> et rougit : un seul bouton pour les deux gestes,
+  il n'y a donc jamais de doute sur celui qui est actif.</p>
+  <p>L'exploration ne sacrifie pas le thème à la densité. Elle impose elle aussi
+  une poignée de mots du thème, enrichit chaque grille trouvée, et ne retient
+  une grille moins noire que si elle contient au moins autant de mots du thème
+  que celle que vous avez déjà. Si la double contrainte se révèle intenable,
+  l'exigence est abaissée d'un mot après six refus, et l'application vous le
+  dit. Une grille de densité égale mais plus riche en thème est également
+  retenue.</p>
+  <p>Les deux flèches <b>&#9664;</b> et <b>&#9654;</b>, à droite de Générer,
+  parcourent les douze dernières grilles produites : une génération malheureuse
+  se rattrape d'un clic, et la flèche droite revient en avant. Chaque grille est
+  gardée avec son dessin, son code et ses mots du thème. Revenir en arrière puis
+  générer à nouveau coupe la branche en avant, comme dans tout historique.</p>
   <table style="font-size:11.5px;border-collapse:collapse;width:100%">
     <tr><th style="text-align:left">Bouton</th><th style="text-align:left">Actif quand</th></tr>
-    <tr><td>Générer, RAZ mots</td><td>mode génération, hors recherche</td></tr>
-    <tr><td>Arrêter</td><td>pendant toute recherche</td></tr>
+    <tr><td>Générer / Arrêter</td><td>toujours pendant une recherche (il arrête) ;
+        sinon en mode génération ou joueur</td></tr>
+    <tr><td>RAZ mots</td><td>mode génération, hors recherche</td></tr>
+    <tr><td>&#9664; et &#9654;</td><td>hors recherche, s'il existe une grille
+        avant ou après dans l'historique</td></tr>
     <tr><td>Menu des modes</td><td>hors recherche ; « définition » et « édition »
-        exigent une grille, « joueur » non — il peut en demander une</td></tr>
+        exigent une grille et sont interdits en mots codés, « joueur » non —
+        il peut en demander une</td></tr>
     <tr><td>Chercher les définitions</td><td>visible en mode définition</td></tr>
     <tr><td>Vérifier les mots</td><td>visible en mode édition</td></tr>
     <tr><td>Aide</td><td>visible en mots codés, ou en mode joueur</td></tr>
     <tr><td>Effacer mes lettres</td><td>visible en mode joueur</td></tr>
-    <tr><td>Imprimer, Enregistrer</td><td>une grille existe, hors recherche</td></tr>
-    <tr><td>Ouvrir</td><td>hors recherche</td></tr>
+    <tr><td>Imprimer, Enregistrer la grille</td><td>une grille existe, hors recherche</td></tr>
+    <tr><td>Ouvrir, listes de mots</td><td>hors recherche</td></tr>
     <tr><td>Menu Dessin et son contenu</td><td>hors mode joueur et hors recherche ;
         Annuler si la pile n'est pas vide</td></tr>
   </table>
@@ -475,23 +527,27 @@
   appui sur une case de la grille la <b>sélectionne</b> — elle et toutes celles
   portant le même numéro se colorent, sans passer en saisie. Il ne reste qu'à
   appuyer sur une des <b>lettres non placées</b>, listées sous les boutons
-  d'aide, pour la poser d'un coup sur toutes ces cases. Un second appui sur la
-  même case annule la sélection.</p>
+  d'aide, pour la poser d'un coup sur toutes ces cases. La sélection tient : un
+  second appui sur la même case ne l'annule pas. Elle ne s'abandonne qu'en
+  cliquant une case noire, ou le fond de page en dehors de la grille et du
+  tableau des lettres.</p>
+  <p>Le tableau des lettres se manie exactement comme la grille : un appui sur
+  une de ses cases choisit le numéro, il n'ouvre pas de saisie. La lettre se
+  pose ensuite depuis la liste des lettres non placées.</p>
   <p>La touche <b>— vider —</b>, en tête de cette liste, retire la lettre de la
   case sélectionnée ; la lettre revient alors dans la liste et redevient
-  disponible. Vous pouvez aussi taper directement au clavier dans le tableau des
-  lettres, si vous préférez.</p>
+  disponible.</p>
   <p><b>Aide : une lettre</b> dévoile une lettre entière du code ; elle reste
   colorée en permanence dans le tableau des lettres, pour que vous sachiez
-  toujours ce qui vous a été donné. <b>Aide : test</b> vérifie la case
+  toujours ce qui vous a été donné, mais c'est le programme qui la choisit.
+  <b>Aide : cette lettre</b> donne au contraire la bonne lettre du numéro que
+  vous venez de choisir : à utiliser quand vous butez sur une case précise.
+  <b>Aide : test</b> vérifie la case
   sélectionnée : si la lettre posée est fausse, les cases de ce numéro passent
   en rouge ; sinon l'application vous le confirme. « Effacer mes lettres » remet
   tout à zéro.</p>
   <p>En <b>mode auteur</b>, un appui sur une case de la grille des lettres
-  change sa couleur : c'est ainsi que vous révélez une lettre au joueur. En
-  <b>mode joueur</b>, un seul appui fait les deux à la fois — la case et toutes
-  celles portant le même numéro prennent la couleur, et le clavier s'ouvre pour
-  la saisie. Un nouvel appui retire la couleur sans quitter la saisie.</p>
+  change sa couleur : c'est ainsi que vous révélez une lettre au joueur.</p>
   <p>Quand toutes les lettres du code sont justes, le même feu d'artifice vous
   félicite qu'en mots croisés : les confettis tombent, puis remontent en
   tourbillon et s'échappent par le haut de l'écran.</p>
@@ -587,14 +643,22 @@
   produite, puisqu'elles ne correspondent plus.</p>
 
   <h4>Les boutons</h4>
-  <p><b>Générer</b> lance une recherche bornée en temps. <b>Explorer</b> cherche
-  sans limite, affiche chaque amélioration et continue ; <b>Arrêter</b> rend la
-  main en conservant la meilleure grille.</p>
+  <p><b>Générer</b> lance une recherche bornée en temps ; relancé sur une grille
+  existante, il explore sans limite, affiche chaque amélioration et continue.
+  Pendant la recherche il devient <b>Arrêter</b> et rend la main en conservant
+  la meilleure grille.</p>
   <p><b>RAZ mots</b> efface la grille produite, <b>RAZ dessin</b> la silhouette
   et les cases noires imposées.</p>
   <p><b>Imprimer corrigé</b> sort la grille avec les lettres, <b>Imprimer à
   remplir</b> seulement les cases noires et les numéros. Les définitions figurent
   dans les deux cas en deux blocs condensés.</p>
+  <p>Le menu <b>Fichier</b> présente trois lignes : la grille avec tout son état
+  (dessin, code, lettres posées, définitions retenues), les <b>mots imposés</b>
+  seuls, et les <b>mots du thème</b> seuls. Chaque ligne a ses trois boutons —
+  Enregistrer, Enregistrer sous, Ouvrir. Les listes partent en simple fichier
+  texte, un mot par ligne : elles se relisent et se modifient dans n'importe
+  quel éditeur, et se rechargent dans une autre grille. Ouvrir une liste accepte
+  aussi une grille enregistrée, dont elle extrait la liste correspondante.</p>
   <p>Sur téléphone, le fichier est déposé dans le dossier <b>Téléchargements</b>.
   C'est là qu'il faut aller le rechercher avec « Ouvrir » ; le sélecteur Android
   propose aussi l'appareil photo et d'autres sources, choisissez « Fichiers ».</p>
@@ -619,7 +683,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 9.7, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 9.8, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre. Tous droits réservés.<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -655,18 +719,6 @@ for (let d = 0; d <= 45; d += 5) {
   const o = document.createElement('option');
   o.value = d / 100; o.textContent = d + ' %'; if (d === 15) o.selected = true;
   $('#densite').appendChild(o);
-}
-const THEMES = {
-  'Mer et marine': 'MER ILE CAP MAT QUAI RAME CALE PONT VOILE ANCRE MAREE RECIF PORT PROUE MOUSSE HUNIER ESCALE VAGUE PHARE CANOT',
-  'Cuisine': 'SEL POT PLAT FOUR MIEL PAIN RIZ HUILE SAUCE POELE FARINE SUCRE OEUF CREME PATE TARTE CHEF MENU EPICE',
-  'Musique': 'AIR NOTE TON CLE LUTH FLUTE PIANO CHANT ORGUE ARCHET CHOEUR ACCORD RYTHME OPERA SOLO DUO GAMME',
-  'Nature': 'PRE BOIS MONT VENT PLUIE ARBRE FEUILLE RACINE SOURCE ROCHE NEIGE ORAGE SABLE MOUSSE RUISSEAU CIME',
-  'Animaux': 'CHAT CHIEN RAT LOUP OURS CERF AIGLE MERLE TRUITE ABEILLE RENARD LAPIN CHEVAL SOURIS OIE ANE',
-  'Astronomie': 'LUNE ETOILE ORBITE COMETE ASTRE NOVA MARS VENUS SOLEIL ECLIPSE PHASE NUIT CIEL AMAS'
-};
-for (const nom of Object.keys(THEMES)) {
-  const o = document.createElement('option');
-  o.value = nom; o.textContent = nom; $('#exemples').appendChild(o);
 }
 // ---- recherche d'un thème dans les catégories du Wiktionnaire ----
 const apiWk = 'https://fr.wiktionary.org/w/api.php?format=json&origin=*&';
@@ -710,11 +762,6 @@ $('#cats').onchange = async e => {
   e.target.value = '';
 };
 
-$('#exemples').onchange = e => {
-  if (!e.target.value) return;
-  $('#theme').value = THEMES[e.target.value].split(' ').join('\n');
-  e.target.value = '';
-};
 for (const id of ['#nl', '#nc']) {
   for (let v = 2; v <= 30; v++) {
     const o = document.createElement('option');
@@ -823,19 +870,32 @@ function propagerCode(n, lettre) {
     const s = cases[i].querySelector('span');
     if (s) s.textContent = lettre;
   }
-  const leg = document.querySelector('#legende .c[data-n="' + n + '"] input');
-  if (leg && leg.value !== lettre) leg.value = lettre;
+  const boite = document.querySelector('#legende .c[data-n="' + n + '"]');
+  if (boite) {
+    const leg = boite.querySelector('input');
+    if (leg) { if (leg.value !== lettre) leg.value = lettre; }
+    else { const sp = boite.querySelector('span.pose'); if (sp) sp.textContent = lettre || ''; }
+  }
   majRestantes();
 }
 
 // sélection d'un numéro dans la grille : on met en évidence toutes ses cases
+// Un clic choisit le numéro et le garde : recliquer dessus ne l'annule pas.
+// Seul un clic sur une case noire ou hors de la grille et du tableau des
+// lettres abandonne la sélection.
 function choisirNum(n) {
-  numSelect = (numSelect === n) ? -1 : n;
+  numSelect = n;
   faux.clear();
   majSelection();
-  $('#etat').textContent = numSelect > 0
-    ? `Case n° ${numSelect} choisie — cliquez une lettre à gauche pour la poser.`
-    : 'Sélection annulée.';
+  $('#etat').textContent =
+    `Case n° ${numSelect} choisie — cliquez une lettre non placée pour la poser.`;
+}
+function annulerSelection() {
+  if (numSelect < 0) return;
+  numSelect = -1;
+  faux.clear();
+  majSelection();
+  $('#etat').textContent = 'Sélection annulée.';
 }
 
 function majSelection() {
@@ -932,32 +992,19 @@ function afficherLegende(g) {
     const u = document.createElement('u'); u.textContent = n;
     d.appendChild(u);
     if (modeJoueur) {
-      const inp = document.createElement('input');
-      inp.maxLength = 1;
-      inp.value = props.get(String(n)) || '';
-      inp.oninput = () => {
-        const v = norm(inp.value).slice(0, 1);
-        inp.value = v;
-        if (v) props.set(String(n), v); else props.delete(String(n));
-        faux.delete(n);
-        propagerCode(n, v);
-        majSelection();
-        verifierVictoireCode();
-      };
-      d.appendChild(inp);
+      // pas de saisie ici non plus : on choisit la case, puis la lettre
+      const s = document.createElement('span');
+      s.className = 'pose';
+      s.textContent = props.get(String(n)) || '';
+      d.appendChild(s);
     } else {
       const s = document.createElement('span'); s.textContent = ch;
       d.appendChild(s);
     }
     if (revelees.has(ch)) { d.style.background = revelees.get(ch); d.classList.add('revelee'); }
     if (modeJoueur) {
-      // en mode joueur, aucune couleur attachée aux lettres : un appui
-      // surligne les cases du même numéro et ouvre la saisie
-      d.onclick = () => {
-        surlignerNum(n);
-        const e = d.querySelector('input');
-        if (e) { e.focus(); e.select(); }
-      };
+      // même comportement que dans la grille : le clic choisit le numéro
+      d.onclick = ev => { ev.stopPropagation(); choisirNum(n); };
     } else {
       d.onclick = () => basculerCouleur(ch, d);
     }
@@ -1020,7 +1067,11 @@ function dessiner(g, tailleForcee) {
     }
     else if (g) {
       const v = g[i];
-      if (v === -2) d.classList.add('noir');
+      if (v === -2) {
+        d.classList.add('noir');
+        if (modeJoueur && typeCourant() === 'codes')
+          d.onclick = ev => { ev.stopPropagation(); annulerSelection(); };
+      }
       else if (modeJoueur && typeCourant() === 'codes' && codeNum) {
         // un clic sélectionne le numéro ; la lettre se choisit dans la
         // colonne de gauche, il n'y a pas de saisie dans la case
@@ -1033,7 +1084,7 @@ function dessiner(g, tailleForcee) {
         d.dataset.n = n;
         if (n === numSelect) d.classList.add('vise');
         if (faux.has(n)) d.classList.add('faux');
-        d.onclick = () => choisirNum(n);
+        d.onclick = ev => { ev.stopPropagation(); choisirNum(n); };
       }
       else if (modeJoueur) {
         const inp = document.createElement('input');
@@ -1253,7 +1304,11 @@ function eclairerMot(cle) {
 
 // un clic hors de la grille et hors des définitions éteint l'éclairage
 document.addEventListener('click', ev => {
+  // en mots codés + joueur, « vise » sert à la sélection d'un numéro : ce
+  // nettoyage, prévu pour l'éclairage des définitions, l'effacerait à tort
+  if (modeJoueur && typeCourant() === 'codes') return;
   if (ev.target.closest('#grille') || ev.target.closest('#defs')) return;
+  if (ev.target.closest('#legende') || ev.target.closest('#restantes')) return;
   if (document.querySelector('.c.vise, .def.vise, .undef.vise')) effacerEclairage();
 });
 // en mode définition : 1er clic = la définition horizontale, 2e = la verticale
@@ -1344,10 +1399,62 @@ function reperer(g, imp) {
 }
 
 let derniereDensite = -1;
+let derniersThemes = [];          // mots du thème présents dans la grille courante
+
+// ---- historique des grilles produites : on peut revenir en arrière ----------
+const MAXGR = 12;                 // une douzaine de grilles conservées
+const grilles = [];
+let iGrille = -1;
+let explorePousse = false;        // une grille d'exploration occupe déjà le sommet
+function pousserGrille(g, dens, themes) {
+  if (iGrille < grilles.length - 1) grilles.length = iGrille + 1;   // on coupe la branche
+  grilles.push({ g: Int8Array.from(g), d: dens, th: (themes || []).slice(),
+                 dessin: etat ? Uint8Array.from(etat) : null,
+                 code: codeNum ? new Map(codeNum) : null,
+                 nl, nc, type: typeCourant() });
+  if (grilles.length > MAXGR) grilles.shift();
+  iGrille = grilles.length - 1;
+}
+function allerGrille(k) {
+  if (k < 0 || k >= grilles.length || k === iGrille) return;
+  const e = grilles[k];
+  iGrille = k;
+  nl = e.nl; nc = e.nc;
+  $('#nl').value = nl; $('#nc').value = nc;
+  if (e.type !== typeCourant()) {
+    $('#type').value = e.type;
+    majTitre();
+    document.body.classList.toggle('fleches', e.type === 'fleches');
+  }
+  etat = e.dessin ? Uint8Array.from(e.dessin) : null;
+  memoriser();
+  derniere = Int8Array.from(e.g);
+  derniereDensite = e.d;
+  derniersThemes = e.th.slice();
+  codeNum = e.code ? new Map(e.code) : null;
+  if (typeCourant() === 'codes' && !codeNum) construireCode(derniere);
+  // la grille change : rien de ce qui s'y rapportait ne vaut plus
+  defsChoisies.clear(); propositions.clear();
+  saisies.clear(); props.clear(); revelees.clear(); faux.clear();
+  numSelect = -1; caseActive = -1; cleActive = null;
+  indexerMots(derniere);
+  dessiner(derniere);
+  afficherLegende(derniere);
+  majDecor();
+  $('#defs').innerHTML = '';
+  if (modeJoueur && typeCourant() !== 'codes') afficherDefs(derniere);
+  majBoutons();
+  $('#etat').textContent = `Grille ${k + 1} sur ${grilles.length} — `
+    + `${(100 * e.d).toFixed(1)} % de noires`
+    + (e.th.length ? `, thème : ${e.th.join(', ')}.` : '.');
+}
+$('#grprec').onclick = () => allerGrille(iGrille - 1);
+$('#grsuiv').onclick = () => allerGrille(iGrille + 1);
 function lancer(affiner, mode) {
   const affinage = affiner;
   imposesNorm = lignes('#imposes');
   recherche = true; exploration = (mode === 'explorer');
+  explorePousse = false;
   majBoutons();
   $('#etat').textContent = mode === 'explorer' ? 'Exploration…'
     : 'Recherche…';
@@ -1376,6 +1483,7 @@ function lancer(affiner, mode) {
     if (m.type === 'grille') {
       derniere = Int8Array.from(m.grille);
       derniereDensite = m.densite;
+      derniersThemes = m.themesPlaces || [];
       defsChoisies.clear();               // la grille change : les definitions ne valent plus
       if (typeCourant() === 'codes') construireCode(derniere); else codeNum = null;
       saisies.clear(); propositions.clear(); props.clear(); revelees.clear();
@@ -1385,6 +1493,14 @@ function lancer(affiner, mode) {
       afficherLegende(derniere);
       majDecor();
       $('#defs').innerHTML = '';
+      if (m.provisoire && explorePousse && iGrille >= 0) {
+        grilles[iGrille] = { g: Int8Array.from(derniere), d: m.densite,
+          th: derniersThemes.slice(), dessin: etat ? Uint8Array.from(etat) : null,
+          code: codeNum ? new Map(codeNum) : null, nl, nc, type: typeCourant() };
+      } else {
+        pousserGrille(derniere, m.densite, derniersThemes);
+        if (m.provisoire) explorePousse = true;
+      }
       majBoutons();
       if (modeJoueur) {
         // le joueur reçoit une grille vierge ; on lui prépare les définitions
@@ -1419,6 +1535,7 @@ function lancer(affiner, mode) {
     densite: affinage && derniereDensite >= 0
       ? Math.max(0, derniereDensite - 0.02) : +$('#densite').value,
     niveau: +$('#niveau').value,
+    themeMin: mode === 'explorer' ? derniersThemes.length : 0,
     maxMots: {},
     affiner: false, mode,
     densiteForcee: affinage && derniereDensite >= 0 ? Math.max(0, derniereDensite - 0.02) : null,
@@ -1426,7 +1543,15 @@ function lancer(affiner, mode) {
   });
 }
 
+function arreterRecherche() {
+  if (worker) worker.postMessage({ mode: 'stop' });
+  exploration = false;
+  $('#etat').textContent = 'Arrêt demandé…';
+  majBoutons();
+}
+// un seul bouton : il lance la recherche, puis l'arrête tant qu'elle tourne
 $('#go').onclick = () => {
+  if (recherche) { arreterRecherche(); return; }
   appliquerType();
   // en mode joueur on veut une grille neuve, pas une exploration
   lancer(false, (derniere && !modeJoueur) ? 'explorer' : undefined);
@@ -1882,6 +2007,84 @@ $('#sauversous').onclick = () => {
   enregistrerVers(nomDuJour(true), JSON.stringify(etatComplet()), true);
 };
 $('#ouvrir').onclick = () => $('#fgrille').click();
+
+// ---- listes de mots : imposés et thème, enregistrées à part ----------------
+const listes = {
+  imposes: { sel: '#imposes', base: 'mots-imposes', titre: 'Mots imposés',
+             poignee: null, nom: null },
+  theme:   { sel: '#theme',   base: 'mots-theme',   titre: 'Mots du thème',
+             poignee: null, nom: null }
+};
+function nomListe(cle) {
+  const d = new Date();
+  return listes[cle].base + '-' + d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0') + '.txt';
+}
+async function enregistrerListe(cle, demanderNom) {
+  const L = listes[cle];
+  const mots = $(L.sel).value.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  if (!mots.length) { $('#etat').textContent = L.titre + ' : la liste est vide.'; return; }
+  const texte = mots.join('\n') + '\n';
+  let nom = L.nom || nomListe(cle);
+  if (window.showSaveFilePicker) {
+    try {
+      if (demanderNom || !L.poignee) {
+        L.poignee = await window.showSaveFilePicker({ suggestedName: nom,
+          types: [{ description: 'Liste de mots', accept: { 'text/plain': ['.txt'] } }] });
+      }
+      const w = await L.poignee.createWritable();
+      await w.write(texte); await w.close();
+      L.nom = L.poignee.name;
+      $('#etat').textContent = L.titre + ' : ' + mots.length + ' mots enregistrés dans ' + L.nom + '.';
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') { $('#etat').textContent = 'Enregistrement annulé.'; return; }
+    }
+  }
+  if (demanderNom || !L.nom) {
+    const saisi = prompt('Nom du fichier', nom);
+    if (saisi === null) { $('#etat').textContent = 'Enregistrement annulé.'; return; }
+    nom = saisi.trim().replace(/\s+/g, '-') || nom;
+    if (!/\.txt$/i.test(nom)) nom += '.txt';
+    L.nom = nom;
+  } else nom = L.nom;
+  const blob = new Blob([texte], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nom; a.style.display = 'none';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+  $('#etat').textContent = L.titre + ' : ' + mots.length + ' mots enregistrés (' + nom + ').';
+}
+let listeCible = null;
+function ouvrirListe(cle) { listeCible = cle; $('#fliste').click(); }
+$('#fliste').onchange = async ev => {
+  const f = ev.target.files[0]; ev.target.value = '';
+  if (!f || !listeCible) return;
+  const L = listes[listeCible];
+  try {
+    const txt = await f.text();
+    // on accepte aussi bien un fichier texte qu'une grille enregistrée
+    let mots;
+    if (/^\s*\{/.test(txt)) {
+      const o = JSON.parse(txt);
+      mots = String(o[listeCible] || '').split(/\r?\n/);
+    } else mots = txt.split(/\r?\n/);
+    mots = mots.map(x => x.trim()).filter(Boolean);
+    $(L.sel).value = mots.join('\n');
+    L.nom = f.name; L.poignee = null;
+    if (listeCible === 'imposes') imposesNorm = lignes('#imposes');
+    $('#etat').textContent = L.titre + ' : ' + mots.length + ' mots chargés depuis ' + f.name + '.';
+  } catch (e) { $('#etat').textContent = 'Lecture impossible : ' + e.message; }
+  listeCible = null;
+};
+$('#impsauver').onclick = () => enregistrerListe('imposes', false);
+$('#impsauversous').onclick = () => enregistrerListe('imposes', true);
+$('#impouvrir').onclick = () => ouvrirListe('imposes');
+$('#thsauver').onclick = () => enregistrerListe('theme', false);
+$('#thsauversous').onclick = () => enregistrerListe('theme', true);
+$('#thouvrir').onclick = () => ouvrirListe('theme');
 $('#fgrille').onchange = async ev => {
   const f = ev.target.files[0]; if (!f) return;
   try {
@@ -1920,6 +2123,9 @@ $('#fgrille').onchange = async ev => {
     if (actif && typeCourant() !== 'codes') afficherDefs(derniere);
     else $('#defs').innerHTML = '';
     afficherLegende(derniere);
+    // la grille ouverte entre dans l'historique : on peut la quitter et y revenir
+    if (derniere) pousserGrille(derniere, derniereDensite >= 0 ? derniereDensite : 0, []);
+    majBoutons();
     $('#etat').textContent = `Grille rechargée (${nl}×${nc}).`;
   } catch (e) { $('#etat').textContent = 'Ouverture impossible : ' + e.message; }
   ev.target.value = '';
@@ -1927,10 +2133,7 @@ $('#fgrille').onchange = async ev => {
 
 // ---------- exploration longue ----------
 
-$('#arreter').onclick = () => {
-  if (worker) worker.postMessage({ mode: 'stop' });
-  exploration = false; majBoutons();
-};
+
 $('#exporter').onclick = () => {
   const obj = { format: 'mots-croises-cgexcel', v: 1, nl, nc,
                 dessin: etat ? Array.from(etat) : [] };
@@ -1988,6 +2191,9 @@ function majBoutons() {
   // le mode joueur reste accessible sans grille : « Nouvelle grille » est
   // précisément le point d'entrée d'un joueur qui part de rien
   if (!g) { modeDef = false; modeEdit = false; }
+  // en mots codés il n'y a ni définition ni retouche de lettres : le code seul
+  // donne la grille, la modifier à la main n'aurait aucun sens
+  if (codes) { modeDef = false; modeEdit = false; }
   const mode = modeCourant();
   const occupe = recherche;                 // une génération ou exploration tourne
 
@@ -1996,19 +2202,23 @@ function majBoutons() {
   sel.disabled = occupe;
   for (const o of sel.options) {
     if (o.value === 'definition') o.disabled = codes || !g;
-    else if (o.value === 'edition') o.disabled = !g;
+    else if (o.value === 'edition') o.disabled = codes || !g;
     else o.disabled = false;
   }
 
   const regles = {
-    '#go':         { actif: !occupe && (mode === 'generation' || mode === 'joueur'),
-                     texte: mode === 'joueur' ? 'Nouvelle grille' : 'Générer' },
-    '#arreter':    { actif: occupe },
+    // un seul bouton : Générer devient Arrêter tant que la recherche tourne
+    '#go':         { actif: occupe || mode === 'generation' || mode === 'joueur',
+                     texte: occupe ? 'Arrêter'
+                            : (mode === 'joueur' ? 'Nouvelle grille' : 'Générer') },
+    '#grprec':     { actif: !occupe && iGrille > 0 },
+    '#grsuiv':     { actif: !occupe && iGrille >= 0 && iGrille < grilles.length - 1 },
     '#razgrille':  { actif: g && !occupe && mode === 'generation' },
     '#toutchercher': { visible: mode === 'definition', actif: !occupe },
     '#verifier':   { visible: mode === 'edition', actif: !occupe },
     '#aide':       { visible: g && (codes || mode === 'joueur'),
                      texte: codes ? 'Aide : une lettre' : 'Aide : cette case' },
+    '#aidelettre': { visible: g && codes && mode === 'joueur' },
     '#test':       { visible: g && codes && mode === 'joueur' },
     '#razjoueur':  { visible: g && mode === 'joueur' },
     '#imprimer':   { actif: g && !occupe },
@@ -2016,6 +2226,10 @@ function majBoutons() {
     '#sauver':     { actif: g && !occupe },
     '#sauversous': { actif: g && !occupe },
     '#ouvrir':     { actif: !occupe },
+    '#impsauver':  { actif: !occupe }, '#impsauversous': { actif: !occupe },
+    '#impouvrir':  { actif: !occupe },
+    '#thsauver':   { actif: !occupe }, '#thsauversous': { actif: !occupe },
+    '#thouvrir':   { actif: !occupe },
     '#dessinonoff':{ actif: mode !== 'joueur' && !occupe,
                      texte: 'Dessin : ' + (modeDessin ? 'ON' : 'off') },
     '#undo':       { actif: mode !== 'joueur' && !occupe && histo.length > 0,
@@ -2024,6 +2238,7 @@ function majBoutons() {
     '#exporter':   { actif: mode !== 'joueur' && !occupe },
     '#importer':   { actif: mode !== 'joueur' && !occupe }
   };
+  $('#go').classList.toggle('stop', occupe);
   for (const [s, r] of Object.entries(regles)) {
     const e = $(s);
     if (!e) continue;
@@ -2062,6 +2277,20 @@ function changerMode(nouveau) {
   $('#etat').textContent = txt[nouveau] || '';
 }
 $('#mode').onchange = e => changerMode(e.target.value);
+
+// En mots codés + joueur, un clic sur le fond de page — hors grille, hors
+// tableau des lettres, hors lettres restantes et hors commandes — abandonne
+// la sélection en cours.
+document.addEventListener('click', ev => {
+  if (!modeJoueur || typeCourant() !== 'codes' || numSelect < 0) return;
+  const t = ev.target;
+  if (!(t instanceof Element)) return;
+  if (t.closest('#grille') || t.closest('#legende') || t.closest('#restantes')
+      || t.closest('button') || t.closest('select') || t.closest('input')
+      || t.closest('textarea') || t.closest('summary') || t.closest('.pan')
+      || t.closest('header') || t.closest('.mots') || t.closest('#defs')) return;
+  annulerSelection();
+});
 
 // les menus déroulants se referment dès qu'on clique ailleurs
 document.addEventListener('click', ev => {
@@ -2180,6 +2409,27 @@ $('#aide').onclick = () => {
     + (modeJoueur ? '' : ` Total révélé : ${revelees.size}.`);
 };
 
+// dévoile la bonne lettre du numéro choisi, sans le chercher au hasard
+$('#aidelettre').onclick = () => {
+  if (!derniere || !codeNum) return;
+  if (numSelect < 0) {
+    $('#etat').textContent = 'Choisissez d\u2019abord une case de la grille.';
+    return;
+  }
+  let bonne = null;
+  for (const [ch, n] of codeNum) if (n === numSelect) bonne = ch;
+  if (!bonne) return;
+  const prises = new Set(revelees.values());
+  revelees.set(bonne, PALETTE.find(c => !prises.has(c)) || PALETTE[revelees.size % PALETTE.length]);
+  props.set(String(numSelect), bonne);
+  faux.clear();
+  propagerCode(numSelect, bonne);
+  dessiner(derniere); afficherLegende(derniere); majSelection();
+  let k = 0; for (const v of derniere) if (v >= 0 && String.fromCharCode(65 + v) === bonne) k++;
+  $('#etat').textContent = `Le n° ${numSelect} est la lettre ${bonne} (${k} occurrences).`;
+  verifierVictoireCode();
+};
+
 $('#test').onclick = () => {
   if (!derniere || !codeNum) return;
   if (numSelect < 0) {
@@ -2213,7 +2463,7 @@ $('#razjoueur').onclick = () => {
 $('#type').onchange = () => {
   majTitre();
   document.body.classList.toggle('fleches', typeCourant() === 'fleches');
-  if (typeCourant() === 'codes') { modeDef = false; $('#defs').innerHTML = ''; }
+  if (typeCourant() === 'codes') { modeDef = false; modeEdit = false; $('#defs').innerHTML = ''; }
   if (typeCourant() === 'fleches') appliquerType();
   if (typeCourant() !== 'codes') { codeNum = null; }
   else if (derniere) construireCode(derniere);

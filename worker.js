@@ -74,6 +74,7 @@ function compterThemes(g, nl, nc, theme) {
 }
 
 let stop = false;
+let cacheIndex = null, cleIndex = '';   // l'index est coûteux : on le garde
 const pause = () => new Promise(r => setTimeout(r, 0));
 
 self.onmessage = async (e) => {
@@ -123,13 +124,20 @@ self.onmessage = async (e) => {
     self.postMessage({ type: 'info', texte: 'Chargement du lexique…' });
     const mots = await chargerLexique();
 
-    self.postMessage({ type: 'info', texte: 'Indexation de ' + mots.length + ' mots…' });
     const imposes = p.imposes || [];
     const theme = p.theme || [];
     const plats = imposes.join(' ').split(/\s+/).filter(Boolean);
     // mots imposes ET mots du theme sont proteges de la troncature du lexique
-    const index = M.Index.depuisListe(mots, 2, p.lmax || 12,
-                                      plats.concat(theme), p.niveau || 20000);
+    // on ne reconstruit l'index que si les paramètres qui le déterminent changent
+    const cle = [p.lmax || 12, p.niveau || 20000,
+                 plats.slice().sort().join('|'), theme.slice().sort().join('|')].join('#');
+    if (cle !== cleIndex) {
+      self.postMessage({ type: 'info', texte: 'Indexation du lexique…' });
+      cacheIndex = M.Index.depuisListe(mots, 2, p.lmax || 12,
+                                       plats.concat(theme), p.niveau || 20000);
+      cleIndex = cle;
+    }
+    const index = cacheIndex;
 
     // un mot impose absent du lexique ne pourra jamais etre place
     const absents = plats.filter(m => {
@@ -166,40 +174,84 @@ self.onmessage = async (e) => {
       const court = Math.round(Math.max(2500, (p.duree || 8000) / 3
                     * (1 + dedans / 400 + imposes.length / 10)));
       const pas = Math.max(0.02, 1 / dedans);   // au moins une case noire
-      let meilleurD = 2, d = base, essais = 0;
+
+      // Le theme doit survivre a la recherche d'une meilleure densite : on
+      // injecte ici aussi une poignee de mots du theme comme imposes, on
+      // enrichit chaque grille trouvee, et l'on refuse toute grille qui ferait
+      // reculer le theme sous ce que la grille actuelle atteint deja.
+      const courts = theme.filter(m => m.length >= 3 && m.length <= 7);
+      for (let i = courts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [courts[i], courts[j]] = [courts[j], courts[i]];
+      }
+      let k = Math.min(courts.length, Math.max(4, Math.min(18, Math.round(dedans / 14))));
+      let seuil = Math.max(0, Math.min(p.themeMin || 0, theme.length));
+      const enrichMs = Math.max(2500, court / 2);
+
+      let meilleurD = 2, meilleurT = -1, d = base, essais = 0;
+      let echecs = 0, refusTheme = 0;
       while (!stop) {
         essais++;
+        injectes = theme.length ? courts.slice(0, k) : [];
         self.postMessage({ type: 'info',
           texte: `Exploration : essai ${essais} à ${(100 * d).toFixed(0)} %`
-                 + (meilleurD < 2 ? ` — meilleure grille : ${(100 * meilleurD).toFixed(1)} %` : '') });
-        const g = faire(d, 0);
+                 + (injectes.length ? ` avec ${injectes.length} mots du thème` : '')
+                 + (meilleurD < 2 ? ` — meilleure grille : ${(100 * meilleurD).toFixed(1)} %`
+                    + (theme.length ? ` et ${meilleurT} mot(s) du thème` : '') : '') });
+        const g = faire(d, 0, 0);
         const res = g.generer(1e9, 20000, court);
         await pause();
         if (res) {
+          echecs = 0;
+          let gr = res.grille;
+          let nT = theme.length ? compterThemes(gr, p.nl, p.nc, theme).length : 0;
+          // une passe d'enrichissement si le theme est en retrait
+          if (theme.length && nT < Math.max(seuil, meilleurT)) {
+            const outil = faire(d, 0, 0);
+            gr = outil.enrichirTheme(gr, enrichMs);
+            nT = compterThemes(gr, p.nl, p.nc, theme).length;
+            await pause();
+          }
           let noirs = 0;
-          for (let i = 0; i < res.grille.length; i++)
-            if (res.grille[i] === -2 && !(masque && masque[i])) noirs++;
+          for (let i = 0; i < gr.length; i++)
+            if (gr[i] === -2 && !(masque && masque[i])) noirs++;
           const dens = noirs / dedans;
-          if (dens < meilleurD) {
-            meilleurD = dens;
+          // on ne retient que ce qui progresse SANS sacrifier le theme :
+          // moins de noires a theme tenu, ou plus de theme a noires egales
+          const tientTheme = nT >= Math.max(seuil, 0);
+          const mieux = (dens < meilleurD && tientTheme)
+                     || (dens <= meilleurD && nT > meilleurT && meilleurD < 2);
+          if (mieux) {
+            meilleurD = Math.min(meilleurD, dens); meilleurT = nT; refusTheme = 0;
             self.postMessage({
               type: 'grille', provisoire: true,
-              grille: Array.from(res.grille), poses: res.poses, densite: dens,
-              croisements: compterCroisements(res.grille, p.nl, p.nc, plats),
-              themesPlaces: compterThemes(res.grille, p.nl, p.nc, theme),
+              grille: Array.from(gr), poses: res.poses, densite: dens,
+              croisements: compterCroisements(gr, p.nl, p.nc, plats),
+              themesPlaces: compterThemes(gr, p.nl, p.nc, theme),
               version: M.VERSION || '?'
             });
-          }
-          if (noirs === 0) {          // on ne fera pas mieux qu'une grille pleine
-            self.postMessage({ type: 'fini',
-              texte: `Grille sans aucune case noire trouvée après ${essais} essais : `
-                     + `impossible de faire mieux.` });
-            return;
+            if (noirs === 0) {        // on ne fera pas mieux qu'une grille pleine
+              self.postMessage({ type: 'fini',
+                texte: `Grille sans aucune case noire trouvée après ${essais} essais : `
+                       + `impossible de faire mieux.` });
+              return;
+            }
+          } else if (dens < meilleurD && !tientTheme) {
+            // la densite progressait mais le theme reculait : on patiente, puis
+            // on abaisse d'un cran l'exigence plutot que de tourner sans fin
+            if (++refusTheme >= 6 && seuil > 0) {
+              seuil--; refusTheme = 0;
+              self.postMessage({ type: 'info',
+                texte: `Thème difficile à tenir : exigence ramenée à ${seuil} mot(s).` });
+            }
           }
           d = Math.max(0, meilleurD - pas);
           if (Math.round(d * dedans) >= Math.round(meilleurD * dedans))
             d = Math.max(0, (Math.round(meilleurD * dedans) - 1) / dedans);
         } else {
+          // rien trouve : on desserre la densite, et de temps en temps on
+          // allege le nombre de mots du theme imposes d'office
+          if (++echecs >= 3 && k > 2) { k = Math.max(2, Math.floor(k * 0.7)); echecs = 0; }
           d = meilleurD < 2 ? Math.min(meilleurD - pas / 2, 0.5)
                             : Math.min(d + pas, 0.5);
           if (meilleurD === 2 && d >= 0.499) d = base;
@@ -208,7 +260,9 @@ self.onmessage = async (e) => {
       }
       self.postMessage({ type: 'fini',
         texte: meilleurD < 2
-          ? `Exploration arrêtée après ${essais} essais — meilleure grille : ${(100 * meilleurD).toFixed(1)} %.`
+          ? `Exploration arrêtée après ${essais} essais — meilleure grille : `
+            + `${(100 * meilleurD).toFixed(1)} %`
+            + (theme.length ? ` avec ${meilleurT} mot(s) du thème.` : '.')
           : `Exploration arrêtée après ${essais} essais, sans solution.` });
       return;
     }
