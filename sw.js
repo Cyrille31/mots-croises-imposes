@@ -1,5 +1,5 @@
 // CGExcel - Mots croisés - service worker
-const CACHE = 'mc-cgexcel-v75';
+const CACHE = 'mc-cgexcel-v76';
 const FICHIERS = ['./', './index.html', './moteur.js', './worker.js',
                   './lexique.txt', './manifest.webmanifest'];
 

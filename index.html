@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1a3a6b">
 <style>
-  :root { --bleu:#1a3a6b; --trait:#243447; --fond:#f7f8fa; }
+  :root { --bleu:#1a3a6b; --trait:#243447; --fond:#f7f8fa; --colg:124px; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { margin:0; padding:7px 9px; font:13px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;
          background:var(--fond); color:#14202e; }
@@ -155,10 +155,19 @@
   .c u { position:absolute; top:0; left:1px; font-size:8px; text-decoration:none;
          font-weight:400; color:#8a96a4; line-height:1; }
   #zone { display:flex; gap:8px; align-items:flex-start; justify-content:center; }
-  #colgauche { display:flex; flex-direction:column; gap:4px; padding-top:24px; }
-  #colgauche button { font:12px inherit; padding:6px 8px; white-space:nowrap; }
+  /* La colonne de gauche est réservée : la grille, si elle est trop large,
+     défile dans son propre cadre au lieu de la repousser hors de l'écran. */
+  #colgauche { display:flex; flex-direction:column; gap:4px; padding-top:24px;
+               flex:0 0 auto; width:0; overflow:hidden; }
+  body.avecaide #colgauche { width:var(--colg); overflow:visible; }
+  #colgauche button { font:12px inherit; padding:6px 8px; white-space:nowrap;
+               width:100%; }
+  #defil { flex:0 1 auto; min-width:0; max-width:100%;
+           overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
+  #defil::-webkit-scrollbar { height:8px; }
+  #defil::-webkit-scrollbar-thumb { background:#c2ccd8; border-radius:4px; }
   #blocleg { display:flex; gap:12px; align-items:center; justify-content:center;
-             flex-wrap:wrap; margin:8px 0; }
+             flex-wrap:wrap; margin:8px 0; max-width:100%; overflow-x:auto; }
   #restantes { margin-top:6px; }
   #restantes b { display:block; font:10.5px/1.3 system-ui; color:#6b7887;
                  font-weight:400; margin-bottom:3px; }
@@ -177,6 +186,9 @@
   #legende .c { position:relative; cursor:pointer; }
   .hdr { display:flex; align-items:center; justify-content:center; font-size:10px;
          color:#6b7887; font-weight:600; border:0; background:transparent; }
+  /* numéros de ligne : ils restent collés à gauche quand la grille défile */
+  .hdrg { position:sticky; left:0; z-index:3; background:var(--fond);
+          box-shadow:1px 0 0 #d7dce3; }
   body.vierge .c span:not(.fA) { visibility:hidden; }
   body.vierge .c.impose, body.vierge .c.themeq { background:#fff !important; }
   #impression { display:none; }
@@ -190,6 +202,12 @@
     body.vierge .c.flcase .fl { visibility:visible; }
     .c .fA { visibility:visible !important; display:block !important; }
     #grille, .c { overflow:visible; }
+    /* à l'impression rien ne défile : le cadre s'efface */
+    #defil { overflow:visible !important; position:static !important;
+             max-width:none !important; flex:none !important; }
+    .hdrg { position:static !important; background:transparent !important; }
+    #blocleg { overflow:visible !important; }
+    #zone { display:block; }
     body.vierge #legende span { visibility:hidden; }
     body.vierge #legende .c.revelee span { visibility:visible; }
     body.codes .c { background:#fff !important; }
@@ -219,9 +237,9 @@
           -webkit-overflow-scrolling:touch; touch-action:pan-y;
           border:1px solid #e2e7ee; border-radius:8px; padding:2px 8px; background:#fff; }
   @media (max-width:700px) { #defs { max-height:44vh; } }
-  #grille { position:sticky; top:0; background:var(--fond); z-index:2; padding:2px 0;
-            max-width:100%; }
-  @media (max-width:700px) { #grille { position:static; } }
+  #defil { position:sticky; top:0; background:var(--fond); z-index:2; padding:2px 0; }
+  #defil #grille { position:static; max-width:none; margin:6px auto; }
+  @media (max-width:700px) { #defil { position:static; } }
   #defs h3 { font-size:12px; color:var(--bleu); margin:8px 0 4px; }
   .def { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin:3px 0;
          font-size:12px; }
@@ -274,7 +292,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">9.9</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.0</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <button id="bAide" class="rond" title="Mode d'emploi">?</button>
@@ -382,7 +400,7 @@
     <button id="test" class="sec" style="display:none">Aide : test</button>
     <div id="restantes"></div>
   </div>
-  <div id="grille"></div>
+  <div id="defil"><div id="grille"></div></div>
 </div>
 <div id="defs"></div>
 <p id="titreleg" style="display:none;text-align:center;font-size:11.5px;color:#6b7887;margin:8px 0 0">
@@ -661,6 +679,16 @@
   texte, un mot par ligne : elles se relisent et se modifient dans n'importe
   quel éditeur, et se rechargent dans une autre grille. Ouvrir une liste accepte
   aussi une grille enregistrée, dont elle extrait la liste correspondante.</p>
+  <h4>Grilles larges</h4>
+  <p>La colonne de gauche — boutons d'aide et lettres non placées — et le tableau
+  des lettres gardent toujours leur place entière : c'est la grille qui se
+  contente de ce qui reste. Si elle n'y tient pas, elle <b>défile
+  horizontalement</b> dans son propre cadre, au doigt sur téléphone, plutôt que
+  de rapetisser jusqu'à l'illisible ou de repousser les commandes hors de
+  l'écran. La colonne des numéros de ligne reste accrochée à gauche pendant ce
+  défilement, comme dans un tableur. Les cases ne descendent pas sous 20 pixels
+  en mots codés — il faut pouvoir lire le petit numéro — ni sous 14 ailleurs.</p>
+
   <p>Sur téléphone, le fichier est déposé dans le dossier <b>Téléchargements</b>.
   C'est là qu'il faut aller le rechercher avec « Ouvrir » ; le sélecteur Android
   propose aussi l'appareil photo et d'autres sources, choisissez « Fichiers ».</p>
@@ -700,7 +728,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 9.9, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.0, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — licence MIT + BAL 1.0 (voir le mode d'emploi).<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -1029,11 +1057,24 @@ function afficherLegende(g) {
   }
 }
 
+// largeur réservée à la colonne de gauche : elle doit rester entièrement
+// visible, la grille se contentant de ce qui reste — quitte à défiler
+const LARG_COLG = 124;
+function colonneUtile() {
+  return !!derniere && (typeCourant() === 'codes' || modeJoueur);
+}
+
 function dessiner(g, tailleForcee) {
   const boite = $('#grille');
-  // la grille doit tenir entièrement à l'écran, avec un minimum lisible
+  document.body.classList.toggle('avecaide', colonneUtile());
+  // la grille occupe la place qui reste ; en deçà d'une taille lisible elle
+  // défile horizontalement plutôt que de devenir illisible ou de déborder.
+  // En mots codés il faut pouvoir lire le petit numéro : le plancher est plus haut.
+  const plancher = typeCourant() === 'codes' ? 20 : 14;
+  const pris = colonneUtile() ? LARG_COLG + 8 : 0;
+  const dispo = Math.min(window.innerWidth - 24 - pris, 560);
   const taille = tailleForcee
-    || Math.max(11, Math.min(30, Math.floor(Math.min(window.innerWidth - 30, 560) / (nc + 1))));
+    || Math.max(plancher, Math.min(30, Math.floor(dispo / (nc + 1))));
   const marge = Math.round(taille * 0.7);
   boite.style.gridTemplateColumns = `${marge}px repeat(${nc}, ${taille}px)`;
   boite.style.border = 'none';
@@ -1044,16 +1085,17 @@ function dessiner(g, tailleForcee) {
   const imp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean));
   const cellulesImposees = g ? reperer(g, imp) : new Set();
   const cellulesTheme = g ? reperer(g, new Set(lignes('#theme'))) : new Set();
-  const entete = (txt, w, ht) => {
+  const entete = (txt, w, ht, gauche) => {
     const e = document.createElement('div');
-    e.className = 'hdr'; e.textContent = txt;
+    e.className = gauche ? 'hdr hdrg' : 'hdr';
+    e.textContent = txt;
     e.style.width = w + 'px'; e.style.height = ht + 'px';
     boite.appendChild(e);
   };
-  entete('', marge, marge);
+  entete('', marge, marge, true);
   for (let c = 0; c < nc; c++) entete(String(c + 1), taille, marge);
   for (let i = 0; i < nl * nc; i++) {
-    if (i % nc === 0) entete(String((i / nc | 0) + 1), marge, taille);
+    if (i % nc === 0) entete(String((i / nc | 0) + 1), marge, taille, true);
     const d = document.createElement('div');
     d.className = 'c';
     d.style.width = d.style.height = taille + 'px';
