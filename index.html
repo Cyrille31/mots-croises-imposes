@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5,
       user-scalable=yes, viewport-fit=cover">
 <title>Mots croisés — CGExcel</title>
-<link rel="icon" href="./icones/icone.svg">
-<link rel="apple-touch-icon" href="./icones/192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icones/192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icones/512.png">
+<link rel="icon" type="image/svg+xml" href="./icones/icone.svg">
+<link rel="apple-touch-icon" sizes="192x192" href="./icones/192.png">
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1a3a6b">
 <style>
@@ -39,18 +41,20 @@
        filter:drop-shadow(0 2px 3px rgba(20,32,46,.35)); }
   #tutodoigt.tape { animation:pique .4s ease-out; }
   @keyframes pique { 45% { transform:translate(3px, 5px) scale(.94); } }
-  #tutobulle { position:absolute; left:50%; transform:translateX(-50%); top:10px;
-       width:calc(100vw - 20px); max-width:540px; pointer-events:auto;
-       background:var(--bleu); color:#fff; border-radius:9px; padding:8px 11px;
-       font-size:13px; line-height:1.4; display:flex; gap:9px; align-items:center;
-       box-shadow:0 6px 20px rgba(20,32,46,.3); }
-  #tutobulle.bas { top:auto; bottom:12px; }
-  #tutotxt { flex:1 1 auto; }
-  #tutobulle b { background:rgba(255,255,255,.18); border-radius:10px;
-       padding:1px 7px; font-size:11.5px; flex:none; }
-  #tutostop { margin:0; flex:none; background:transparent; border:1px solid rgba(255,255,255,.5);
-       color:#fff; font-size:11.5px; padding:3px 8px; }
-  #tutostop:hover { background:rgba(255,255,255,.14); }
+  /* la fenêtre suit le doigt et se pose juste en dessous de lui */
+  #tutobulle { position:absolute; left:0; top:0; width:min(300px, calc(100vw - 24px));
+       pointer-events:none; background:var(--bleu); color:#fff; border-radius:9px;
+       padding:8px 11px; font-size:14px; line-height:1.5;
+       box-shadow:0 6px 20px rgba(20,32,46,.35);
+       transition:left .6s cubic-bezier(.4,0,.2,1), top .6s cubic-bezier(.4,0,.2,1); }
+  #tutobulle b { display:inline-block; background:rgba(255,255,255,.2); border-radius:10px;
+       padding:1px 7px; font-size:12px; margin-right:6px; }
+  #tutotxt { display:inline; }
+  #tutostop { position:fixed; right:12px; bottom:12px; margin:0; pointer-events:auto;
+       background:var(--bleu); border:1px solid rgba(255,255,255,.55); color:#fff;
+       font-size:12.5px; padding:6px 12px; border-radius:7px;
+       box-shadow:0 4px 12px rgba(20,32,46,.3); }
+  #tutostop:hover { background:#24508a; }
   @media print { #tutoc { display:none; } }
   .panregl { right:9px; min-width:214px; }
   .panregl .lr { display:flex; align-items:center; justify-content:space-between;
@@ -312,30 +316,28 @@
 </head>
 <body>
 <header>
-  <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="30" height="30">
-    <defs>
-      <radialGradient id="s" cx="35%" cy="30%" r="70%">
-        <stop offset="0%" stop-color="#8fc4f0"/><stop offset="55%" stop-color="#2f6fb5"/>
-        <stop offset="100%" stop-color="#13345e"/>
-      </radialGradient>
-    </defs>
-    <rect width="120" height="120" fill="#fff"/>
-    <g stroke="#dfe5ec" stroke-width="1">
-      <path d="M0 20h120M0 40h120M0 60h120M0 80h120M0 100h120"/>
-      <path d="M20 0v120M40 0v120M60 0v120M80 0v120M100 0v120"/>
+  <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="30" height="30" aria-hidden="true">
+    <defs><linearGradient id="lg" x1="0" y1="0" x2=".35" y2="1">
+      <stop offset="0" stop-color="#2b5f96"/><stop offset="1" stop-color="#122747"/></linearGradient>
+      <clipPath id="lk"><rect x="16.80" y="16.80" width="86.40" height="86.40" rx="3.46"/></clipPath></defs>
+    <rect width="120" height="120" rx="26.40" fill="url(#lg)"/>
+    <g clip-path="url(#lk)">
+      <rect x="16.80" y="16.80" width="86.40" height="86.40" fill="#fff"/>
+      <rect x="38.40" y="16.80" width="21.60" height="21.60" fill="#1d3c68"/>
+      <rect x="60.00" y="38.40" width="21.60" height="21.60" fill="#1d3c68"/>
+      <rect x="81.60" y="60.00" width="21.60" height="21.60" fill="#1d3c68"/>
+      <rect x="38.40" y="60.00" width="21.60" height="21.60" fill="#f0a03c"/>
+      <g stroke="#8397af" stroke-width="1.08" opacity=".8">
+        <path d="M38.40 16.80V103.20"/><path d="M16.80 38.40H103.20"/>
+        <path d="M60.00 16.80V103.20"/><path d="M16.80 60.00H103.20"/>
+        <path d="M81.60 16.80V103.20"/><path d="M16.80 81.60H103.20"/>
+      </g>
     </g>
-    <g stroke="#4a6a8f" stroke-width="4" stroke-linecap="round" opacity=".85">
-      <path d="M34 76 L60 40 M60 40 L88 62 M34 76 L88 62 M60 40 L58 84 M34 76 L58 84 M88 62 L58 84"/>
-    </g>
-    <g fill="url(#s)">
-      <circle cx="60" cy="40" r="15"/><circle cx="34" cy="76" r="13"/>
-      <circle cx="88" cy="62" r="12"/><circle cx="58" cy="84" r="10"/>
-    </g>
-    <rect x="1.5" y="1.5" width="117" height="117" fill="none" stroke="#c8d0da" stroke-width="2"/>
+    <rect x="16.80" y="16.80" width="86.40" height="86.40" rx="3.46" fill="none" stroke="#0f2447" stroke-width="1.94"/>
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.3</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.4</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <button id="btuto" class="rond large" title="Démonstration animée">Tuto</button>
@@ -439,8 +441,8 @@
       </div></details></div>
 </div>
 <div id="tutoc" hidden>
-  <div id="tutobulle"><b id="tutonum">1/5</b><span id="tutotxt"></span>
-    <button id="tutostop">Arrêter</button></div>
+  <div id="tutobulle"><b id="tutonum">1/5</b><span id="tutotxt"></span></div>
+  <button id="tutostop">Arrêter</button>
   <div id="tutohalo"></div>
   <div id="tutodoigt"><svg viewBox="0 0 48 60" width="34" height="42" aria-hidden="true">
     <path d="M18 26V9a5 5 0 0 1 10 0v15h2a5 5 0 0 1 5 5v1h1a4.5 4.5 0 0 1 4.5 4.5V49a9 9 0 0 1-9 9H24a10 10 0 0 1-8.3-4.4L8 42a4 4 0 0 1 6-5l4 4z"
@@ -803,7 +805,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.3, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.4, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -2716,21 +2718,48 @@ function tutoDire(n, texte) {
   $('#tutotxt').textContent = texte;
 }
 
-// place le doigt (sa pointe) et le halo sur un élément
+// pose la petite fenêtre juste sous le doigt, sans sortir de l'écran
+function tutoPlacerBulle(x, y, r) {
+  const b = $('#tutobulle'), d = b.getBoundingClientRect();
+  const marge = 10;
+  let g = x - d.width / 2;
+  g = Math.max(marge, Math.min(g, window.innerWidth - d.width - marge));
+  let h = y + r + 48;                       // sous le halo ET sous le doigt
+  if (h + d.height > window.innerHeight - marge) h = y - r - d.height - 14;
+  h = Math.max(marge, Math.min(h, window.innerHeight - d.height - marge));
+  b.style.left = g + 'px'; b.style.top = h + 'px';
+}
+
+// place le doigt (sa pointe), le halo et la fenêtre sur un élément
 async function tutoViser(el, rayon) {
   const doigt = $('#tutodoigt'), halo = $('#tutohalo');
   el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
   await dodo(420);
   const b = el.getBoundingClientRect();
   const x = b.left + b.width / 2, y = b.top + b.height / 2;
-  // la bulle se met du côté opposé à la cible, pour ne jamais la masquer
-  $('#tutobulle').classList.toggle('bas', y < window.innerHeight / 2);
   const r = rayon || Math.max(b.width, b.height) / 2 + 7;
   halo.style.width = halo.style.height = (2 * r) + 'px';
   halo.style.left = x + 'px'; halo.style.top = y + 'px';
   doigt.style.left = (x - 16) + 'px';          // la pointe du doigt vise le centre
   doigt.style.top = (y - 4) + 'px';
+  tutoPlacerBulle(x, y, r);
   await dodo(760);
+}
+
+// une seconde et demie par ligne de texte : on mesure les lignes réellement
+// affichées plutôt que de compter les caractères
+async function tutoLire() {
+  const t = $('#tutotxt');
+  const lh = parseFloat(getComputedStyle($('#tutobulle')).lineHeight) || 20;
+  // le texte est en ligne : son rectangle englobe ses lignes, on les compte
+  const lignes = Math.max(1, Math.round(t.getBoundingClientRect().height / lh));
+  await dodoAnnulable(1500 * lignes);
+}
+
+// attente que le bouton « Arrêter » peut couper à tout moment
+async function dodoAnnulable(ms) {
+  const fin = Date.now() + ms;
+  while (!tutoStop && Date.now() < fin) await dodo(Math.min(120, fin - Date.now()));
 }
 
 async function tutoTaper(el) {
@@ -2746,6 +2775,8 @@ async function tutoEtape(n, texte, el, rayon) {
   if (tutoStop || !el) return false;
   tutoDire(n, texte);
   await tutoViser(el, rayon);
+  if (tutoStop) return false;
+  await tutoLire();                       // le temps de lire avant le geste
   if (tutoStop) return false;
   await tutoTaper(el);
   return !tutoStop;
@@ -2792,6 +2823,7 @@ $('#btuto').onclick = async () => {
     if (!await tutoEtape(1, 'On demande une grille neuve.', $('#go'))) return tutoFermer('Démonstration interrompue.');
 
     tutoDire(2, 'Le moteur fabrique la grille… quelques secondes.');
+    await dodo(80);
     if (!await tutoAttendreGrille(avant)) return tutoFermer('Démonstration interrompue.');
     await dodo(600);
 
@@ -2816,7 +2848,7 @@ $('#btuto').onclick = async () => {
 ;
 
     tutoDire(5, 'Et voilà — à vous de deviner le reste du code !');
-    await dodo(2600);
+    await tutoLire();
     tutoFermer('Démonstration terminée : continuez la grille.');
   } catch (e) {
     tutoFermer('Démonstration interrompue : ' + (e && e.message ? e.message : e));
