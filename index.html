@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5,
       user-scalable=yes, viewport-fit=cover">
 <title>Mots croisés — CGExcel</title>
-<link rel="icon" href="./icones/192.png">
+<link rel="icon" href="./icones/icone.svg">
+<link rel="apple-touch-icon" href="./icones/192.png">
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1a3a6b">
 <style>
@@ -262,7 +263,11 @@
     #impression p { margin:2px 0; }
   }
   .bal { background:#f2f7ec; border-left:3px solid #7ba05b; border-radius:0 5px 5px 0;
-      padding:6px 9px; margin:6px 0; }
+      padding:8px 11px; margin:8px 0; line-height:1.55; }
+  .bal b { color:#4d6b34; }
+  .balpetit { color:#6b7887; font-size:11.5px; }
+  .balpied { display:inline-block; max-width:430px; color:#7c8894; font-style:italic;
+      margin:2px 0 3px; }
   details.pli { padding:3px 8px 6px; margin:0 0 6px; }
   details.pli summary { font-size:12px; }
   details.pli .mots { margin-top:4px; }
@@ -330,7 +335,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.1</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.3</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <button id="btuto" class="rond large" title="Démonstration animée">Tuto</button>
@@ -779,10 +784,13 @@
   copier, le modifier, le distribuer et même le vendre, à la seule condition de
   conserver l'avis de copyright et le texte de la licence. Il est fourni en
   l'état, sans garantie d'aucune sorte.</p>
-  <p class="bal"><b>BAL 1.0 — Bonne Action License.</b> En utilisant ce logiciel,
-  vous vous engagez sur l'honneur à faire une bonne action par jour. Cet
-  engagement n'a aucune valeur juridique et ne restreint en rien les droits
-  accordés par la licence MIT : c'est un vœu, pas une obligation.</p>
+  <p class="bal"><b>BAL 1.0 — Bonne Action License</b><br>
+  En échange, une seule chose vous est demandée, sur l'honneur : faire une bonne
+  action chaque jour. Aider un voisin, sourire à un inconnu, ramasser un
+  papier… c'est vous qui voyez.<br>
+  <span class="balpetit">Cet engagement n'a aucune valeur juridique et ne
+  restreint en rien les droits accordés par la licence MIT : c'est un vœu, pas
+  une obligation, et nul n'est tenu d'en rendre compte à quiconque.</span></p>
   <p>Le texte complet figure dans le fichier <tt>LICENSE</tt> du dépôt. Le
   lexique est dérivé de ressources lexicales libres et conserve la licence de sa
   source ; les définitions ne sont pas fournies avec le logiciel — elles sont
@@ -795,8 +803,11 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.1, moteur <span id="vmot">?</span><br>
-  © 2026 Cyrille Gindre — licence MIT + BAL 1.0 (voir le mode d'emploi).<br>
+  Mots croisés CGExcel — interface 10.3, moteur <span id="vmot">?</span><br>
+  © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
+  <span class="balpied">En échange, une seule chose vous est demandée, sur
+  l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
+  inconnu, ramasser un papier… c'est vous qui voyez.</span><br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
 </footer>
@@ -2787,14 +2798,22 @@ $('#btuto').onclick = async () => {
     if (!await tutoEtape(3, 'Un coup de pouce : cette aide dévoile une lettre entière du code.',
         $('#aide'))) return tutoFermer('Démonstration interrompue.');
 
+    // on vise une case dont la lettre n'a pas déjà été donnée par l'aide
     const cible = [...document.querySelectorAll('#grille .c')]
-      .find(c => !c.classList.contains('noir') && !c.classList.contains('hors') && c.dataset.n);
+      .find(c => !c.classList.contains('noir') && !c.classList.contains('hors')
+                 && c.dataset.n && !props.get(c.dataset.n));
     if (!await tutoEtape(4, 'On choisit une case : toutes celles qui portent le même numéro '
         + 'se colorent avec elle.', cible)) return tutoFermer('Démonstration interrompue.');
 
-    const lettre = document.querySelector('#restantes .chip:not(.vide)');
-    if (!await tutoEtape(5, 'Puis on clique la lettre à y poser : elle s’inscrit d’un coup '
-        + 'dans toutes ces cases.', lettre)) return tutoFermer('Démonstration interrompue.');
+    // et l'on pose la VRAIE lettre de ce numéro : la démonstration doit être juste
+    let bonne = null;
+    if (codeNum) for (const [ch, n] of codeNum) if (n === numSelect) bonne = ch;
+    const puces = [...document.querySelectorAll('#restantes .chip:not(.vide)')];
+    const lettre = puces.find(c => c.textContent === bonne) || puces[0];
+    if (!await tutoEtape(5, 'Puis on clique la lettre à y poser \u2014 ici la bonne, ' + (bonne || '?')
+        + ' : elle s\u2019inscrit d\u2019un coup dans toutes ces cases.',
+        lettre)) return tutoFermer('Démonstration interrompue.')
+;
 
     tutoDire(5, 'Et voilà — à vous de deviner le reste du code !');
     await dodo(2600);

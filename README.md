@@ -53,9 +53,12 @@ Logiciel libre sous **licence MIT** : usage, copie, modification, distribution
 et vente permis, à condition de conserver l'avis de copyright et le texte de la
 licence. Fourni en l'état, sans garantie.
 
-**BAL 1.0 — Bonne Action License.** En utilisant ce logiciel, vous vous engagez
-sur l'honneur à faire une bonne action par jour. Cet engagement n'a aucune
-valeur juridique et ne restreint en rien les droits accordés par la licence MIT.
+**BAL 1.0 — Bonne Action License.** En échange, une seule chose vous est
+demandée, sur l'honneur : faire une bonne action chaque jour. Aider un voisin,
+sourire à un inconnu, ramasser un papier… c'est vous qui voyez.
+
+Cet engagement n'a aucune valeur juridique et ne restreint en rien les droits
+accordés par la licence MIT : c'est un vœu, pas une obligation.
 
 Texte complet dans [`LICENSE`](LICENSE). Le lexique est dérivé de ressources
 lexicales libres et conserve la licence de sa source ; les définitions ne sont

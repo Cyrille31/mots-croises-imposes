@@ -1,7 +1,8 @@
 // CGExcel - Mots croisés - service worker
-const CACHE = 'mc-cgexcel-v77';
+const CACHE = 'mc-cgexcel-v79';
 const FICHIERS = ['./', './index.html', './moteur.js', './worker.js',
-                  './lexique.txt', './manifest.webmanifest'];
+                  './lexique.txt', './manifest.webmanifest',
+                  './icones/192.png', './icones/512.png', './icones/maskable-512.png'];
 
 // À l'installation on contourne le cache HTTP : sans cela le nouveau cache
 // pouvait être rempli avec les anciens fichiers encore valides côté serveur.

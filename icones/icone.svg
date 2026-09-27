@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs><linearGradient id="f" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#2b5f96"/><stop offset="1" stop-color="#122747"/></linearGradient><clipPath id="k"><rect x="71.68" y="71.68" width="368.64" height="368.64" rx="14.75"/></clipPath></defs>
+<rect width="512" height="512" rx="112.64" fill="url(#f)"/>
+<g clip-path="url(#k)">
+<rect x="71.68" y="71.68" width="368.64" height="368.64" fill="#fff"/>
+<rect x="163.84" y="71.68" width="92.16" height="92.16" fill="#1d3c68"/>
+<rect x="256.00" y="163.84" width="92.16" height="92.16" fill="#1d3c68"/>
+<rect x="348.16" y="256.00" width="92.16" height="92.16" fill="#1d3c68"/>
+<rect x="163.84" y="256.00" width="92.16" height="92.16" fill="#f0a03c"/>
+<g stroke="#8397af" stroke-width="4.61" opacity=".8">
+<path d="M163.84 71.68V440.32"/>
+<path d="M71.68 163.84H440.32"/>
+<path d="M256.00 71.68V440.32"/>
+<path d="M71.68 256.00H440.32"/>
+<path d="M348.16 71.68V440.32"/>
+<path d="M71.68 348.16H440.32"/>
+</g></g>
+<text x="82.74" y="101.54" font-family="system-ui,Arial,sans-serif" font-size="24.88" fill="#94a7be" font-weight="600">1</text>
+<text x="267.06" y="101.54" font-family="system-ui,Arial,sans-serif" font-size="24.88" fill="#94a7be" font-weight="600">7</text>
+<text x="82.74" y="193.70" font-family="system-ui,Arial,sans-serif" font-size="24.88" fill="#94a7be" font-weight="600">4</text>
+<text x="174.90" y="193.70" font-family="system-ui,Arial,sans-serif" font-size="24.88" fill="#94a7be" font-weight="600">2</text>
+<text x="82.74" y="285.86" font-family="system-ui,Arial,sans-serif" font-size="24.88" fill="#94a7be" font-weight="600">9</text>
+<text x="267.06" y="285.86" font-family="system-ui,Arial,sans-serif" font-size="24.88" fill="#94a7be" font-weight="600">5</text>
+<text x="174.90" y="378.02" font-family="system-ui,Arial,sans-serif" font-size="24.88" fill="#94a7be" font-weight="600">3</text>
+<text x="359.22" y="378.02" font-family="system-ui,Arial,sans-serif" font-size="24.88" fill="#94a7be" font-weight="600">8</text>
+<rect x="71.68" y="71.68" width="368.64" height="368.64" rx="14.75" fill="none" stroke="#0f2447" stroke-width="8.29"/>
+</svg>
