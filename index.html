@@ -9,7 +9,8 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#1a3a6b">
 <style>
-  :root { --bleu:#1a3a6b; --trait:#243447; --fond:#f7f8fa; --colg:124px; }
+  :root { --bleu:#1a3a6b; --trait:#243447; --fond:#f7f8fa;
+          --colg:156px; --puce:34px; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { margin:0; padding:7px 9px; font:13px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;
          background:var(--fond); color:#14202e; }
@@ -19,6 +20,37 @@
           font-weight:700; background:#fff; color:var(--bleu); border:1px solid #b9c6d8;
           cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .rond:hover { background:#eef3f9; }
+  .rond.large { width:auto; padding:0 11px; border-radius:15px; font-size:13px; }
+
+  /* ---- démonstration animée ---- */
+  #tutoc { position:fixed; inset:0; z-index:60; pointer-events:none; }
+  #tutoc[hidden] { display:none; }
+  #tutohalo { position:absolute; width:0; height:0; border-radius:50%;
+       border:3px solid #e08a2e; background:rgba(224,138,46,.16);
+       transform:translate(-50%,-50%); transition:all .45s cubic-bezier(.4,0,.2,1);
+       box-shadow:0 0 0 3px rgba(255,255,255,.75); }
+  #tutohalo.tape { animation:tapote .4s ease-out; }
+  @keyframes tapote { 0% { transform:translate(-50%,-50%) scale(1); }
+       45% { transform:translate(-50%,-50%) scale(.72); }
+       100% { transform:translate(-50%,-50%) scale(1); } }
+  #tutodoigt { position:absolute; width:34px; height:42px;
+       transition:left .6s cubic-bezier(.4,0,.2,1), top .6s cubic-bezier(.4,0,.2,1);
+       filter:drop-shadow(0 2px 3px rgba(20,32,46,.35)); }
+  #tutodoigt.tape { animation:pique .4s ease-out; }
+  @keyframes pique { 45% { transform:translate(3px, 5px) scale(.94); } }
+  #tutobulle { position:absolute; left:50%; transform:translateX(-50%); top:10px;
+       width:calc(100vw - 20px); max-width:540px; pointer-events:auto;
+       background:var(--bleu); color:#fff; border-radius:9px; padding:8px 11px;
+       font-size:13px; line-height:1.4; display:flex; gap:9px; align-items:center;
+       box-shadow:0 6px 20px rgba(20,32,46,.3); }
+  #tutobulle.bas { top:auto; bottom:12px; }
+  #tutotxt { flex:1 1 auto; }
+  #tutobulle b { background:rgba(255,255,255,.18); border-radius:10px;
+       padding:1px 7px; font-size:11.5px; flex:none; }
+  #tutostop { margin:0; flex:none; background:transparent; border:1px solid rgba(255,255,255,.5);
+       color:#fff; font-size:11.5px; padding:3px 8px; }
+  #tutostop:hover { background:rgba(255,255,255,.14); }
+  @media print { #tutoc { display:none; } }
   .panregl { right:9px; min-width:214px; }
   .panregl .lr { display:flex; align-items:center; justify-content:space-between;
                  gap:8px; font-size:12px; color:#54616f; margin:0; }
@@ -155,6 +187,8 @@
   .c u { position:absolute; top:0; left:1px; font-size:8px; text-decoration:none;
          font-weight:400; color:#8a96a4; line-height:1; }
   #zone { display:flex; gap:8px; align-items:flex-start; justify-content:center; }
+  /* la colonne des aides et des lettres peut passer de l'autre côté */
+  body.dispodroite #zone { flex-direction:row-reverse; }
   /* La colonne de gauche est réservée : la grille, si elle est trop large,
      défile dans son propre cadre au lieu de la repousser hors de l'écran. */
   #colgauche { display:flex; flex-direction:column; gap:4px; padding-top:24px;
@@ -171,12 +205,16 @@
   #restantes { margin-top:6px; }
   #restantes b { display:block; font:10.5px/1.3 system-ui; color:#6b7887;
                  font-weight:400; margin-bottom:3px; }
-  .chips { display:grid; grid-template-columns:repeat(4, 22px); gap:3px; }
-  .chip { width:22px; height:22px; padding:0; margin:0; font:12px/1 inherit;
-          font-weight:600; border:1px solid #b9c6d8; border-radius:4px;
-          background:#fff; color:var(--bleu); cursor:pointer; }
+  /* touches assez grandes pour le doigt : 34 px, 30 px sur les petits écrans */
+  .chips { display:grid; grid-template-columns:repeat(4, var(--puce)); gap:4px; }
+  .chip { width:var(--puce); height:var(--puce); padding:0; margin:0;
+          font:15px/1 inherit; font-weight:600; border:1px solid #b9c6d8;
+          border-radius:6px; background:#fff; color:var(--bleu); cursor:pointer; }
   .chip:hover { background:#eef3f9; }
-  .chip.vide { grid-column:1 / -1; width:auto; color:#8a96a4; letter-spacing:.2em; }
+  .chip:active { background:#dbe7f5; }
+  .chip.vide { grid-column:1 / -1; width:auto; height:26px; color:#8a96a4;
+          letter-spacing:.2em; font-size:11px; }
+  @media (max-width:430px) { :root { --puce:30px; --colg:140px; } }
   .c.faux { background-color:#ffd2d2 !important; color:#8b1a1a; }
   #legende .c.vise { outline:2px solid #1a3a6b; outline-offset:-2px; }
   #legende .c span.pose { color:#16457e; font-weight:600; }
@@ -292,9 +330,10 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.0</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.1</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
+    <button id="btuto" class="rond large" title="Démonstration animée">Tuto</button>
     <button id="bAide" class="rond" title="Mode d'emploi">?</button>
     <details class="menu" id="mregl"><summary class="rond">⋮</summary>
       <div class="pan panregl">
@@ -308,6 +347,11 @@
           <span class="dim"><select id="nl"></select> × <select id="nc"></select></span></label>
         <label class="lr">Cases noires
           <select id="densite"></select></label>
+        <label class="lr">Disposition
+          <select id="dispo">
+            <option value="gauche" selected>lettres à gauche</option>
+            <option value="droite">lettres à droite</option>
+          </select></label>
         <label class="lr">Vocabulaire
           <select id="niveau">
             <option value="3000" selected>très courant</option>
@@ -349,10 +393,10 @@
     <button id="razgrille" class="sec">RAZ mots</button></div>
   <div class="groupe">
     <select id="mode" class="modesel">
-      <option value="generation" selected>Mode : génération</option>
+      <option value="generation">Mode : génération</option>
       <option value="definition">Mode : définition</option>
       <option value="edition">Mode : édition</option>
-      <option value="joueur">Mode : joueur</option>
+      <option value="joueur" selected>Mode : joueur</option>
     </select>
     <button id="toutchercher" class="sec" style="display:none">Chercher les définitions</button>
     <button id="verifier" class="sec" style="display:none">Vérifier les mots</button>
@@ -388,6 +432,14 @@
         <button id="exporter" class="sec">Exporter</button>
         <button id="importer" class="sec">Importer</button>
       </div></details></div>
+</div>
+<div id="tutoc" hidden>
+  <div id="tutobulle"><b id="tutonum">1/5</b><span id="tutotxt"></span>
+    <button id="tutostop">Arrêter</button></div>
+  <div id="tutohalo"></div>
+  <div id="tutodoigt"><svg viewBox="0 0 48 60" width="34" height="42" aria-hidden="true">
+    <path d="M18 26V9a5 5 0 0 1 10 0v15h2a5 5 0 0 1 5 5v1h1a4.5 4.5 0 0 1 4.5 4.5V49a9 9 0 0 1-9 9H24a10 10 0 0 1-8.3-4.4L8 42a4 4 0 0 1 6-5l4 4z"
+      fill="#fff" stroke="#1a3a6b" stroke-width="2.4" stroke-linejoin="round"/></svg></div>
 </div>
 <input type="file" id="fgrille" style="display:none">
 <input type="file" id="fliste" style="display:none">
@@ -427,6 +479,13 @@
   plutôt que de tout recommencer. Une fois la grille bouclée, il essaie de
   blanchir des cases noires une à une, puis de remplacer des mots par des mots
   de votre thème.</p>
+
+  <p><b>Au premier lancement</b>, l'application s'ouvre en <b>mots codés, mode
+  joueur</b> : cliquez <b>Nouvelle grille</b> et vous jouez. Le bouton
+  <b>Tuto</b>, en haut à droite, joue la démonstration : un doigt demande une
+  grille, prend une aide, choisit une case, y pose une lettre. Il fabrique une
+  vraie grille et vous prévient avant d'en remplacer une ; la touche
+  <i>Échap</i> ou le bouton <i>Arrêter</i> l'interrompent.</p>
 
   <p><b>Le déroulement habituel.</b> Saisir les mots imposés et le thème, régler
   la taille, cliquer <b>Générer</b>. Éventuellement dessiner une forme et
@@ -517,6 +576,7 @@
     <tr><td>Générer / Arrêter</td><td>toujours pendant une recherche (il arrête) ;
         sinon en mode génération ou joueur</td></tr>
     <tr><td>RAZ mots</td><td>mode génération, hors recherche</td></tr>
+    <tr><td>Tuto</td><td>hors recherche et hors démonstration</td></tr>
     <tr><td>&#9664; et &#9654;</td><td>hors recherche, s'il existe une grille
         avant ou après dans l'historique</td></tr>
     <tr><td>Menu des modes</td><td>hors recherche ; « définition » et « édition »
@@ -679,6 +739,13 @@
   texte, un mot par ligne : elles se relisent et se modifient dans n'importe
   quel éditeur, et se rechargent dans une autre grille. Ouvrir une liste accepte
   aussi une grille enregistrée, dont elle extrait la liste correspondante.</p>
+  <h4>Disposition</h4>
+  <p>Le réglage <b>Disposition</b> place la colonne des aides et des lettres à
+  gauche ou à droite de la grille — selon la main dont vous tenez le téléphone.
+  Ce choix est le seul qui se retienne d'une session à l'autre. Les touches des
+  lettres mesurent 34 pixels, 30 sur les petits écrans : de quoi viser au doigt
+  sans loupe.</p>
+
   <h4>Grilles larges</h4>
   <p>La colonne de gauche — boutons d'aide et lettres non placées — et le tableau
   des lettres gardent toujours leur place entière : c'est la grille qui se
@@ -728,7 +795,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.0, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.1, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — licence MIT + BAL 1.0 (voir le mode d'emploi).<br>
   Développé avec l'assistance d'une intelligence artificielle (Claude, Anthropic).<br>
   Lexique dérivé de ressources libres — définitions non fournies.
@@ -752,7 +819,7 @@ const faux = new Set();       // numéros dont la lettre a été testée et refu
 const saisies = new Map();    // case -> lettre saisie par le joueur
 let motsDeCase = null;        // case -> [{cle, cells}] pour l'eclairage croise
 let cleActive = null;         // definition mise en evidence
-let modeJoueur = false, modeDef = false, modeDessin = false, modeEdit = false;
+let modeJoueur = true, modeDef = false, modeDessin = false, modeEdit = false;
 const histo = [];             // pile d'annulation du dessin (3 niveaux)
 let clicPrec = -1, sensPrec = 'V';
 const PALETTE = ['#ffd6d6', '#d6ecff', '#d9f7d6', '#fff3c4', '#e8dbff',
@@ -1059,7 +1126,7 @@ function afficherLegende(g) {
 
 // largeur réservée à la colonne de gauche : elle doit rester entièrement
 // visible, la grille se contentant de ce qui reste — quitte à défiler
-const LARG_COLG = 124;
+const LARG_COLG = () => window.innerWidth <= 430 ? 140 : 156;
 function colonneUtile() {
   return !!derniere && (typeCourant() === 'codes' || modeJoueur);
 }
@@ -1070,8 +1137,8 @@ function dessiner(g, tailleForcee) {
   // la grille occupe la place qui reste ; en deçà d'une taille lisible elle
   // défile horizontalement plutôt que de devenir illisible ou de déborder.
   // En mots codés il faut pouvoir lire le petit numéro : le plancher est plus haut.
-  const plancher = typeCourant() === 'codes' ? 20 : 14;
-  const pris = colonneUtile() ? LARG_COLG + 8 : 0;
+  const plancher = typeCourant() === 'codes' ? 18 : 14;
+  const pris = colonneUtile() ? LARG_COLG() + 8 : 0;
   const dispo = Math.min(window.innerWidth - 24 - pris, 560);
   const taille = tailleForcee
     || Math.max(plancher, Math.min(30, Math.floor(dispo / (nc + 1))));
@@ -2277,6 +2344,7 @@ function majBoutons() {
     '#go':         { actif: occupe || mode === 'generation' || mode === 'joueur',
                      texte: occupe ? 'Arrêter'
                             : (mode === 'joueur' ? 'Nouvelle grille' : 'Générer') },
+    '#btuto':      { actif: !occupe && !tutoEnCours },
     '#grprec':     { actif: !occupe && iGrille > 0 },
     '#grsuiv':     { actif: !occupe && iGrille >= 0 && iGrille < grilles.length - 1 },
     '#razgrille':  { actif: g && !occupe && mode === 'generation' },
@@ -2614,10 +2682,133 @@ $('#installer').onclick = async () => {
      + 'Sur PC : ic\u00f4ne d\u2019installation dans la barre d\u2019adresse.');
 };
 
+
+// ---- réglage de disposition : colonne des lettres à gauche ou à droite -----
+function appliquerDispo() {
+  const d = $('#dispo').value;
+  document.body.classList.toggle('dispodroite', d === 'droite');
+  try { localStorage.setItem('mc-dispo', d); } catch (e) { /* stockage indisponible */ }
+  dessiner(derniere);
+}
+$('#dispo').onchange = appliquerDispo;
+try {
+  const d = localStorage.getItem('mc-dispo');
+  if (d) { $('#dispo').value = d; document.body.classList.toggle('dispodroite', d === 'droite'); }
+} catch (e) { /* stockage indisponible */ }
+
+// ---- démonstration animée : un doigt joue les premiers gestes --------------
+let tutoEnCours = false, tutoStop = false;
+const dodo = ms => new Promise(r => setTimeout(r, ms));
+
+function tutoDire(n, texte) {
+  $('#tutonum').textContent = n + '/5';
+  $('#tutotxt').textContent = texte;
+}
+
+// place le doigt (sa pointe) et le halo sur un élément
+async function tutoViser(el, rayon) {
+  const doigt = $('#tutodoigt'), halo = $('#tutohalo');
+  el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+  await dodo(420);
+  const b = el.getBoundingClientRect();
+  const x = b.left + b.width / 2, y = b.top + b.height / 2;
+  // la bulle se met du côté opposé à la cible, pour ne jamais la masquer
+  $('#tutobulle').classList.toggle('bas', y < window.innerHeight / 2);
+  const r = rayon || Math.max(b.width, b.height) / 2 + 7;
+  halo.style.width = halo.style.height = (2 * r) + 'px';
+  halo.style.left = x + 'px'; halo.style.top = y + 'px';
+  doigt.style.left = (x - 16) + 'px';          // la pointe du doigt vise le centre
+  doigt.style.top = (y - 4) + 'px';
+  await dodo(760);
+}
+
+async function tutoTaper(el) {
+  const doigt = $('#tutodoigt'), halo = $('#tutohalo');
+  doigt.classList.add('tape'); halo.classList.add('tape');
+  await dodo(400);
+  doigt.classList.remove('tape'); halo.classList.remove('tape');
+  if (!tutoStop) el.click();
+  await dodo(450);
+}
+
+async function tutoEtape(n, texte, el, rayon) {
+  if (tutoStop || !el) return false;
+  tutoDire(n, texte);
+  await tutoViser(el, rayon);
+  if (tutoStop) return false;
+  await tutoTaper(el);
+  return !tutoStop;
+}
+
+// attend qu'une grille neuve soit arrivée du moteur
+async function tutoAttendreGrille(avant) {
+  const limite = Date.now() + 90000;
+  while (!tutoStop && Date.now() < limite) {
+    if (!recherche && derniere && derniere !== avant) return true;
+    await dodo(200);
+  }
+  return false;
+}
+
+function tutoFermer(message) {
+  tutoEnCours = false;
+  $('#tutoc').hidden = true;
+  document.removeEventListener('keydown', tutoTouche);
+  if (message) $('#etat').textContent = message;
+  majBoutons();
+}
+function tutoTouche(ev) { if (ev.key === 'Escape') { tutoStop = true; } }
+
+$('#tutostop').onclick = () => { tutoStop = true; };
+
+$('#btuto').onclick = async () => {
+  if (tutoEnCours) return;
+  if (recherche) { $('#etat').textContent = 'Attendez la fin de la recherche en cours.'; return; }
+  // la démonstration produit une grille : on prévient si elle en écrase une
+  if (derniere && !confirm('La démonstration va fabriquer une nouvelle grille de mots '
+      + 'codés et remplacer celle-ci. Continuer ?')) return;
+
+  document.querySelectorAll('details.menu').forEach(m => m.open = false);
+  if (typeCourant() !== 'codes') { $('#type').value = 'codes'; $('#type').onchange(); }
+  if (!modeJoueur) changerMode('joueur');
+
+  tutoEnCours = true; tutoStop = false;
+  $('#tutoc').hidden = false;
+  document.addEventListener('keydown', tutoTouche);
+  majBoutons();
+  try {
+    const avant = derniere;
+    if (!await tutoEtape(1, 'On demande une grille neuve.', $('#go'))) return tutoFermer('Démonstration interrompue.');
+
+    tutoDire(2, 'Le moteur fabrique la grille… quelques secondes.');
+    if (!await tutoAttendreGrille(avant)) return tutoFermer('Démonstration interrompue.');
+    await dodo(600);
+
+    if (!await tutoEtape(3, 'Un coup de pouce : cette aide dévoile une lettre entière du code.',
+        $('#aide'))) return tutoFermer('Démonstration interrompue.');
+
+    const cible = [...document.querySelectorAll('#grille .c')]
+      .find(c => !c.classList.contains('noir') && !c.classList.contains('hors') && c.dataset.n);
+    if (!await tutoEtape(4, 'On choisit une case : toutes celles qui portent le même numéro '
+        + 'se colorent avec elle.', cible)) return tutoFermer('Démonstration interrompue.');
+
+    const lettre = document.querySelector('#restantes .chip:not(.vide)');
+    if (!await tutoEtape(5, 'Puis on clique la lettre à y poser : elle s’inscrit d’un coup '
+        + 'dans toutes ces cases.', lettre)) return tutoFermer('Démonstration interrompue.');
+
+    tutoDire(5, 'Et voilà — à vous de deviner le reste du code !');
+    await dodo(2600);
+    tutoFermer('Démonstration terminée : continuez la grille.');
+  } catch (e) {
+    tutoFermer('Démonstration interrompue : ' + (e && e.message ? e.message : e));
+  }
+};
+
 if (window.MotsCroises && window.MotsCroises.VERSION)
   $('#vmot').textContent = window.MotsCroises.VERSION;
 majTitre();
 document.body.classList.toggle('fleches', typeCourant() === 'fleches');
+document.body.classList.add('joueur');     // on démarre en mots codés, mode joueur
 appliquerType();
 majBoutons();
 dessiner(null);
