@@ -73,6 +73,110 @@ function compterThemes(g, nl, nc, theme) {
   return [...vus];
 }
 
+// ---- anagrammes -----------------------------------------------------------
+// Les mots sont regroupes par leurs lettres triees : deux mots sont anagrammes
+// si et seulement s'ils partagent cette cle. C'est le classement suggere par
+// l'utilisateur, ou les anagrammes deviennent contigues.
+let groupes = null, groupesPour = null;
+const cleAna = m => m.split('').sort().join('');
+
+function construireGroupes(mots) {
+  const g = new Map(), rang = new Map();
+  for (let i = 0; i < mots.length; i++) {
+    const n = M.normaliser(mots[i]);
+    if (!/^[A-Z]+$/.test(n)) continue;
+    if (!rang.has(n)) rang.set(n, i);          // rang = frequence, le lexique est trie
+    const k = cleAna(n);
+    let l = g.get(k);
+    if (!l) { l = []; g.set(k, l); }
+    if (!l.includes(n)) l.push(n);
+  }
+  return { g, rang };
+}
+
+// distance entre deux anagrammes : nombre de positions ou les lettres different
+function ecart(a, b) {
+  let d = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
+  return d;
+}
+
+// la meilleure anagramme : la plus eloignee, et a egalite la plus courante
+function meilleureAnagramme(mot, sauf) {
+  if (!groupes) return null;
+  const l = groupes.g.get(cleAna(mot));
+  if (!l) return null;
+  const cands = l.filter(x => x !== mot && !(sauf && sauf.has(x)));
+  if (!cands.length) return null;
+  cands.sort((x, y) => ecart(mot, y) - ecart(mot, x)
+                    || (groupes.rang.get(x) || 1e9) - (groupes.rang.get(y) || 1e9));
+  return cands;
+}
+
+// Aucune anagramme reelle : on en fabrique une. On tire des permutations et
+// l'on garde la plus eloignee qui reste prononcable — alternance de voyelles
+// et de consonnes proche de celle du mot d'origine, pas de lettre triplee.
+const VOY = new Set(['A', 'E', 'I', 'O', 'U', 'Y']);
+function anagrammeFabriquee(mot) {
+  const lettres = mot.split('');
+  let meilleur = null, note = -1;
+  for (let essai = 0; essai < 400; essai++) {
+    const p = lettres.slice();
+    for (let i = p.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    const s = p.join('');
+    if (s === mot) continue;
+    let n = ecart(mot, s) * 2;
+    for (let i = 1; i < s.length; i++) {
+      if (VOY.has(s[i]) !== VOY.has(s[i - 1])) n += 1.5;   // alternance
+      if (i >= 2 && s[i] === s[i - 1] && s[i] === s[i - 2]) n -= 8;
+      if (s[i] === s[i - 1] && !'ELMNPRSTFC'.includes(s[i])) n -= 3;
+    }
+    if (n > note) { note = n; meilleur = s; }
+  }
+  return meilleur || mot.split('').reverse().join('');
+}
+
+// tous les mots de la grille, avec leurs cases
+function motsDeLaGrille(g, nl, nc) {
+  const out = [];
+  for (let r = 0; r < nl; r++) {
+    let w = '';
+    for (let c = 0; c <= nc; c++) {
+      const v = c < nc ? g[r * nc + c] : -2;
+      if (v < 0) { if (w.length > 1) out.push(w); w = ''; }
+      else w += String.fromCharCode(65 + v);
+    }
+  }
+  for (let c = 0; c < nc; c++) {
+    let w = '';
+    for (let r = 0; r <= nl; r++) {
+      const v = r < nl ? g[r * nc + c] : -2;
+      if (v < 0) { if (w.length > 1) out.push(w); w = ''; }
+      else w += String.fromCharCode(65 + v);
+    }
+  }
+  return [...new Set(out)];
+}
+
+// pour chaque mot de la grille : l'anagramme a proposer, et les autres choix
+function anagrammesDeLaGrille(g, nl, nc) {
+  const out = {};
+  const prises = new Set();                 // une meme anagramme ne sert qu'une fois
+  for (const mot of motsDeLaGrille(g, nl, nc)) {
+    const cands = meilleureAnagramme(mot, prises);
+    if (cands && cands.length) {
+      out[mot] = { a: cands[0], autres: cands.slice(0, 6), faux: false };
+      prises.add(cands[0]);
+    } else {
+      out[mot] = { a: anagrammeFabriquee(mot), autres: [], faux: true };
+    }
+  }
+  return out;
+}
+
 let stop = false;
 let cacheIndex = null, cleIndex = '';   // l'index est coûteux : on le garde
 const pause = () => new Promise(r => setTimeout(r, 0));
@@ -129,11 +233,30 @@ self.onmessage = async (e) => {
     const plats = imposes.join(' ').split(/\s+/).filter(Boolean);
     // mots imposes ET mots du theme sont proteges de la troncature du lexique
     // on ne reconstruit l'index que si les paramètres qui le déterminent changent
-    const cle = [p.lmax || 12, p.niveau || 20000,
+    const anagramot = p.type === 'anagramot';
+    // Le regroupement par lettres triees sert aux deux usages : filtrer le
+    // lexique, et trouver l'anagramme a proposer comme definition.
+    if (anagramot && groupesPour !== mots.length) {
+      self.postMessage({ type: 'info', texte: 'Regroupement des anagrammes…' });
+      groupes = construireGroupes(mots);
+      groupesPour = mots.length;
+    }
+    let liste = mots;
+    if (anagramot) {
+      liste = mots.filter(m => {
+        const n = M.normaliser(m);
+        const l = groupes.g.get(cleAna(n));
+        return l && l.length > 1;
+      });
+      if (liste.length < 500) throw new Error('trop peu de mots ont une anagramme');
+    }
+    const cle = [p.lmax || 12, p.niveau || 20000, anagramot ? 'A' : '-',
                  plats.slice().sort().join('|'), theme.slice().sort().join('|')].join('#');
     if (cle !== cleIndex) {
-      self.postMessage({ type: 'info', texte: 'Indexation du lexique…' });
-      cacheIndex = M.Index.depuisListe(mots, 2, p.lmax || 12,
+      self.postMessage({ type: 'info',
+        texte: anagramot ? `Indexation (${liste.length} mots à anagramme)…`
+                         : 'Indexation du lexique…' });
+      cacheIndex = M.Index.depuisListe(liste, 2, p.lmax || 12,
                                        plats.concat(theme), p.niveau || 20000);
       cleIndex = cle;
     }
@@ -228,6 +351,7 @@ self.onmessage = async (e) => {
               grille: Array.from(gr), poses: res.poses, densite: dens,
               croisements: compterCroisements(gr, p.nl, p.nc, plats),
               themesPlaces: compterThemes(gr, p.nl, p.nc, theme),
+              anagrammes: anagramot ? anagrammesDeLaGrille(gr, p.nl, p.nc) : null,
               version: M.VERSION || '?'
             });
             if (noirs === 0) {        // on ne fera pas mieux qu'une grille pleine
@@ -383,6 +507,7 @@ self.onmessage = async (e) => {
       densite: noirs / G.dedans.length,
       croisements: compterCroisements(r.grille, p.nl, p.nc, plats),
       themesPlaces: compterThemes(r.grille, p.nl, p.nc, theme),
+      anagrammes: anagramot ? anagrammesDeLaGrille(r.grille, p.nl, p.nc) : null,
       version: M.VERSION || '?'
     });
   } catch (err) {

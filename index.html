@@ -340,7 +340,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.5</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.6</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -359,6 +359,7 @@
             <option value="croises">mots croisés</option>
             <option value="fleches">mots fléchés</option>
             <option value="codes" selected>mots codés</option>
+            <option value="anagramot">anagramots</option>
           </select></label>
         <label class="lr">Dimensions
           <span class="dim"><select id="nl"></select> × <select id="nc"></select></span></label>
@@ -547,7 +548,7 @@
   ceux-là sont candidats à l'imposition d'office.
   Pour en garantir un, mettez-le dans les mots imposés.</p>
 
-  <h4>Les trois types de grille</h4>
+  <h4>Les quatre types de grille</h4>
   <p><b>Mots croisés</b> — le fonctionnement habituel.</p>
   <p><b>Mots fléchés</b> — des cases de définition sont posées une sur deux en
   première ligne et en première colonne, comme dans les grilles du commerce. À
@@ -572,6 +573,30 @@
   première ligne et en première colonne, une sur deux, en commençant par le coin
   supérieur gauche. Vous pouvez toujours dessiner une forme, mais ces deux
   bandes ne sont plus modifiables.</p>
+  <p><b>Anagramots</b> — une grille de mots croisés dont chaque définition est
+  une <b>anagramme</b> du mot à trouver. Le programme n'y fait entrer que des
+  mots qui possèdent au moins une anagramme : sur le lexique fourni, un mot sur
+  quatre environ, ce qui laisse une trentaine de milliers de mots et ne dégrade
+  pas la densité de cases noires.</p>
+  <p>Les anagrammes sont calculées à la génération, sans réseau : les mots sont
+  regroupés par leurs lettres triées par ordre alphabétique, et deux mots sont
+  anagrammes si et seulement s'ils tombent dans le même groupe. Entre plusieurs
+  candidates, le programme retient celle dont l'ordre des lettres s'éloigne le
+  plus du mot — le plus grand nombre de positions occupées par une autre lettre
+  — et, à égalité, la plus courante. Une même anagramme ne sert jamais deux fois
+  dans une grille.</p>
+  <p>Les <b>mots imposés</b> font exception : rien ne garantit qu'ils aient une
+  anagramme, et TOULOUSE ou BONJOUR n'en ont pas. Le programme en <b>fabrique</b>
+  alors une, en cherchant parmi quelques centaines de permutations celle qui
+  s'éloigne le plus du mot tout en restant prononçable — alternance de voyelles
+  et de consonnes, pas de lettre triplée. Ces anagrammes-là portent un
+  <b>astérisque</b> : ce ne sont pas des mots, seules leurs lettres comptent, et
+  l'avertissement figure aussi sur la feuille imprimée.</p>
+  <p>En mode définition, chaque champ contient l'anagramme et reste modifiable ;
+  le menu des propositions offre les autres anagrammes du même mot. Si vous
+  retouchez une lettre en mode édition, les anagrammes des mots qui traversent
+  la case sont effacées plutôt que de devenir fausses.</p>
+
   <p><b>Mots codés</b> — pas de définitions : le jeu consiste à retrouver le
   code. Chaque lettre employée dans la grille reçoit un numéro
   tiré au hasard, affiché en petit dans le coin des cases. Une petite grille de
@@ -616,7 +641,8 @@
     <tr><td>Menu des modes</td><td>hors recherche ; « définition » et « édition »
         exigent une grille et sont interdits en mots codés, « joueur » non —
         il peut en demander une</td></tr>
-    <tr><td>Chercher les définitions</td><td>visible en mode définition</td></tr>
+    <tr><td>Chercher les définitions</td><td>visible en mode définition, sauf en
+        anagramots où les anagrammes sont déjà là</td></tr>
     <tr><td>Vérifier les mots</td><td>visible en mode édition</td></tr>
     <tr><td>Aide</td><td>visible en mots codés, ou en mode joueur</td></tr>
     <tr><td>Effacer mes lettres</td><td>visible en mode joueur</td></tr>
@@ -832,7 +858,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.5, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.6, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -951,7 +977,8 @@ function reporter(nnl, nnc) {
 
 // ---- mots fléchés : cases noires imposées en première ligne et colonne
 function typeCourant() { return $('#type').value; }
-const NOMS = { croises: 'Mots croisés', fleches: 'Mots fléchés', codes: 'Mots codés' };
+const NOMS = { croises: 'Mots croisés', fleches: 'Mots fléchés', codes: 'Mots codés',
+               anagramot: 'Anagramots' };
 function majTitre() {
   $('#titre').textContent = NOMS[typeCourant()];
   document.title = NOMS[typeCourant()] + ' — CGExcel';
@@ -1221,7 +1248,15 @@ function dessiner(g, tailleForcee) {
         else { derniere[i] = -2; inp.value = ''; }
         d.classList.toggle('noir', derniere[i] === -2);
         indexerMots(derniere);
-        $('#etat').textContent = 'Grille retouchée — pensez à vérifier les mots.';
+        // en anagramots, changer une lettre rend fausse l'anagramme des mots
+        // qui traversent la case : on l'efface plutôt que de la laisser mentir
+        let vidées = 0;
+        if (typeCourant() === 'anagramot' && motsDeCase) {
+          for (const m of motsDeCase.get(i) || [])
+            if (defsChoisies.delete(m.cle)) { propositions.delete(m.cle); vidées++; }
+        }
+        $('#etat').textContent = 'Grille retouchée — pensez à vérifier les mots.'
+          + (vidées ? ` ${vidées} anagramme(s) effacée(s) : régénérez ou récrivez-les.` : '');
       };
       inp.addEventListener('pointerdown', ev => ev.stopPropagation());
       d.appendChild(inp);
@@ -1566,6 +1601,7 @@ function reperer(g, imp) {
 
 let derniereDensite = -1;
 let derniersThemes = [];          // mots du thème présents dans la grille courante
+let derniersAnagrammes = null;    // anagramot : mot de la grille -> anagramme proposée
 
 // ---- historique des grilles produites : on peut revenir en arrière ----------
 const MAXGR = 12;                 // une douzaine de grilles conservées
@@ -1650,11 +1686,13 @@ function lancer(affiner, mode) {
       derniere = Int8Array.from(m.grille);
       derniereDensite = m.densite;
       derniersThemes = m.themesPlaces || [];
+      derniersAnagrammes = m.anagrammes || null;
       defsChoisies.clear();               // la grille change : les definitions ne valent plus
       if (typeCourant() === 'codes') construireCode(derniere); else codeNum = null;
       saisies.clear(); propositions.clear(); props.clear(); revelees.clear();
       indexerMots(derniere);
       if (modeJoueur) defsChoisies.clear();
+      if (typeCourant() === 'anagramot') appliquerAnagrammes(derniere, derniersAnagrammes);
       dessiner(derniere);
       afficherLegende(derniere);
       majDecor();
@@ -1671,6 +1709,7 @@ function lancer(affiner, mode) {
       if (modeJoueur) {
         // le joueur reçoit une grille vierge ; on lui prépare les définitions
         if (typeCourant() === 'codes') afficherLegende(derniere);
+        else if (typeCourant() === 'anagramot') afficherDefs(derniere);
         else chercherToutes(true).then(() => afficherDefs(derniere));
       }
       $('#vmot').textContent = m.version || '?';
@@ -1708,6 +1747,7 @@ function lancer(affiner, mode) {
     densite: affinage && derniereDensite >= 0
       ? Math.max(0, derniereDensite - 0.02) : +$('#densite').value,
     niveau: +$('#niveau').value,
+    type: typeCourant(),
     themeMin: mode === 'explorer' ? derniersThemes.length : 0,
     maxMots: {},
     affiner: false, mode,
@@ -1891,6 +1931,30 @@ function remplirSelect(sel, props) {
         + p.texte.replace(/</g, '&lt;') + (plusieurs ? ' — ' + p.source : '') + '</option>').join('');
 }
 
+// En anagramots, la « définition » d'un mot est une de ses anagrammes. Le
+// moteur les a calculées ; on les range comme des définitions ordinaires, et
+// les autres anagrammes possibles nourrissent la liste des propositions.
+function appliquerAnagrammes(g, ana) {
+  if (!g || !ana) return 0;
+  defsChoisies.clear(); propositions.clear();
+  let n = 0, fabriquees = 0;
+  const par = motsParLigne(g);
+  for (const sens of ['H', 'V'])
+    for (const e of par[sens])
+      e.mots.forEach((mot, k) => {
+        const o = ana[mot];
+        if (!o) return;
+        const cle = sens + e.n + '.' + k;
+        defsChoisies.set(cle, o.a + (o.faux ? ' *' : ''));
+        n++; if (o.faux) fabriquees++;
+        if (o.autres && o.autres.length > 1)
+          propositions.set(cle, o.autres.map(t => ({ texte: t, source: 'anagramme' })));
+      });
+  anagFabriquees = fabriquees;
+  return n;
+}
+let anagFabriquees = 0;
+
 function afficherDefs(g) {
   if (modeJoueur) return afficherDefsJoueur(g);
   const zone = $('#defs');
@@ -1918,16 +1982,23 @@ function afficherDefs(g) {
         if (modeJoueur) inp.readOnly = true;
         inp.oninput = () => { defsChoisies.set(cle, inp.value); majDecor(); };
         inp.onfocus = () => d.scrollIntoView({ block: 'nearest' });
-        inp.onblur = () => { inp.value = formater(inp.value); defsChoisies.set(cle, inp.value); };
+        inp.onblur = () => {
+          // une anagramme est un mot en capitales : on ne la met pas en phrase
+          if (typeCourant() !== 'anagramot') inp.value = formater(inp.value);
+          defsChoisies.set(cle, inp.value);
+        };
         const sel = document.createElement('select');
         remplirSelect(sel, propositions.get(cle));
+        const anag = typeCourant() === 'anagramot';
         sel.onchange = () => {
           if (sel.value) {
-            inp.value = formater(sel.value); defsChoisies.set(cle, inp.value); majDecor();
+            inp.value = anag ? sel.value : formater(sel.value);
+            defsChoisies.set(cle, inp.value); majDecor();
           }
         };
         const m = mot.toLowerCase();
-        for (const [nom, url] of [
+        // en anagramots les liens vers les sites de définitions n'ont pas d'objet
+        if (!anag) for (const [nom, url] of [
           ['fsolver', 'https://www.fsolver.fr/mots-fleches/' + encodeURIComponent(m)],
           ['fléche', 'https://commeunefleche.com'],
           ['dico-mots', 'https://www.dico-mots.fr/mots-croises/' + mot + '.html']
@@ -1966,6 +2037,7 @@ function afficherDefs(g) {
           } catch (err) { sel.innerHTML = '<option value="">réseau indisponible</option>'; }
           b.disabled = false; b.textContent = 'Wiktionnaire';
         };
+        if (anag) { bc.style.display = 'none'; b.style.display = 'none'; }
         d.append(bc, b, sel, inp);
         zone.appendChild(d);
       });
@@ -2107,6 +2179,14 @@ function construireImpression() {
   }
   const par = motsParLigne(derniere), z = $('#impression');
   z.innerHTML = '';
+  if (typeCourant() === 'anagramot') {
+    const n = document.createElement('p');
+    n.style.fontStyle = 'italic';
+    n.textContent = 'Anagramots : chaque indice est une anagramme du mot à trouver'
+      + (anagFabriquees ? ', et celles qui portent un astérisque ne sont pas des '
+         + 'mots — seules leurs lettres comptent.' : '.');
+    z.appendChild(n);
+  }
   for (const [sens, titre] of [['H', 'Horizontalement'], ['V', 'Verticalement']]) {
     const t = document.createElement('h3'); t.textContent = titre; z.appendChild(t);
     const p = document.createElement('p');
@@ -2387,7 +2467,8 @@ function majBoutons() {
     '#grprec':     { actif: !occupe && iGrille > 0 },
     '#grsuiv':     { actif: !occupe && iGrille >= 0 && iGrille < grilles.length - 1 },
     '#razgrille':  { actif: g && !occupe && mode === 'generation' },
-    '#toutchercher': { visible: mode === 'definition', actif: !occupe },
+    '#toutchercher': { visible: mode === 'definition' && typeCourant() !== 'anagramot',
+                       actif: !occupe },
     '#verifier':   { visible: mode === 'edition', actif: !occupe },
     '#aide':       { visible: g && (codes || mode === 'joueur'),
                      texte: codes ? 'Aide : une lettre' : 'Aide : cette case' },
@@ -2647,7 +2728,10 @@ $('#type').onchange = () => {
     ? 'Mots fléchés : cases noires imposées en première ligne et première colonne.'
     : (typeCourant() === 'codes'
        ? 'Mots codés : chaque lettre reçoit un numéro tiré au hasard.'
-       : 'Mots croisés.');
+       : (typeCourant() === 'anagramot'
+          ? 'Anagramots : chaque définition est une anagramme du mot à trouver. '
+            + 'Seuls les mots qui ont une anagramme entrent dans la grille.'
+          : 'Mots croisés.'));
 };
 $('#nl').onchange = $('#nc').onchange = () => {
   const a = +$('#nl').value, b = +$('#nc').value;
