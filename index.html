@@ -24,6 +24,9 @@
           cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .rond:hover { background:#eef3f9; }
   .rond.large { width:auto; padding:0 11px; border-radius:15px; font-size:13px; }
+  #mtuto .pan { right:0; left:auto; min-width:250px; }
+  .pantuto .ent { font-size:11px; color:#7b8794; font-weight:600; padding:1px 2px 3px; }
+  .pantuto button { text-align:left; white-space:normal; }
 
   /* ---- démonstration animée ---- */
   #tutoc { position:fixed; inset:0; z-index:60; pointer-events:none; }
@@ -337,10 +340,17 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.4</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.5</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
-    <button id="btuto" class="rond large" title="Démonstration animée">Tuto</button>
+    <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
+      <div class="pan pantuto">
+        <span class="ent">Choisissez une démonstration</span>
+        <button id="tuto-codes" class="sec">Mots codés : jouer</button>
+        <button id="tuto-croises" class="sec">Mots croisés : créer, définir, jouer</button>
+        <button id="tuto-dessin" class="sec">Dessin : une grille en cœur</button>
+        <button id="tuto-imposes" class="sec">Mots imposés : deux mots sur une ligne</button>
+      </div></details>
     <button id="bAide" class="rond" title="Mode d'emploi">?</button>
     <details class="menu" id="mregl"><summary class="rond">⋮</summary>
       <div class="pan panregl">
@@ -488,11 +498,28 @@
   de votre thème.</p>
 
   <p><b>Au premier lancement</b>, l'application s'ouvre en <b>mots codés, mode
-  joueur</b> : cliquez <b>Nouvelle grille</b> et vous jouez. Le bouton
-  <b>Tuto</b>, en haut à droite, joue la démonstration : un doigt demande une
-  grille, prend une aide, choisit une case, y pose une lettre. Il fabrique une
-  vraie grille et vous prévient avant d'en remplacer une ; la touche
-  <i>Échap</i> ou le bouton <i>Arrêter</i> l'interrompent.</p>
+  joueur</b> : cliquez <b>Nouvelle grille</b> et vous jouez.</p>
+
+  <p>Le bouton <b>Tuto</b>, en haut à droite, déroule quatre démonstrations. Un
+  doigt se déplace, une petite fenêtre le suit et explique, et l'application
+  fait réellement ce qu'elle montre — ce ne sont pas des images.</p>
+  <ul>
+    <li><b>Mots codés : jouer</b> — demander une grille, prendre une aide,
+      choisir une case, y poser la bonne lettre.</li>
+    <li><b>Mots croisés : créer, définir, jouer</b> — fabriquer la grille,
+      chercher toutes les définitions au Wiktionnaire, en récrire une à la
+      main, passer en mode joueur et répondre à un mot.</li>
+    <li><b>Dessin : une grille en cœur</b> — activer le dessin, balayer les
+      cases hors grille pour découper un cœur, imposer deux cases noires en
+      appuyant deux fois, puis générer.</li>
+    <li><b>Mots imposés : deux mots sur une ligne</b> — saisir
+      <tt>PIERRE MARIE</tt> et <tt>SOLEIL</tt>, et voir PIERRE, une case noire,
+      puis MARIE sortir alignés dans la grille.</li>
+  </ul>
+  <p>Chaque démonstration fabrique sa propre grille et vous prévient avant de
+  remplacer votre travail. Chaque fenêtre reste affichée une seconde et demie
+  par ligne de texte ; la touche <i>Échap</i> ou le bouton <i>Arrêter</i>, en
+  bas à droite, coupent à tout moment.</p>
 
   <p><b>Le déroulement habituel.</b> Saisir les mots imposés et le thème, régler
   la taille, cliquer <b>Générer</b>. Éventuellement dessiner une forme et
@@ -583,7 +610,7 @@
     <tr><td>Générer / Arrêter</td><td>toujours pendant une recherche (il arrête) ;
         sinon en mode génération ou joueur</td></tr>
     <tr><td>RAZ mots</td><td>mode génération, hors recherche</td></tr>
-    <tr><td>Tuto</td><td>hors recherche et hors démonstration</td></tr>
+    <tr><td>Menu Tuto</td><td>hors recherche et hors démonstration</td></tr>
     <tr><td>&#9664; et &#9654;</td><td>hors recherche, s'il existe une grille
         avant ou après dans l'historique</td></tr>
     <tr><td>Menu des modes</td><td>hors recherche ; « définition » et « édition »
@@ -805,7 +832,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.4, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.5, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -2357,7 +2384,6 @@ function majBoutons() {
     '#go':         { actif: occupe || mode === 'generation' || mode === 'joueur',
                      texte: occupe ? 'Arrêter'
                             : (mode === 'joueur' ? 'Nouvelle grille' : 'Générer') },
-    '#btuto':      { actif: !occupe && !tutoEnCours },
     '#grprec':     { actif: !occupe && iGrille > 0 },
     '#grsuiv':     { actif: !occupe && iGrille >= 0 && iGrille < grilles.length - 1 },
     '#razgrille':  { actif: g && !occupe && mode === 'generation' },
@@ -2399,6 +2425,7 @@ function majBoutons() {
     if (off) { m.setAttribute('data-off', ''); m.open = false; }
     else m.removeAttribute('data-off');
   };
+  grise('#mtuto', occupe || tutoEnCours);
   grise('#mdessin', mode === 'joueur' || occupe);
   grise('#mimpr', !g || occupe);
   grise('#menr', occupe);
@@ -2709,12 +2736,18 @@ try {
   if (d) { $('#dispo').value = d; document.body.classList.toggle('dispodroite', d === 'droite'); }
 } catch (e) { /* stockage indisponible */ }
 
-// ---- démonstration animée : un doigt joue les premiers gestes --------------
-let tutoEnCours = false, tutoStop = false;
+// ---- démonstrations animées : un doigt joue les gestes ---------------------
+let tutoEnCours = false, tutoStop = false, tutoTotal = 5, tutoRate = '';
 const dodo = ms => new Promise(r => setTimeout(r, ms));
 
+// attente que le bouton « Arrêter » peut couper à tout moment
+async function dodoAnnulable(ms) {
+  const fin = Date.now() + ms;
+  while (!tutoStop && Date.now() < fin) await dodo(Math.min(120, fin - Date.now()));
+}
+
 function tutoDire(n, texte) {
-  $('#tutonum').textContent = n + '/5';
+  $('#tutonum').textContent = n + '/' + tutoTotal;
   $('#tutotxt').textContent = texte;
 }
 
@@ -2751,44 +2784,80 @@ async function tutoViser(el, rayon) {
 async function tutoLire() {
   const t = $('#tutotxt');
   const lh = parseFloat(getComputedStyle($('#tutobulle')).lineHeight) || 20;
-  // le texte est en ligne : son rectangle englobe ses lignes, on les compte
   const lignes = Math.max(1, Math.round(t.getBoundingClientRect().height / lh));
   await dodoAnnulable(1500 * lignes);
 }
 
-// attente que le bouton « Arrêter » peut couper à tout moment
-async function dodoAnnulable(ms) {
-  const fin = Date.now() + ms;
-  while (!tutoStop && Date.now() < fin) await dodo(Math.min(120, fin - Date.now()));
-}
-
-async function tutoTaper(el) {
+async function tutoTaper(el, cliquer) {
   const doigt = $('#tutodoigt'), halo = $('#tutohalo');
   doigt.classList.add('tape'); halo.classList.add('tape');
   await dodo(400);
   doigt.classList.remove('tape'); halo.classList.remove('tape');
-  if (!tutoStop) el.click();
-  await dodo(450);
+  if (!tutoStop && cliquer !== false && el) el.click();
+  await dodo(430);
 }
 
-async function tutoEtape(n, texte, el, rayon) {
+// montrer sans agir
+async function tutoMontrer(n, texte, el, rayon) {
   if (tutoStop || !el) return false;
   tutoDire(n, texte);
   await tutoViser(el, rayon);
   if (tutoStop) return false;
-  await tutoLire();                       // le temps de lire avant le geste
-  if (tutoStop) return false;
+  await tutoLire();
+  return !tutoStop;
+}
+
+// montrer puis cliquer
+async function tutoEtape(n, texte, el, rayon) {
+  if (!await tutoMontrer(n, texte, el, rayon)) return false;
   await tutoTaper(el);
   return !tutoStop;
 }
 
+// montrer puis changer la valeur d'un menu déroulant
+async function tutoRegler(n, texte, sel, valeur) {
+  const el = $(sel);
+  if (!await tutoMontrer(n, texte, el)) return false;
+  await tutoTaper(el, false);
+  if (tutoStop) return false;
+  el.value = valeur;
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  await dodo(450);
+  return !tutoStop;
+}
+
+// montrer puis saisir un texte, lettre à lettre
+async function tutoSaisir(n, texte, el, contenu, effacer) {
+  if (!await tutoMontrer(n, texte, el)) return false;
+  await tutoTaper(el, false);
+  if (tutoStop) return false;
+  el.focus();
+  if (effacer !== false) el.value = '';
+  for (const c of contenu) {
+    if (tutoStop) return false;
+    el.value += c;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    await dodo(c === '\n' ? 180 : 45);
+  }
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  el.dispatchEvent(new Event('blur', { bubbles: true }));
+  await dodo(400);
+  return !tutoStop;
+}
+
 // attend qu'une grille neuve soit arrivée du moteur
-async function tutoAttendreGrille(avant) {
+async function tutoAttendreGrille(avant, n) {
+  tutoDire(n, 'Le moteur fabrique la grille… quelques secondes.');
   const limite = Date.now() + 90000;
   while (!tutoStop && Date.now() < limite) {
-    if (!recherche && derniere && derniere !== avant) return true;
+    if (!recherche && derniere && derniere !== avant) { await dodo(500); return true; }
+    // une recherche qui s'arrête sans rien produire : inutile d'attendre la fin
+    if (!recherche && Date.now() - limite > -88000 && derniere === avant) {
+      tutoRate = 'le moteur n\u2019a pas trouvé de grille'; return false;
+    }
     await dodo(200);
   }
+  if (!tutoStop) tutoRate = 'la grille a mis trop de temps à venir';
   return false;
 }
 
@@ -2799,61 +2868,289 @@ function tutoFermer(message) {
   if (message) $('#etat').textContent = message;
   majBoutons();
 }
-function tutoTouche(ev) { if (ev.key === 'Escape') { tutoStop = true; } }
-
+function tutoTouche(ev) { if (ev.key === 'Escape') tutoStop = true; }
 $('#tutostop').onclick = () => { tutoStop = true; };
 
-$('#btuto').onclick = async () => {
-  if (tutoEnCours) return;
+// remet l'application dans l'état qu'attend la démonstration
+function tutoPreparer(type, mode, lignes, colonnes) {
+  if (typeCourant() !== type) { $('#type').value = type; $('#type').onchange(); }
+  if (lignes) {
+    $('#nl').value = lignes; $('#nc').value = colonnes || lignes;
+    $('#nl').onchange();
+  }
+  if (modeCourant() !== mode) changerMode(mode);
+}
+
+// ---------------------------------------------------------------------------
+// 1. Mots codés : jouer
+// ---------------------------------------------------------------------------
+async function tutoCodes() {
+  tutoTotal = 5;
+  tutoPreparer('codes', 'joueur', 7, 7);
+  const avant = derniere;
+  if (!await tutoEtape(1, 'On demande une grille neuve.', $('#go'))) return;
+  if (!await tutoAttendreGrille(avant, 2)) return;
+
+  if (!await tutoEtape(3, 'Un coup de pouce : cette aide dévoile une lettre entière du code.',
+      $('#aide'))) return;
+
+  const cible = [...document.querySelectorAll('#grille .c')]
+    .find(c => !c.classList.contains('noir') && !c.classList.contains('hors')
+               && c.dataset.n && !props.get(c.dataset.n));
+  if (!await tutoEtape(4, 'On choisit une case : toutes celles qui portent le même numéro '
+      + 'se colorent avec elle.', cible)) return;
+
+  let bonne = null;
+  if (codeNum) for (const [ch, n] of codeNum) if (n === numSelect) bonne = ch;
+  const puces = [...document.querySelectorAll('#restantes .chip:not(.vide)')];
+  const lettre = puces.find(c => c.textContent === bonne) || puces[0];
+  if (!await tutoEtape(5, 'Puis on clique la lettre à y poser — ici la bonne, ' + (bonne || '?')
+      + ' : elle s’inscrit d’un coup dans toutes ces cases.', lettre)) return;
+
+  tutoDire(5, 'Et voilà — à vous de deviner le reste du code !');
+  await tutoLire();
+}
+
+// ---------------------------------------------------------------------------
+// 2. Mots croisés : fabriquer, définir, puis jouer
+// ---------------------------------------------------------------------------
+async function tutoCroises() {
+  tutoTotal = 7;
+  tutoPreparer('croises', 'generation', 7, 7);
+  const avant = derniere;
+  if (!await tutoEtape(1, 'On fabrique d’abord une grille de mots croisés.', $('#go'))) return;
+  if (!await tutoAttendreGrille(avant, 2)) return;
+
+  if (!await tutoRegler(3, 'On passe en mode définition : c’est là qu’on rédige '
+      + 'les définitions de la grille.', '#mode', 'definition')) return;
+  await dodo(300);
+
+  if (!await tutoEtape(4, 'Ce bouton va chercher une définition pour chaque mot, '
+      + 'dans le Wiktionnaire. Patience, il interroge un mot après l’autre.',
+      $('#toutchercher'))) return;
+  // la recherche est un aller-retour réseau : on attend qu'elle rende la main
+  const t0 = Date.now();
+  while (!tutoStop && Date.now() - t0 < 60000 && $('#toutchercher').disabled) await dodo(300);
+  await dodo(600);
+  if (tutoStop) return;
+
+  const champ = document.querySelector('#defs .def input');
+  if (champ) {
+    if (!await tutoSaisir(5, 'Une définition ne vous plaît pas ? Elle se récrit à la main, '
+        + 'tout simplement.', champ, 'Ma définition à moi')) return;
+  }
+
+  if (!await tutoRegler(6, 'La grille est prête : on passe en mode joueur pour la remplir.',
+      '#mode', 'joueur')) return;
+  await dodo(800);
+
+  // on répond au premier mot horizontal : on repère une suite de cases saisissables
+  const suites = [];
+  for (let r = 0; r < nl; r++) {
+    let suite = [];
+    for (let c = 0; c < nc; c++) {
+      const i = r * nc + c;
+      const inp = cases[i] && cases[i].querySelector('input.js');
+      if (inp) suite.push(i);
+      else { if (suite.length >= 3) suites.push(suite); suite = []; }
+    }
+    if (suite.length >= 3) suites.push(suite);
+  }
+  const cellules = suites[0];
+  if (cellules) {
+    if (!await tutoMontrer(7, 'Il ne reste qu\u2019à répondre : on clique la première case '
+        + 'du mot, et l\u2019on tape les lettres.', cases[cellules[0]])) return;
+    await tutoTaper(cases[cellules[0]], false);
+    for (const c of cellules) {
+      if (tutoStop) return;
+      const inp = cases[c] && cases[c].querySelector('input.js');
+      if (!inp) continue;
+      const b = cases[c].getBoundingClientRect();
+      const x = b.left + b.width / 2, y = b.top + b.height / 2;
+      $('#tutodoigt').style.left = (x - 16) + 'px';
+      $('#tutodoigt').style.top = (y - 4) + 'px';
+      $('#tutohalo').style.left = x + 'px';
+      $('#tutohalo').style.top = y + 'px';
+      $('#tutohalo').style.width = $('#tutohalo').style.height = (b.width + 12) + 'px';
+      inp.focus();
+      inp.value = String.fromCharCode(65 + derniere[c]);
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      await dodo(340);
+    }
+    await dodo(600);
+  }
+  tutoDire(7, 'Les lettres s\u2019inscrivent au fil de la frappe. Quand toute la grille '
+    + 'est juste, une petite fête vous attend. À vous pour le reste !');
+  await tutoLire();
+}
+
+// ---------------------------------------------------------------------------
+// 3. Dessin : une grille en forme de cœur, avec des cases noires imposées
+// ---------------------------------------------------------------------------
+const COEUR = [
+  '..XX...XX..',
+  '.XXXX.XXXX.',
+  'XXXXXXXXXXX',
+  'XXXXXXXXXXX',
+  'XXXXXXXXXXX',
+  '.XXXXXXXXX.',
+  '..XXXXXXX..',
+  '...XXXXX...',
+  '....XXX....'
+];
+
+async function tutoDessin() {
+  tutoTotal = 6;
+  tutoPreparer('croises', 'generation', COEUR.length, COEUR[0].length);
+  $('#razdessin').click();
+  await dodo(400);
+
+  if (!await tutoEtape(1, 'Le dessin permet de découper une grille de la forme qu’on veut. '
+      + 'On l’active ici.', $('#mdessin > summary'))) return;
+  await dodo(250);
+  if (!await tutoEtape(2, 'Dessin : off devient Dessin : ON.', $('#dessinonoff'))) return;
+  $('#mdessin').open = false;
+  await dodo(300);
+
+  // on trace la silhouette : le doigt balaie les cases à mettre hors grille
+  tutoDire(3, 'Un glissement du doigt met les cases hors de la grille. '
+    + 'Ici, on dégage tout ce qui entoure un cœur.');
+  if (!etat) etat = new Uint8Array(nl * nc);
+  memoHisto();
+  const halo = $('#tutohalo'), doigt = $('#tutodoigt');
+  const c0 = cases[0].getBoundingClientRect();
+  halo.style.width = halo.style.height = (c0.width + 10) + 'px';
+  for (let r = 0; r < nl && !tutoStop; r++) {
+    const dehors = [];
+    for (let k = 0; k < nc; k++) if (COEUR[r][k] !== 'X') dehors.push(r * nc + k);
+    if (!dehors.length) continue;
+    for (const i of dehors) {
+      if (tutoStop) break;
+      const b = cases[i].getBoundingClientRect();
+      const x = b.left + b.width / 2, y = b.top + b.height / 2;
+      halo.style.left = x + 'px'; halo.style.top = y + 'px';
+      doigt.style.left = (x - 16) + 'px'; doigt.style.top = (y - 4) + 'px';
+      peindre(i, 1);
+      await dodo(85);
+    }
+    await dodo(120);
+  }
+  peinture = 1; terminer();
+  if (tutoStop) return;
+  await dodo(500);
+
+  // deux cases noires imposées, au cœur du cœur
+  const milieu = Math.floor(nc / 2);
+  const impose = [3 * nc + milieu - 2, 3 * nc + milieu + 2];
+  for (let k = 0; k < impose.length; k++) {
+    const i = impose[k];
+    if (!cases[i]) continue;
+    if (!await tutoMontrer(4 + k, k === 0
+        ? 'Chaque case a trois états. Un premier appui la met hors grille, '
+          + 'un deuxième en fait une case noire imposée, un troisième la rend blanche.'
+        : 'Une deuxième case noire imposée, pour la symétrie.', cases[i])) return;
+    for (let t = 0; t < 2; t++) {   // deux appuis : blanc → hors → noire imposée
+      if (tutoStop) return;
+      memoHisto();
+      peindre(i, (etat[i] + 1) % 3);
+      peinture = etat[i]; terminer();
+      $('#tutodoigt').classList.add('tape'); $('#tutohalo').classList.add('tape');
+      await dodo(420);
+      $('#tutodoigt').classList.remove('tape'); $('#tutohalo').classList.remove('tape');
+    }
+    await dodo(300);
+  }
+
+  $('#mdessin').open = true; await dodo(250);
+  $('#dessinonoff').click();                    // on referme le mode dessin
+  $('#mdessin').open = false;
+  await dodo(300);
+  const avant = derniere;
+  if (!await tutoEtape(6, 'Le dessin est fini : on lance la génération, et le moteur '
+      + 'remplit le cœur en respectant les cases noires imposées.', $('#go'))) return;
+  if (!await tutoAttendreGrille(avant, 6)) return;
+  tutoDire(6, 'Voilà une grille en forme de cœur. Le dessin s’exporte et se réimporte '
+    + 'depuis le menu Dessin.');
+  await tutoLire();
+}
+
+// ---------------------------------------------------------------------------
+// 4. Mots imposés : deux mots sur une même ligne
+// ---------------------------------------------------------------------------
+async function tutoImposes() {
+  tutoTotal = 5;
+  // PIERRE + case noire + MARIE occupe douze cases : la grille doit les offrir
+  tutoPreparer('croises', 'generation', 10, 12);
+  $('#razdessin').click();
+  await dodo(300);
+  const pli = document.querySelector('details.pli');
+  if (!pli.open) { pli.open = true; await dodo(350); }
+
+  if (!await tutoMontrer(1, 'On peut imposer des mots : ils figureront tous dans la grille. '
+      + 'Un mot par ligne.', pli.querySelector('summary'))) return;
+
+  if (!await tutoSaisir(2, 'On en met deux, séparés par un blanc, sur la même ligne : '
+      + 'ils seront placés à la suite, séparés par une case noire.',
+      $('#imposes'), 'PIERRE MARIE\nSOLEIL')) return;
+
+  if (!await tutoMontrer(3, 'PIERRE MARIE donnera donc PIERRE, une case noire, puis MARIE — '
+      + 'à l’horizontale ou à la verticale, c’est le moteur qui décide.',
+      $('#imposes'))) return;
+  pli.open = false;
+  await dodo(300);
+
+  const avant = derniere;
+  if (!await tutoEtape(4, 'On lance la recherche.', $('#go'))) return;
+  if (!await tutoAttendreGrille(avant, 4)) return;
+
+  const bleue = document.querySelector('#grille .c.impose');
+  if (bleue) {
+    if (!await tutoMontrer(5, 'Les mots imposés ressortent en bleu. Comptez les cases : '
+        + 'PIERRE puis une case noire puis MARIE, comme promis.', bleue)) return;
+  } else {
+    tutoDire(5, 'Les mots imposés ressortent en bleu dans la grille.');
+    await tutoLire();
+  }
+  tutoDire(5, 'Le compte rendu, sous les boutons, dit combien de mots imposés ont trouvé '
+    + 'leur place et lesquels se croisent.');
+  await tutoLire();
+}
+
+// ---------------------------------------------------------------------------
+const TUTOS = {
+  codes:   { titre: 'Mots codés : jouer', run: tutoCodes },
+  croises: { titre: 'Mots croisés : créer, définir, jouer', run: tutoCroises },
+  dessin:  { titre: 'Dessin : une grille en cœur', run: tutoDessin },
+  imposes: { titre: 'Mots imposés : deux mots sur une ligne', run: tutoImposes }
+};
+
+async function lancerTuto(cle) {
+  const t = TUTOS[cle];
+  if (!t || tutoEnCours) return;
   if (recherche) { $('#etat').textContent = 'Attendez la fin de la recherche en cours.'; return; }
-  // la démonstration produit une grille : on prévient si elle en écrase une
-  if (derniere && !confirm('La démonstration va fabriquer une nouvelle grille de mots '
-      + 'codés et remplacer celle-ci. Continuer ?')) return;
+  if ((derniere || (etat && etat.some(v => v))) && !confirm(
+      'La démonstration va fabriquer sa propre grille et remplacer votre travail en cours. '
+      + 'Continuer ?')) return;
 
   document.querySelectorAll('details.menu').forEach(m => m.open = false);
-  if (typeCourant() !== 'codes') { $('#type').value = 'codes'; $('#type').onchange(); }
-  if (!modeJoueur) changerMode('joueur');
-
-  tutoEnCours = true; tutoStop = false;
+  tutoEnCours = true; tutoStop = false; tutoRate = '';
   $('#tutoc').hidden = false;
   document.addEventListener('keydown', tutoTouche);
   majBoutons();
   try {
-    const avant = derniere;
-    if (!await tutoEtape(1, 'On demande une grille neuve.', $('#go'))) return tutoFermer('Démonstration interrompue.');
-
-    tutoDire(2, 'Le moteur fabrique la grille… quelques secondes.');
-    await dodo(80);
-    if (!await tutoAttendreGrille(avant)) return tutoFermer('Démonstration interrompue.');
-    await dodo(600);
-
-    if (!await tutoEtape(3, 'Un coup de pouce : cette aide dévoile une lettre entière du code.',
-        $('#aide'))) return tutoFermer('Démonstration interrompue.');
-
-    // on vise une case dont la lettre n'a pas déjà été donnée par l'aide
-    const cible = [...document.querySelectorAll('#grille .c')]
-      .find(c => !c.classList.contains('noir') && !c.classList.contains('hors')
-                 && c.dataset.n && !props.get(c.dataset.n));
-    if (!await tutoEtape(4, 'On choisit une case : toutes celles qui portent le même numéro '
-        + 'se colorent avec elle.', cible)) return tutoFermer('Démonstration interrompue.');
-
-    // et l'on pose la VRAIE lettre de ce numéro : la démonstration doit être juste
-    let bonne = null;
-    if (codeNum) for (const [ch, n] of codeNum) if (n === numSelect) bonne = ch;
-    const puces = [...document.querySelectorAll('#restantes .chip:not(.vide)')];
-    const lettre = puces.find(c => c.textContent === bonne) || puces[0];
-    if (!await tutoEtape(5, 'Puis on clique la lettre à y poser \u2014 ici la bonne, ' + (bonne || '?')
-        + ' : elle s\u2019inscrit d\u2019un coup dans toutes ces cases.',
-        lettre)) return tutoFermer('Démonstration interrompue.')
-;
-
-    tutoDire(5, 'Et voilà — à vous de deviner le reste du code !');
-    await tutoLire();
-    tutoFermer('Démonstration terminée : continuez la grille.');
+    await t.run();
+    tutoFermer(tutoStop ? 'Démonstration interrompue.'
+      : (tutoRate ? 'Démonstration arrêtée : ' + tutoRate + '. Réessayez, ou agrandissez la grille.'
+                  : 'Démonstration terminée — à vous.'));
   } catch (e) {
     tutoFermer('Démonstration interrompue : ' + (e && e.message ? e.message : e));
   }
-};
+}
+for (const cle of Object.keys(TUTOS)) {
+  const b = $('#tuto-' + cle);
+  if (b) b.onclick = () => lancerTuto(cle);
+}
+
 
 if (window.MotsCroises && window.MotsCroises.VERSION)
   $('#vmot').textContent = window.MotsCroises.VERSION;
