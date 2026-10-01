@@ -156,6 +156,39 @@
   .undef { cursor:pointer; padding:1px 2px; border-radius:3px; }
   .undef:hover { background:#f0f4f9; }
   .undef.vise { background:#fff6d5; }
+  /* ---- victoire : la vitre se brise et les éclats s'envolent ---- */
+  #vitre { position:fixed; inset:0; z-index:101; pointer-events:none; }
+  #vitre .fissure { fill:none; stroke:#9fb4cd; stroke-width:1.1; opacity:0;
+       animation:craque .5s ease-out forwards; }
+  @keyframes craque { 0% { opacity:0; } 15% { opacity:1; } 70% { opacity:1; } 100% { opacity:0; } }
+  #vitre .choc { fill:#fff; opacity:0; animation:flash .55s ease-out forwards; }
+  @keyframes flash { 0% { opacity:.95; transform:scale(.2); }
+                     100% { opacity:0; transform:scale(2.4); } }
+  #vitre .eclat { transform-box:fill-box; transform-origin:center;
+       animation:envol var(--dur) cubic-bezier(.33,0,.5,1) var(--del) forwards; }
+  #vitre .aile { transform-box:fill-box; transform-origin:center;
+       animation:battement var(--bat) ease-in-out var(--del) infinite; }
+  #vitre .aile polygon { fill:rgba(255,255,255,.62); stroke:rgba(126,154,189,.85);
+       stroke-width:.9; stroke-linejoin:round;
+       animation:teinte var(--dur) ease-in var(--del) forwards; }
+  @keyframes battement { 0%,100% { transform:scaleX(1); } 50% { transform:scaleX(.28); } }
+  @keyframes teinte {
+    0%   { fill:rgba(255,255,255,.62); stroke:rgba(126,154,189,.85); }
+    28%  { fill:rgba(255,255,255,.72); }
+    62%  { fill:hsla(var(--h), 85%, 66%, .92); stroke:hsla(var(--h), 70%, 42%, .9); }
+    100% { fill:hsla(var(--h), 90%, 72%, 0); stroke:hsla(var(--h), 70%, 50%, 0); }
+  }
+  @keyframes envol {
+    0%   { transform:translate(0,0) rotate(0deg); }
+    9%   { transform:translate(calc(var(--dx) * .04), calc(var(--dy) * .04)) rotate(2deg); }
+    26%  { transform:translate(calc(var(--dx) * .16), calc(var(--dy) * .10)) rotate(var(--r1)); }
+    100% { transform:translate(var(--dx), -112vh) rotate(var(--r2)); }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    #vitre .eclat, #vitre .aile, #vitre .aile polygon { animation-duration:.01s; }
+  }
+  @media print { #vitre { display:none; } }
+
   #bravo { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
            background:rgba(255,255,255,.7); z-index:99; font-size:26px; color:var(--bleu);
            font-weight:700; text-align:center; }
@@ -192,8 +225,8 @@
        display:flex; flex-direction:column; justify-content:flex-start; }
   .c .fl i { font-style:normal; display:block; }
   .c .fl i + i { border-top:1px solid #aab4c2; margin-top:1px; padding-top:1px; }
-  .c u { position:absolute; top:0; left:1px; font-size:8px; text-decoration:none;
-         font-weight:400; color:#8a96a4; line-height:1; }
+  .c u { position:absolute; top:0; left:1.5px; font-size:10px; text-decoration:none;
+         font-weight:600; color:#7788a0; line-height:1.05; letter-spacing:-.02em; }
   #zone { display:flex; gap:8px; align-items:flex-start; justify-content:center; }
   /* la colonne des aides et des lettres peut passer de l'autre côté */
   body.dispodroite #zone { flex-direction:row-reverse; }
@@ -263,8 +296,7 @@
     #impression { display:block; font-size:13.5px; line-height:1.6; }
     #impression h3 { font-size:15px; }
     #legende .c { font-size:16px !important; }
-    #legende .c u { font-size:10px !important; }
-    .c u { font-size:10px !important; }
+    #legende .c u { font-weight:600; }
     #legende { page-break-inside:avoid; }
     #impression h3 { font-size:12px; color:#000; margin:8px 0 3px; }
     #impression p { margin:2px 0; }
@@ -340,7 +372,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.6</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.7</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -365,6 +397,18 @@
           <span class="dim"><select id="nl"></select> × <select id="nc"></select></span></label>
         <label class="lr">Cases noires
           <select id="densite"></select></label>
+        <label class="lr">Cases à l'impression
+          <select id="tailleimp">
+            <option value="auto" selected>8 mm (15 en fléchés)</option>
+            <option value="max">au maximum</option>
+          </select></label>
+        <label class="lr">Anagrammes cachées
+          <select id="difana"></select></label>
+        <label class="lr">Animation de victoire
+          <select id="anim">
+            <option value="papillons" selected>vitre et papillons</option>
+            <option value="confettis">confettis</option>
+          </select></label>
         <label class="lr">Disposition
           <select id="dispo">
             <option value="gauche" selected>lettres à gauche</option>
@@ -592,6 +636,10 @@
   et de consonnes, pas de lettre triplée. Ces anagrammes-là portent un
   <b>astérisque</b> : ce ne sont pas des mots, seules leurs lettres comptent, et
   l'avertissement figure aussi sur la feuille imprimée.</p>
+  <p>Le réglage <b>Anagrammes cachées</b> fixe la difficulté : c'est la part des
+  mots dont l'anagramme n'est pas donnée — 30 % par défaut. Ces mots-là ne se
+  trouvent plus que par leurs croisements. À 0 % toutes les anagrammes sont
+  fournies, à 70 % il n'en reste qu'une sur trois.</p>
   <p>En mode définition, chaque champ contient l'anagramme et reste modifiable ;
   le menu des propositions offre les autres anagrammes du même mot. Si vous
   retouchez une lettre en mode édition, les anagrammes des mots qui traversent
@@ -615,7 +663,11 @@
   il n'y a plus de bascules séparées qui pouvaient se contredire.</p>
   <p><b>Générer</b> produit une première grille ; si une grille existe déjà, le
   même bouton lance une exploration qui cherche mieux sans limite de temps et
-  remplace la grille à chaque amélioration. Pendant toute recherche, ce même
+  remplace la grille à chaque amélioration. En <b>mode joueur</b>, « Nouvelle
+  grille » explore d'emblée : les grilles s'enchaînent, de moins en moins
+  noires, et vous arrêtez sur celle qui vous plaît. Les définitions ne sont
+  alors cherchées qu'une fois l'exploration arrêtée, pour ne pas multiplier les
+  appels au Wiktionnaire. Pendant toute recherche, ce même
   bouton devient <b>Arrêter</b> et rougit : un seul bouton pour les deux gestes,
   il n'y a donc jamais de doute sur celui qui est actif.</p>
   <p>L'exploration ne sacrifie pas le thème à la densité. Elle impose elle aussi
@@ -799,6 +851,22 @@
   texte, un mot par ligne : elles se relisent et se modifient dans n'importe
   quel éditeur, et se rechargent dans une autre grille. Ouvrir une liste accepte
   aussi une grille enregistrée, dont elle extrait la liste correspondante.</p>
+  <h4>Taille des cases à l'impression</h4>
+  <p>Le réglage <b>Cases à l'impression</b> fixe le côté d'une case sur le
+  papier. Par défaut <b>8 mm</b>, et <b>15 mm</b> en mots fléchés, où la case
+  doit loger deux définitions. On peut imposer une valeur de 5 à 20 mm, ou
+  choisir <b>au maximum</b> : la grille remplit alors la largeur de la page.
+  La conversion passe par des pixels entiers, l'écart réel est d'un dixième de
+  millimètre au plus.</p>
+
+  <h4>Victoire</h4>
+  <p>Deux animations, au choix dans les réglages. <b>Vitre et papillons</b>,
+  par défaut : l'écran se fend depuis le centre comme une vitre qui reçoit un
+  choc, en un éventail de rayons coupés par des anneaux ; les éclats se
+  décollent, prennent couleur et montent en battant des ailes. <b>Confettis</b>
+  reprend l'ancienne fête, qui tombe puis remonte en tourbillon. Ce choix se
+  retient d'une session à l'autre, comme la disposition.</p>
+
   <h4>Disposition</h4>
   <p>Le réglage <b>Disposition</b> place la colonne des aides et des lettres à
   gauche ou à droite de la grille — selon la main dont vous tenez le téléphone.
@@ -858,7 +926,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.6, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.7, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -940,6 +1008,16 @@ $('#cats').onchange = async e => {
   e.target.value = '';
 };
 
+for (let mm = 5; mm <= 20; mm++) {
+  const o = document.createElement('option');
+  o.value = mm; o.textContent = mm + ' mm';
+  $('#tailleimp').appendChild(o);
+}
+for (let d = 0; d <= 70; d += 10) {
+  const o = document.createElement('option');
+  o.value = d / 100; o.textContent = d + ' %'; if (d === 30) o.selected = true;
+  $('#difana').appendChild(o);
+}
 for (const id of ['#nl', '#nc']) {
   for (let v = 2; v <= 30; v++) {
     const o = document.createElement('option');
@@ -1169,6 +1247,7 @@ function afficherLegende(g) {
     const n = codeNum.get(ch);
     d.dataset.n = n;
     const u = document.createElement('u'); u.textContent = n;
+    u.style.fontSize = tailleNum(26);
     d.appendChild(u);
     if (modeJoueur) {
       // pas de saisie ici non plus : on choisit la case, puis la lettre
@@ -1197,6 +1276,9 @@ const LARG_COLG = () => window.innerWidth <= 430 ? 140 : 156;
 function colonneUtile() {
   return !!derniere && (typeCourant() === 'codes' || modeJoueur);
 }
+
+// le petit numéro en coin suit la taille de la case, avec un plancher lisible
+function tailleNum(cell) { return Math.max(10, Math.round(cell * 0.36)) + 'px'; }
 
 function dessiner(g, tailleForcee) {
   const boite = $('#grille');
@@ -1278,6 +1360,7 @@ function dessiner(g, tailleForcee) {
         // colonne de gauche, il n'y a pas de saisie dans la case
         const ch = String.fromCharCode(65 + v), n = codeNum.get(ch);
         const u = document.createElement('u'); u.textContent = n;
+        u.style.fontSize = tailleNum(taille);
         d.appendChild(u);
         const s = document.createElement('span');
         s.textContent = props.get(String(n)) || '';
@@ -1313,6 +1396,7 @@ function dessiner(g, tailleForcee) {
           const n = codeNum.get(ch) || '';
           const u = document.createElement('u');
           u.textContent = n;
+          u.style.fontSize = tailleNum(taille);
           d.appendChild(u);
           if (modeJoueur) s.textContent = props.get(String(n)) || '';
           if (revelees.has(ch)) { d.style.background = revelees.get(ch); d.classList.add('revelee'); }
@@ -1565,6 +1649,90 @@ function verifierVictoire() {
   feter();
 }
 function feter() {
+  if ($('#anim').value === 'papillons') return feterPapillons();
+  return feterConfettis();
+}
+
+// La vitre se fend depuis le centre, en un éventail de rayons coupés par des
+// anneaux : les quadrilatères ainsi découpés sont les éclats. Ils se décollent,
+// prennent couleur et montent en battant des ailes.
+function feterPapillons() {
+  const b = $('#bravo');
+  b.classList.add('on');
+  const W = window.innerWidth, H = window.innerHeight;
+  const cx = W / 2, cy = H * 0.44;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.id = 'vitre';
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+
+  const RAYONS = 15;
+  const portee = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy)) * 1.12;
+  const angles = [];
+  for (let i = 0; i < RAYONS; i++)
+    angles.push(i * 2 * Math.PI / RAYONS + (Math.random() - 0.5) * 0.26);
+  // anneaux : resserrés près du choc, de plus en plus larges ensuite
+  const parts = [0, 0.07, 0.19, 0.36, 0.58, 0.82, 1];
+  const rayon = parts.map(t => t * portee);
+  const pt = (i, j) => {
+    const a = angles[i % RAYONS];
+    const r = rayon[j] * (j === 0 || j === rayon.length - 1 ? 1 : 1 + (Math.random() - 0.5) * 0.16);
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  };
+  const P = [];
+  for (let i = 0; i <= RAYONS; i++) { P[i] = []; for (let j = 0; j < rayon.length; j++) P[i][j] = pt(i, j); }
+  for (let j = 0; j < rayon.length; j++) P[RAYONS][j] = P[0][j];   // on referme
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const fissures = [];
+  for (let i = 0; i < RAYONS; i++)
+    fissures.push('M' + P[i][0].map(v => v.toFixed(1)).join(' ')
+      + 'L' + P[i].slice(1).map(p => p.map(v => v.toFixed(1)).join(' ')).join('L'));
+  for (let j = 1; j < rayon.length - 1; j++)
+    fissures.push('M' + P[0][j].map(v => v.toFixed(1)).join(' ')
+      + P.slice(1).map(c => 'L' + c[j].map(v => v.toFixed(1)).join(' ')).join(''));
+  const fp = document.createElementNS(ns, 'path');
+  fp.setAttribute('class', 'fissure');
+  fp.setAttribute('d', fissures.join(' '));
+  svg.appendChild(fp);
+
+  const choc = document.createElementNS(ns, 'circle');
+  choc.setAttribute('class', 'choc');
+  choc.setAttribute('cx', cx); choc.setAttribute('cy', cy);
+  choc.setAttribute('r', Math.max(18, portee * 0.05));
+  svg.appendChild(choc);
+
+  const teintes = [8, 28, 44, 150, 190, 205, 265, 320, 345];
+  for (let i = 0; i < RAYONS; i++)
+    for (let j = 0; j < rayon.length - 1; j++) {
+      const q = [P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1]];
+      const g = document.createElementNS(ns, 'g');
+      g.setAttribute('class', 'eclat');
+      const mx = q.reduce((a, p) => a + p[0], 0) / 4;
+      const ecart = (mx - cx) / W;                   // les éclats s'écartent du choc
+      g.style.setProperty('--dx', Math.round(ecart * W * 0.55 + (Math.random() - 0.5) * 90) + 'px');
+      g.style.setProperty('--dy', Math.round(14 + Math.random() * 26) + 'px');
+      g.style.setProperty('--r1', ((Math.random() - 0.5) * 26).toFixed(1) + 'deg');
+      g.style.setProperty('--r2', ((Math.random() - 0.5) * 150).toFixed(1) + 'deg');
+      g.style.setProperty('--dur', (2.9 + Math.random() * 1.9).toFixed(2) + 's');
+      g.style.setProperty('--del', (0.35 + j * 0.13 + Math.random() * 0.4).toFixed(2) + 's');
+      const aile = document.createElementNS(ns, 'g');
+      aile.setAttribute('class', 'aile');
+      aile.style.setProperty('--bat', (0.26 + Math.random() * 0.22).toFixed(2) + 's');
+      aile.style.setProperty('--del', g.style.getPropertyValue('--del'));
+      aile.style.setProperty('--dur', g.style.getPropertyValue('--dur'));
+      aile.style.setProperty('--h', teintes[Math.floor(Math.random() * teintes.length)]);
+      const poly = document.createElementNS(ns, 'polygon');
+      poly.setAttribute('points', q.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '));
+      aile.appendChild(poly); g.appendChild(aile); svg.appendChild(g);
+    }
+
+  document.body.appendChild(svg);
+  setTimeout(() => svg.remove(), 6200);
+  setTimeout(() => b.classList.remove('on'), 5200);
+}
+
+function feterConfettis() {
   const b = $('#bravo');
   b.classList.add('on');
   const emo = ['🎉', '🎊', '🏆', '🥳', '🔷', '🟠', '🟣', '🔴', '🟢', '⭐'];
@@ -1675,10 +1843,21 @@ function lancer(affiner, mode) {
   worker.onmessage = e => {
     const m = e.data;
     if (m.type === 'version') { $('#vmot').textContent = m.v; return; }
-    if (m.type === 'info') { $('#etat').textContent = m.texte; return; }
+    if (m.type === 'info') {
+      // « Exploration : essai 193 à 4 % » parle à l'auteur, pas au joueur :
+      // on lui dit seulement où il en est et comment s'arrêter
+      $('#etat').textContent = (modeJoueur && exploration && derniere)
+        ? `Grille à ${(100 * derniereDensite).toFixed(1)} % de cases noires. `
+          + 'La recherche en cherche une plus aérée — cliquez Arrêter pour jouer celle-ci.'
+        : m.texte;
+      return;
+    }
     if (m.type === 'fini') {
       $('#etat').textContent = m.texte;
       recherche = false; exploration = false; majBoutons();
+      // la grille retenue est celle-ci : c'est le moment de chercher ses définitions
+      if (modeJoueur && derniere && typeCourant() !== 'codes' && typeCourant() !== 'anagramot')
+        chercherToutes(true).then(() => afficherDefs(derniere));
       return;
     }
     if (!m.provisoire) { recherche = false; exploration = false; majBoutons(); }
@@ -1707,17 +1886,22 @@ function lancer(affiner, mode) {
       }
       majBoutons();
       if (modeJoueur) {
-        // le joueur reçoit une grille vierge ; on lui prépare les définitions
+        // le joueur reçoit une grille vierge ; on lui prépare les définitions.
+        // Pendant une exploration on ne les cherche pas à chaque amélioration :
+        // ce serait des dizaines d'allers-retours réseau pour rien.
         if (typeCourant() === 'codes') afficherLegende(derniere);
         else if (typeCourant() === 'anagramot') afficherDefs(derniere);
-        else chercherToutes(true).then(() => afficherDefs(derniere));
+        else if (!m.provisoire) chercherToutes(true).then(() => afficherDefs(derniere));
+        else $('#defs').innerHTML = '';
       }
       $('#vmot').textContent = m.version || '?';
       // En mode joueur le compte rendu ne doit nommer aucun mot : mots du
       // thème et croisements des mots imposés donneraient la solution.
       if (modeJoueur) {
-        $('#etat').textContent = `Grille ${nl}×${nc} prête `
-          + `(${(100 * m.densite).toFixed(1)} % de cases noires) — à vous de jouer.`;
+        $('#etat').textContent = `Grille ${nl}×${nc} `
+          + `à ${(100 * m.densite).toFixed(1)} % de cases noires`
+          + (m.provisoire ? ' — la recherche continue, cliquez Arrêter pour jouer celle-ci.'
+                          : ' — à vous de jouer.');
       } else {
         const cx = m.croisements || [];
         const nImp = new Set(imposesNorm.join(' ').split(/\s+/).filter(Boolean)).size;
@@ -1725,7 +1909,9 @@ function lancer(affiner, mode) {
           + `${m.poses}/${nImp} mots imposés, `
           + (cx.length ? `${cx.length} croisement(s) : ${cx.join(', ')}.` : 'aucun croisement.')
           + ((m.themesPlaces && m.themesPlaces.length)
-             ? ` Thème : ${m.themesPlaces.join(', ')}.` : '');
+             ? ` Thème : ${m.themesPlaces.join(', ')}.` : '')
+          + (typeCourant() === 'anagramot' && anagCachees
+             ? ` ${anagCachees} anagramme(s) cachée(s).` : '');
       }
     } else if (m.type === 'echec') {
       const d = m.diag || {};
@@ -1766,8 +1952,9 @@ function arreterRecherche() {
 $('#go').onclick = () => {
   if (recherche) { arreterRecherche(); return; }
   appliquerType();
-  // en mode joueur on veut une grille neuve, pas une exploration
-  lancer(false, (derniere && !modeJoueur) ? 'explorer' : undefined);
+  // Le joueur a droit au même traitement que l'auteur : on enchaîne les
+  // grilles de mieux en mieux remplies, et il arrête quand une lui convient.
+  lancer(false, (derniere || modeJoueur) ? 'explorer' : undefined);
 };
 // ---------- definitions ----------
 const defsChoisies = new Map();          // cle -> texte retenu
@@ -1937,7 +2124,8 @@ function remplirSelect(sel, props) {
 function appliquerAnagrammes(g, ana) {
   if (!g || !ana) return 0;
   defsChoisies.clear(); propositions.clear();
-  let n = 0, fabriquees = 0;
+  let fabriquees = 0;
+  const tous = [];
   const par = motsParLigne(g);
   for (const sens of ['H', 'V'])
     for (const e of par[sens])
@@ -1946,14 +2134,26 @@ function appliquerAnagrammes(g, ana) {
         if (!o) return;
         const cle = sens + e.n + '.' + k;
         defsChoisies.set(cle, o.a + (o.faux ? ' *' : ''));
-        n++; if (o.faux) fabriquees++;
+        tous.push(cle); if (o.faux) fabriquees++;
         if (o.autres && o.autres.length > 1)
           propositions.set(cle, o.autres.map(t => ({ texte: t, source: 'anagramme' })));
       });
   anagFabriquees = fabriquees;
-  return n;
+  // La difficulté se règle en cachant une part des anagrammes : ces mots-là
+  // ne se devinent plus que par leurs croisements.
+  const part = +$('#difana').value || 0;
+  anagCachees = 0;
+  if (part > 0 && tous.length) {
+    for (let i = tous.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tous[i], tous[j]] = [tous[j], tous[i]];
+    }
+    const k = Math.min(tous.length - 1, Math.round(part * tous.length));
+    for (let i = 0; i < k; i++) { defsChoisies.delete(tous[i]); propositions.delete(tous[i]); anagCachees++; }
+  }
+  return tous.length;
 }
-let anagFabriquees = 0;
+let anagFabriquees = 0, anagCachees = 0;
 
 function afficherDefs(g) {
   if (modeJoueur) return afficherDefsJoueur(g);
@@ -2196,11 +2396,22 @@ function construireImpression() {
     z.appendChild(p);
   }
 }
+// taille d'une case sur le papier : « auto » vaut 8 mm, 15 en mots fléchés ;
+// « au maximum » remplit la largeur ; sinon la valeur choisie, en millimètres
+const PXMM = 96 / 25.4;
+function tailleImpression() {
+  const fleche = typeCourant() === 'fleches';
+  const v = $('#tailleimp').value;
+  if (v === 'max')
+    return fleche ? Math.max(56, Math.floor(620 / (nc + 1)))
+                  : Math.max(30, Math.floor(700 / (nc + 1)));
+  const mm = (v === 'auto') ? (fleche ? 15 : 8) : (+v || 8);
+  return Math.round(mm * PXMM);
+}
 function imprimer(vierge) {
   construireImpression();
   const fleche = typeCourant() === 'fleches';
-  const grand = fleche ? Math.max(56, Math.floor(620 / (nc + 1)))
-                       : Math.max(30, Math.floor(700 / (nc + 1)));
+  const grand = tailleImpression();
   dessiner(derniere, grand);
   if (fleche) {
     indexerMots(derniere);
@@ -2815,10 +3026,19 @@ function appliquerDispo() {
   dessiner(derniere);
 }
 $('#dispo').onchange = appliquerDispo;
+// deux réglages de goût se retiennent d'une session à l'autre
 try {
   const d = localStorage.getItem('mc-dispo');
   if (d) { $('#dispo').value = d; document.body.classList.toggle('dispodroite', d === 'droite'); }
+  const a = localStorage.getItem('mc-anim');
+  if (a) $('#anim').value = a;
 } catch (e) { /* stockage indisponible */ }
+$('#anim').onchange = () => {
+  try { localStorage.setItem('mc-anim', $('#anim').value); } catch (e) { /* ignoré */ }
+  $('#etat').textContent = $('#anim').value === 'papillons'
+    ? 'Victoire : la vitre se brise et les éclats s\u2019envolent en papillons.'
+    : 'Victoire : pluie de confettis.';
+};
 
 // ---- démonstrations animées : un doigt joue les gestes ---------------------
 let tutoEnCours = false, tutoStop = false, tutoTotal = 5, tutoRate = '';
