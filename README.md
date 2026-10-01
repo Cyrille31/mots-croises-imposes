@@ -64,3 +64,7 @@ Texte complet dans [`LICENSE`](LICENSE). Le lexique est dérivé de ressources
 lexicales libres et conserve la licence de sa source ; les définitions ne sont
 pas fournies — elles sont demandées au Wiktionnaire (CC BY-SA), les autres sites
 n'étant que des liens sortants.
+
+La capture d'écran de l'animation de victoire repose sur
+[html2canvas](https://html2canvas.hertzen.com) 1.4.1 (© Niklas von Hertzen,
+licence MIT), embarqué dans `html2canvas.min.js`.

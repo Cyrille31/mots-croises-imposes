@@ -49,3 +49,7 @@ de sa source. Les définitions ne sont pas fournies avec le logiciel : elles
 sont consultées à la demande auprès du Wiktionnaire (licence CC BY-SA), et les
 autres sites proposés ne sont que des liens sortants, sans aucune reprise de
 leur contenu.
+
+La capture d'écran de l'animation de victoire utilise html2canvas 1.4.1
+(fichier html2canvas.min.js), © 2022 Niklas von Hertzen, distribué sous
+licence MIT : https://html2canvas.hertzen.com
