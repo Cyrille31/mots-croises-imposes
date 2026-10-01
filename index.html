@@ -189,6 +189,22 @@
   }
   @media print { #vitre { display:none; } }
 
+  /* variante photographique : chaque éclat porte un morceau de l'écran, sur fond noir */
+  #nuit { position:fixed; inset:0; z-index:100; background:#000; pointer-events:none;
+          transition:opacity 1s ease; }
+  #nuit.fin { opacity:0; }
+  #eclats { position:fixed; inset:0; z-index:102; pointer-events:none; overflow:hidden; }
+  #eclats .eclat { position:absolute; will-change:transform;
+       animation:envol var(--dur) cubic-bezier(.33,0,.5,1) var(--del) forwards; }
+  #eclats canvas { display:block; width:100%; height:100%;
+       animation:battement var(--bat) ease-in-out var(--del) infinite; }
+  #vitre.dessus { z-index:103; }
+  @media (prefers-reduced-motion:reduce) {
+    #eclats .eclat, #eclats canvas { animation-duration:.01s; }
+  }
+  #bravo.nuit { background:transparent; color:#fff; z-index:101; transition:opacity 1s ease; }
+  #bravo.nuit.fin { opacity:0; }
+
   #bravo { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
            background:rgba(255,255,255,.7); z-index:99; font-size:26px; color:var(--bleu);
            font-weight:700; text-align:center; }
@@ -861,9 +877,11 @@
 
   <h4>Victoire</h4>
   <p>Deux animations, au choix dans les réglages. <b>Vitre et papillons</b>,
-  par défaut : l'écran se fend depuis le centre comme une vitre qui reçoit un
-  choc, en un éventail de rayons coupés par des anneaux ; les éclats se
-  décollent, prennent couleur et montent en battant des ailes. <b>Confettis</b>
+  par défaut : l'écran est photographié puis se fend depuis le centre comme une
+  vitre qui reçoit un choc, en un éventail de rayons coupés par des anneaux ;
+  chaque éclat emporte son morceau de page et s'envole en battant des ailes,
+  laissant derrière lui un fond noir, puis l'écran redevient normal en une
+  seconde. <b>Confettis</b>
   reprend l'ancienne fête, qui tombe puis remonte en tourbillon. Ce choix se
   retient d'une session à l'autre, comme la disposition.</p>
 
@@ -1649,8 +1667,156 @@ function verifierVictoire() {
   feter();
 }
 function feter() {
-  if ($('#anim').value === 'papillons') return feterPapillons();
+  if ($('#anim').value === 'papillons') return feterEclats();
   return feterConfettis();
+}
+
+// html2canvas n'est chargé qu'à la première victoire (il est en cache hors ligne).
+let promesseCapture = null;
+function chargerCapture() {
+  if (window.html2canvas) return Promise.resolve(window.html2canvas);
+  if (!promesseCapture) promesseCapture = new Promise((ok, ko) => {
+    const sc = document.createElement('script');
+    sc.src = './html2canvas.min.js';
+    sc.onload = () => window.html2canvas ? ok(window.html2canvas) : ko(new Error('html2canvas'));
+    sc.onerror = () => { promesseCapture = null; ko(new Error('html2canvas')); };
+    document.head.appendChild(sc);
+  });
+  return promesseCapture;
+}
+
+// Photographie de l'écran : la vitre se fend, chaque éclat emporte son morceau
+// de page et s'envole en battant des ailes ; derrière, tout est noir, puis la
+// page revient en une seconde. Sans capture possible, on retombe sur la vitre.
+let fete = false;
+async function feterEclats() {
+  if (fete) return;
+  fete = true;
+  const W = window.innerWidth, H = window.innerHeight;
+  let photo;
+  try {
+    const h2c = await chargerCapture();
+    const fond = getComputedStyle(document.body).backgroundColor;
+    photo = await h2c(document.body, {
+      x: window.scrollX, y: window.scrollY, width: W, height: H,
+      windowWidth: document.documentElement.clientWidth,
+      scale: Math.min(window.devicePixelRatio || 1, 2),
+      backgroundColor: fond && fond !== 'rgba(0, 0, 0, 0)' ? fond : '#fff',
+      logging: false,
+      // html2canvas ignore l'état fermé des <details> : on en écarte le contenu
+      ignoreElements: el => {
+        const d = el.parentElement;
+        return !!d && d.tagName === 'DETAILS' && !d.open && el.tagName !== 'SUMMARY';
+      },
+      // … et numérote les <summary> comme des listes : on retire le marqueur
+      onclone: doc => doc.querySelectorAll('summary').forEach(m => { m.style.listStyle = 'none'; }),
+    });
+  } catch (e) {
+    fete = false;
+    return feterPapillons();
+  }
+
+  const cx = W / 2, cy = H * 0.44;
+  const RAYONS = 15;
+  const portee = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy)) * 1.12;
+  const angles = [];
+  for (let i = 0; i < RAYONS; i++)
+    angles.push(i * 2 * Math.PI / RAYONS + (Math.random() - 0.5) * 0.26);
+  const parts = [0, 0.07, 0.19, 0.36, 0.58, 0.82, 1];
+  const rayon = parts.map(t => t * portee);
+  const P = [];
+  for (let i = 0; i < RAYONS; i++) {
+    P[i] = [];
+    for (let j = 0; j < rayon.length; j++) {
+      const r = rayon[j] * (j === 0 || j === rayon.length - 1 ? 1 : 1 + (Math.random() - 0.5) * 0.16);
+      P[i][j] = [cx + r * Math.cos(angles[i]), cy + r * Math.sin(angles[i])];
+    }
+  }
+  P[RAYONS] = P[0];
+
+  const nuit = document.createElement('div');
+  nuit.id = 'nuit';
+  const b = $('#bravo');
+  b.classList.add('nuit', 'on');
+  const zone = document.createElement('div');
+  zone.id = 'eclats';
+  const k = photo.width / W;
+  let fin = 0;
+  for (let i = 0; i < RAYONS; i++)
+    for (let j = 0; j < rayon.length - 1; j++) {
+      const q = [P[i][j], P[i + 1][j], P[i + 1][j + 1], P[i][j + 1]];
+      const mx = q.reduce((a, p) => a + p[0], 0) / 4, my = q.reduce((a, p) => a + p[1], 0) / 4;
+      // un demi-pixel de débord pour qu'aucune couture noire ne se voie au départ
+      const qq = q.map(([x, y]) => {
+        const d = Math.hypot(x - mx, y - my) || 1;
+        return [x + (x - mx) / d * 0.7, y + (y - my) / d * 0.7];
+      });
+      const x0 = Math.max(0, Math.floor(Math.min(...qq.map(p => p[0]))));
+      const y0 = Math.max(0, Math.floor(Math.min(...qq.map(p => p[1]))));
+      const x1 = Math.min(W, Math.ceil(Math.max(...qq.map(p => p[0]))));
+      const y1 = Math.min(H, Math.ceil(Math.max(...qq.map(p => p[1]))));
+      if (x1 - x0 < 1 || y1 - y0 < 1) continue;
+      const cv = document.createElement('canvas');
+      cv.width = Math.ceil((x1 - x0) * k); cv.height = Math.ceil((y1 - y0) * k);
+      const ctx = cv.getContext('2d');
+      ctx.scale(k, k);
+      ctx.translate(-x0, -y0);
+      ctx.beginPath();
+      qq.forEach(([x, y], n) => n ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(photo, 0, 0, W, H);
+
+      const e = document.createElement('div');
+      e.className = 'eclat';
+      Object.assign(e.style, { left: x0 + 'px', top: y0 + 'px',
+                               width: (x1 - x0) + 'px', height: (y1 - y0) + 'px' });
+      const dur = 2.9 + Math.random() * 1.9, del = 0.35 + j * 0.13 + Math.random() * 0.4;
+      fin = Math.max(fin, dur + del);
+      e.style.setProperty('--dx', Math.round((mx - cx) * 0.55 + (Math.random() - 0.5) * 90) + 'px');
+      e.style.setProperty('--dy', Math.round(14 + Math.random() * 26) + 'px');
+      e.style.setProperty('--r1', ((Math.random() - 0.5) * 26).toFixed(1) + 'deg');
+      e.style.setProperty('--r2', ((Math.random() - 0.5) * 150).toFixed(1) + 'deg');
+      e.style.setProperty('--dur', dur.toFixed(2) + 's');
+      e.style.setProperty('--del', del.toFixed(2) + 's');
+      e.style.setProperty('--bat', (0.26 + Math.random() * 0.22).toFixed(2) + 's');
+      e.appendChild(cv);
+      zone.appendChild(e);
+    }
+
+  // fissures et éclair du choc, par-dessus
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.id = 'vitre';
+  svg.classList.add('dessus');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  const f = n => n.toFixed(1);
+  const d = [];
+  for (let i = 0; i < RAYONS; i++) d.push('M' + P[i].map(p => f(p[0]) + ' ' + f(p[1])).join('L'));
+  for (let j = 1; j < rayon.length - 1; j++)
+    d.push('M' + P.map(c => f(c[j][0]) + ' ' + f(c[j][1])).join('L'));
+  const fp = document.createElementNS(ns, 'path');
+  fp.setAttribute('class', 'fissure');
+  fp.setAttribute('d', d.join(' '));
+  svg.appendChild(fp);
+  const choc = document.createElementNS(ns, 'circle');
+  choc.setAttribute('class', 'choc');
+  choc.setAttribute('cx', cx); choc.setAttribute('cy', cy);
+  choc.setAttribute('r', Math.max(18, portee * 0.05));
+  svg.appendChild(choc);
+
+  document.body.append(nuit, zone, svg);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) fin = 0.8;
+  setTimeout(() => {
+    zone.remove(); svg.remove();
+    nuit.classList.add('fin'); b.classList.add('fin');
+    setTimeout(() => {
+      nuit.remove();
+      b.classList.remove('on', 'nuit', 'fin');
+      fete = false;
+    }, 1000);
+  }, fin * 1000 + 100);
 }
 
 // La vitre se fend depuis le centre, en un éventail de rayons coupés par des
