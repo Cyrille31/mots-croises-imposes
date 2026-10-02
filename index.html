@@ -264,6 +264,13 @@
   .c .fl i + i { border-top:1px solid #aab4c2; margin-top:1px; padding-top:1px; }
   .c u { position:absolute; top:0; left:1.5px; font-size:10px; text-decoration:none;
          font-weight:600; color:#7788a0; line-height:1.05; letter-spacing:-.02em; }
+  /* mots codés : numéros plus discrets, au choix, dans la grille à l'écran */
+  @media screen {
+    body.numclair #grille .c u { color:#a3b0c2; font-weight:500;
+         transform:scale(.8); transform-origin:top left; }
+    body.numpale #grille .c u { color:#c3ccd8; font-weight:400;
+         transform:scale(.66); transform-origin:top left; }
+  }
   #zone { display:flex; gap:8px; align-items:flex-start; justify-content:center; }
   /* la colonne des aides et des lettres peut passer de l'autre côté */
   body.dispodroite #zone { flex-direction:row-reverse; }
@@ -418,7 +425,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.10</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.11</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -451,6 +458,12 @@
           </select></label>
         <label class="lr">Anagrammes cachées
           <select id="difana"></select></label>
+        <label class="lr">Numéros (mots codés)
+          <select id="numcodes">
+            <option value="normal" selected>normaux</option>
+            <option value="clair">plus clairs, plus petits</option>
+            <option value="pale">très discrets</option>
+          </select></label>
         <label class="lr">Animation de victoire
           <select id="anim">
             <option value="papillons" selected>vitre et papillons</option>
@@ -919,6 +932,14 @@
   La conversion passe par des pixels entiers, l'écart réel est d'un dixième de
   millimètre au plus.</p>
 
+  <h4>Numéros des mots codés</h4>
+  <p>Le réglage <b>Numéros (mots codés)</b>, dans le menu ⋮, rend les petits
+  numéros des cases plus discrets : <i>plus clairs, plus petits</i>, ou
+  <i>très discrets</i>, pour laisser la place aux lettres posées. Il ne vaut que
+  pour la grille à l'écran : la grille de correspondance et la feuille
+  imprimée gardent des numéros bien lisibles. Le choix se retient d'une session
+  à l'autre.</p>
+
   <h4>Victoire</h4>
   <p>Deux animations, au choix dans les réglages. <b>Vitre et papillons</b>,
   par défaut : l'écran est photographié puis se fend depuis le centre comme une
@@ -1009,7 +1030,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.10, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.11, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -3554,6 +3575,22 @@ try {
   const da = localStorage.getItem('mc-difana');
   if (da !== null && [...$('#difana').options].some(o => o.value === da)) $('#difana').value = da;
 } catch (e) { /* stockage indisponible */ }
+// visibilité des numéros en mots codés : une classe sur le corps de page
+function appliquerNumCodes() {
+  const v = $('#numcodes').value;
+  document.body.classList.toggle('numclair', v === 'clair');
+  document.body.classList.toggle('numpale', v === 'pale');
+}
+$('#numcodes').onchange = () => {
+  appliquerNumCodes();
+  try { localStorage.setItem('mc-numcodes', $('#numcodes').value); } catch (e) { /* ignoré */ }
+};
+try {
+  const v = localStorage.getItem('mc-numcodes');
+  if (v && [...$('#numcodes').options].some(o => o.value === v)) $('#numcodes').value = v;
+} catch (e) { /* stockage indisponible */ }
+appliquerNumCodes();
+
 $('#difana').onchange = () => {
   try { localStorage.setItem('mc-difana', $('#difana').value); } catch (e) { /* ignoré */ }
   if (typeCourant() !== 'anagramot' || !derniere || !anagOrdre.length) return;
