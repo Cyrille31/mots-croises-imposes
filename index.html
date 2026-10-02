@@ -358,7 +358,9 @@
   @media (max-width:700px) { #defs { max-height:44vh; } }
   /* en mode joueur le clavier virtuel couvre le bas de l'écran : une marge vide
      après la dernière définition permet de la remonter jusqu'à la voir */
-  body.joueur #defs::after { content:''; display:block; height:30vh; }
+  /* seulement quand il y a des définitions : en mots codés le bloc est vide et
+     la marge masquerait la grille de correspondance */
+  body.joueur #defs:not(:empty)::after { content:''; display:block; height:30vh; }
   @media print { body.joueur #defs::after { display:none; } }
   #defil { position:sticky; top:0; background:var(--fond); z-index:2; padding:2px 0; }
   #defil #grille { position:static; max-width:none; margin:6px auto; }
@@ -416,7 +418,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.9</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.10</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -966,11 +968,13 @@
   définitions, et la tentative en cours d'un joueur. Le nom dit le type, la
   taille et le jour : <tt>mcr-5x7-2026-10-02.json</tt>, avec <tt>mcr</tt> pour
   les mots croisés, <tt>mfl</tt> les fléchés, <tt>mcd</tt> les codés et
-  <tt>ana</tt> les anagramots. Une fois une grille enregistrée ou ouverte,
-  <b>Enregistrer</b> réécrit son fichier sans rien demander ; une nouvelle
-  grille repart d'un nom neuf. Si un fichier de ce nom existe déjà dans le
-  dossier des grilles, l'application demande s'il faut l'écraser ; sinon elle
-  ajoute un numéro (<tt>…-2026-10-02-2.json</tt>). <b>Enregistrer sous</b>
+  <tt>ana</tt> les anagramots. Chaque nouvelle grille repart d'un nom neuf. Un fichier existant n'est jamais
+  écrasé sans votre accord : si le nom est déjà pris dans le dossier des
+  grilles, l'application demande s'il faut l'écraser ; sinon elle ajoute un
+  numéro (<tt>…-2026-10-02-2.json</tt>). Seule exception : le fichier que vous
+  venez d'enregistrer pour la même grille est mis à jour sans question. Une
+  grille ouverte depuis un fichier demande confirmation au premier
+  enregistrement. <b>Enregistrer sous</b>
   propose le premier nom libre et pose la même question. <b>Exporter / Importer le
   dessin</b> ne concerne que la silhouette.</p>
   <p>Les boutons d'enregistrement montrent où en est l'opération : jaunes
@@ -1005,7 +1009,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.9, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.10, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -2866,7 +2870,8 @@ document.addEventListener('click', ev => {
 // nom neuf, sans quoi « Enregistrer » écraserait le fichier de la précédente.
 let nomCourant = null;
 let grilleNommee = null;          // la grille à laquelle nomCourant se rapporte
-function nommerGrille(nom) { nomCourant = nom; grilleNommee = derniere; }
+let dejaEcrit = false;            // ce fichier a été écrit par nous, pour cette grille
+function nommerGrille(nom) { nomCourant = nom; grilleNommee = derniere; dejaEcrit = true; }
 const SIGLES = { croises: 'mcr', fleches: 'mfl', codes: 'mcd', anagramot: 'ana' };
 // mcr-5x7-2026-10-02.json : type, taille, jour
 function nomDeBase() {
@@ -2891,13 +2896,15 @@ function etatComplet() {
     anagrammes: anagOrdre.length ? derniersAnagrammes : null,
     anagOrdre: anagOrdre.length ? anagOrdre : null };
 }
-// « Enregistrer » réécrit sans rien demander le fichier de CETTE grille ;
-// pour une grille pas encore enregistrée, un fichier existant de même nom
-// n'est écrasé qu'avec l'accord de l'utilisateur.
+// Un fichier existant n'est jamais écrasé sans accord. Seule exception : le
+// fichier que cette session vient d'écrire pour cette même grille, que
+// « Enregistrer » met à jour en silence. Un fichier ouvert, lui, demande
+// confirmation au premier enregistrement.
 $('#sauver').onclick = ev => avecRetour(ev.currentTarget, () => {
   const meme = !!nomCourant && grilleNommee === derniere;
   if (!meme) poigneeFichier = null;
-  return enregistrerVers(meme ? nomCourant : nomDeBase(), JSON.stringify(etatComplet()), false, !meme);
+  return enregistrerVers(meme ? nomCourant : nomDeBase(), JSON.stringify(etatComplet()),
+                         false, !(meme && dejaEcrit));
 });
 $('#sauversous').onclick = ev => avecRetour(ev.currentTarget, () => {
   poigneeFichier = null;
@@ -3035,7 +3042,7 @@ async function chargerGrille(f) {
     imposesNorm = lignes('#imposes');
     dessiner(derniere);
     const actif = !!derniere;
-    nomCourant = f.name || null; grilleNommee = derniere;
+    nomCourant = f.name || null; grilleNommee = derniere; dejaEcrit = false;
     if (o.joueur) changerMode('joueur');
     afficherLegende(derniere);       // après le basculement du mode
     majBoutons();
