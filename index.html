@@ -64,6 +64,8 @@
                  gap:8px; font-size:12px; color:#54616f; margin:0; }
   .panregl select { font:12px inherit; }
   .panregl .dim { display:flex; align-items:center; gap:3px; }
+  .panregl .lr button { margin:0; padding:3px 7px; font-size:11.5px; max-width:130px;
+                        overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .panregl hr { border:0; border-top:1px solid #e2e7ee; margin:4px 0 2px; width:100%; }
   .logo { flex:none; border-radius:5px; }
   h1 { font-size:14px; margin:0; color:var(--bleu); }
@@ -335,6 +337,10 @@
           -webkit-overflow-scrolling:touch; touch-action:pan-y;
           border:1px solid #e2e7ee; border-radius:8px; padding:2px 8px; background:#fff; }
   @media (max-width:700px) { #defs { max-height:44vh; } }
+  /* en mode joueur le clavier virtuel couvre le bas de l'écran : une marge vide
+     après la dernière définition permet de la remonter jusqu'à la voir */
+  body.joueur #defs::after { content:''; display:block; height:30vh; }
+  @media print { body.joueur #defs::after { display:none; } }
   #defil { position:sticky; top:0; background:var(--fond); z-index:2; padding:2px 0; }
   #defil #grille { position:static; max-width:none; margin:6px auto; }
   @media (max-width:700px) { #defil { position:static; } }
@@ -343,15 +349,18 @@
          font-size:12px; }
   .def b { flex:none; min-width:26px; text-align:right; color:var(--bleu); }
   .def .mot { flex:none; min-width:74px; font-family:ui-monospace,monospace; letter-spacing:.05em; }
-  .def input { flex:1 1 100%; min-width:150px; padding:3px 6px; font:12px inherit;
-       border:1px solid #ccd3dc; border-radius:5px; }
+  /* la définition se replie sur autant de lignes qu'il faut : on la lit en entier
+     pendant qu'on l'écrit, au lieu de la voir fuir hors du champ */
+  .def textarea { flex:1 1 100%; min-width:150px; min-height:0; padding:3px 6px;
+       font:inherit; font-size:12px; line-height:1.35; border:1px solid #ccd3dc; border-radius:5px;
+       resize:none; overflow:hidden; }
   .def select { flex:0 1 auto; max-width:42%; font:11.5px inherit; }
   .def button { padding:2px 6px; font-size:11px; margin:0; }
   .def .lien { flex:none; font-size:11px; color:var(--bleu); text-decoration:none;
                border:1px solid #cfd8e4; border-radius:4px; padding:2px 5px; background:#fff; }
   @media print { .def .lien { display:none; } }
   @media print { .def select, .def button { display:none; }
-                 .def input { border:0; padding:0; }
+                 .def textarea { border:0; padding:0; }
                  #defs h3 { page-break-after:avoid; } }
   footer { margin:12px 0 4px; font-size:10.5px; color:#8a96a4; text-align:center; line-height:1.5; }
   @media print {
@@ -388,7 +397,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.7</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.8</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -438,6 +447,8 @@
             <option value="60000">large</option>
             <option value="999999">complet</option>
           </select></label>
+        <label class="lr">Dossier des grilles
+          <button id="dossier" class="sec" type="button">Téléchargements</button></label>
         <hr>
         <button id="majver" class="sec">Vérifier les mises à jour</button>
         <button id="installer" class="sec">Ajouter à l'écran d'accueil</button>
@@ -567,7 +578,7 @@
   <ul>
     <li><b>Mots codés : jouer</b> — demander une grille, prendre une aide,
       choisir une case, y poser la bonne lettre.</li>
-    <li><b>Mots croisés : créer, définir, jouer</b> — fabriquer la grille,
+    <li><b>Mots croisés : créer, définir, jouer</b> — fabriquer une petite grille 5×5,
       chercher toutes les définitions au Wiktionnaire, en récrire une à la
       main, passer en mode joueur et répondre à un mot.</li>
     <li><b>Dessin : une grille en cœur</b> — activer le dessin, balayer les
@@ -578,8 +589,9 @@
       puis MARIE sortir alignés dans la grille.</li>
   </ul>
   <p>Chaque démonstration fabrique sa propre grille et vous prévient avant de
-  remplacer votre travail. Chaque fenêtre reste affichée une seconde et demie
-  par ligne de texte ; la touche <i>Échap</i> ou le bouton <i>Arrêter</i>, en
+  remplacer votre travail. Si une recherche continue d'améliorer la grille, le
+  doigt clique <b>Arrêter</b> dès la première venue pour jouer celle-ci. Chaque
+  fenêtre reste affichée une seconde et demie par ligne de texte ; la touche <i>Échap</i> ou le bouton <i>Arrêter</i>, en
   bas à droite, coupent à tout moment.</p>
 
   <p><b>Le déroulement habituel.</b> Saisir les mots imposés et le thème, régler
@@ -655,7 +667,10 @@
   <p>Le réglage <b>Anagrammes cachées</b> fixe la difficulté : c'est la part des
   mots dont l'anagramme n'est pas donnée — 30 % par défaut. Ces mots-là ne se
   trouvent plus que par leurs croisements. À 0 % toutes les anagrammes sont
-  fournies, à 70 % il n'en reste qu'une sur trois.</p>
+  fournies, à 70 % il n'en reste qu'une sur trois. Ce réglage peut changer en
+  cours de partie, sans changer de grille : en montant, de nouvelles anagrammes
+  disparaissent ; en descendant, les dernières cachées réapparaissent. Le choix
+  se retient d'une session à l'autre.</p>
   <p>En mode définition, chaque champ contient l'anagramme et reste modifiable ;
   le menu des propositions offre les autres anagrammes du même mot. Si vous
   retouchez une lettre en mode édition, les anagrammes des mots qui traversent
@@ -794,7 +809,10 @@
   la saisie avance toute seule vers la case suivante.</p>
   <p>Les définitions sont présentées comme sur la feuille « à remplir » : deux
   blocs continus, <i>Horizontalement</i> et <i>Verticalement</i>, sans les mots
-  de la solution ni les liens de recherche. Chaque définition reste cliquable.</p>
+  de la solution ni les liens de recherche. Chaque définition reste cliquable.
+  Un espace vide prolonge le bloc sous la dernière définition : sur téléphone,
+  quand le clavier couvre le bas de l'écran, on fait remonter les dernières
+  définitions jusqu'à les voir.</p>
   <p>Un second clic sur la même définition, ou un clic n'importe où hors de la
   grille et du bloc des définitions, éteint l'éclairage.</p>
   <p>Un clic dans une case met en évidence ses deux définitions, l'horizontale et
@@ -846,6 +864,9 @@
   dégrossir, mais « Habitation » n'est pas une bonne définition de MAISON. Les
   mots étant stockés sans accents, plusieurs entrées voisines peuvent apparaître
   (ÉTÉ, ÊTES…) ; le titre de l'article est alors indiqué entre crochets.</p>
+  <p>Le champ d'une définition s'agrandit sur autant de lignes que son texte en
+  demande : une longue définition se lit en entier pendant qu'on l'écrit. La
+  touche Entrée valide le champ au lieu d'aller à la ligne.</p>
   <p>Les définitions sont mises en forme automatiquement — minuscules, seule la
   première lettre en capitale — et effacées dès qu'une nouvelle grille est
   produite, puisqu'elles ne correspondent plus.</p>
@@ -902,12 +923,22 @@
   défilement, comme dans un tableur. Les cases ne descendent pas sous 20 pixels
   en mots codés — il faut pouvoir lire le petit numéro — ni sous 14 ailleurs.</p>
 
-  <p>Sur téléphone, le fichier est déposé dans le dossier <b>Téléchargements</b>.
-  C'est là qu'il faut aller le rechercher avec « Ouvrir » ; le sélecteur Android
-  propose aussi l'appareil photo et d'autres sources, choisissez « Fichiers ».</p>
-  <p>Sur Chrome et Edge de bureau, <b>Enregistrer sous</b> ouvre la véritable
-  boîte de dialogue du système : vous choisissez le dossier et le nom, et les
-  enregistrements suivants réécrivent ce fichier sans rien redemander. Ailleurs —
+  <p><b>Dossier des grilles</b>, dans les réglages ⋮. Quand le navigateur sait
+  ouvrir un dossier (Chrome et Edge de bureau notamment), les grilles
+  s'enregistrent dans un dossier choisi une fois pour toutes — par défaut
+  <b>Documents/mots croisés</b> : le choix s'ouvre dans Documents au premier
+  enregistrement, et si l'on retient Documents lui-même, le sous-dossier
+  « mots croisés » y est créé. « Ouvrir » démarre alors dans ce dossier. Le
+  navigateur peut redemander l'autorisation d'y écrire à la session suivante.</p>
+  <p>Les navigateurs qui ne savent pas ouvrir un dossier — Chrome pour Android à
+  ce jour — ne laissent une page web écrire que dans <b>Téléchargements</b> ; le
+  réglage l'indique alors. C'est là qu'il faut aller rechercher la grille avec
+  « Ouvrir » ; le sélecteur Android propose aussi l'appareil photo et d'autres
+  sources, choisissez « Fichiers ».</p>
+  <p>Avec un dossier des grilles, <b>Enregistrer sous</b> demande seulement le
+  nom du fichier. Si le choix du dossier est refusé, <b>Enregistrer sous</b>
+  ouvre la boîte de dialogue du système : vous choisissez le dossier et le nom,
+  et les enregistrements suivants réécrivent ce fichier sans rien redemander. Ailleurs —
   Android notamment — le nom vous est demandé puis le fichier est téléchargé, le
   navigateur pouvant alors signaler qu'un fichier de même nom existe déjà.</p>
   <p><b>Enregistrer</b> conserve tout — grille, dessin, mots, réglages,
@@ -944,7 +975,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.7, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.8, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -1645,7 +1676,7 @@ function clicDefinition(i) {
   const l = document.querySelector(`[data-cle="${choisi.cle}"]`);
   if (l) {
     l.scrollIntoView({ block: 'center' });
-    const champ = l.querySelector('input');
+    const champ = l.querySelector('textarea');
     if (champ) champ.focus();
   }
   $('#etat').textContent = (sensPrec === 'H' ? 'Horizontal' : 'Vertical') + ' — ligne '
@@ -1947,6 +1978,7 @@ function pousserGrille(g, dens, themes) {
   grilles.push({ g: Int8Array.from(g), d: dens, th: (themes || []).slice(),
                  dessin: etat ? Uint8Array.from(etat) : null,
                  code: codeNum ? new Map(codeNum) : null,
+                 ana: anagOrdre.length ? derniersAnagrammes : null, ordre: anagOrdre.slice(),
                  nl, nc, type: typeCourant() });
   if (grilles.length > MAXGR) grilles.shift();
   iGrille = grilles.length - 1;
@@ -1973,6 +2005,8 @@ function allerGrille(k) {
   defsChoisies.clear(); propositions.clear();
   saisies.clear(); props.clear(); revelees.clear(); faux.clear();
   numSelect = -1; caseActive = -1; cleActive = null;
+  derniersAnagrammes = e.ana || null;
+  appliquerAnagrammes(e.type === 'anagramot' ? derniere : null, e.ana, e.ordre);
   indexerMots(derniere);
   dessiner(derniere);
   afficherLegende(derniere);
@@ -2038,6 +2072,7 @@ function lancer(affiner, mode) {
       indexerMots(derniere);
       if (modeJoueur) defsChoisies.clear();
       if (typeCourant() === 'anagramot') appliquerAnagrammes(derniere, derniersAnagrammes);
+      else appliquerAnagrammes(null);
       dessiner(derniere);
       afficherLegende(derniere);
       majDecor();
@@ -2045,7 +2080,9 @@ function lancer(affiner, mode) {
       if (m.provisoire && explorePousse && iGrille >= 0) {
         grilles[iGrille] = { g: Int8Array.from(derniere), d: m.densite,
           th: derniersThemes.slice(), dessin: etat ? Uint8Array.from(etat) : null,
-          code: codeNum ? new Map(codeNum) : null, nl, nc, type: typeCourant() };
+          code: codeNum ? new Map(codeNum) : null,
+          ana: anagOrdre.length ? derniersAnagrammes : null, ordre: anagOrdre.slice(),
+          nl, nc, type: typeCourant() };
       } else {
         pousserGrille(derniere, m.densite, derniersThemes);
         if (m.provisoire) explorePousse = true;
@@ -2287,11 +2324,14 @@ function remplirSelect(sel, props) {
 // En anagramots, la « définition » d'un mot est une de ses anagrammes. Le
 // moteur les a calculées ; on les range comme des définitions ordinaires, et
 // les autres anagrammes possibles nourrissent la liste des propositions.
-function appliquerAnagrammes(g, ana) {
-  if (!g || !ana) return 0;
-  defsChoisies.clear(); propositions.clear();
+let anagFabriquees = 0, anagCachees = 0;
+const anagToutes = new Map();     // cle -> { texte, autres } : toutes, même cachées
+let anagOrdre = [];               // ordre tiré une fois par grille : les premières se cachent
+
+function indexerAnagrammes(g, ana, ordre) {
+  anagToutes.clear(); anagOrdre = [];
+  if (!g || !ana) return;
   let fabriquees = 0;
-  const tous = [];
   const par = motsParLigne(g);
   for (const sens of ['H', 'V'])
     for (const e of par[sens])
@@ -2299,27 +2339,47 @@ function appliquerAnagrammes(g, ana) {
         const o = ana[mot];
         if (!o) return;
         const cle = sens + e.n + '.' + k;
-        defsChoisies.set(cle, o.a + (o.faux ? ' *' : ''));
-        tous.push(cle); if (o.faux) fabriquees++;
-        if (o.autres && o.autres.length > 1)
-          propositions.set(cle, o.autres.map(t => ({ texte: t, source: 'anagramme' })));
+        anagToutes.set(cle, { texte: o.a + (o.faux ? ' *' : ''),
+          autres: o.autres && o.autres.length > 1
+            ? o.autres.map(t => ({ texte: t, source: 'anagramme' })) : null });
+        if (o.faux) fabriquees++;
       });
   anagFabriquees = fabriquees;
-  // La difficulté se règle en cachant une part des anagrammes : ces mots-là
-  // ne se devinent plus que par leurs croisements.
-  const part = +$('#difana').value || 0;
-  anagCachees = 0;
-  if (part > 0 && tous.length) {
-    for (let i = tous.length - 1; i > 0; i--) {
+  if (ordre && ordre.length === anagToutes.size && ordre.every(c => anagToutes.has(c))) {
+    anagOrdre = ordre.slice();
+  } else {
+    anagOrdre = [...anagToutes.keys()];
+    for (let i = anagOrdre.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [tous[i], tous[j]] = [tous[j], tous[i]];
+      [anagOrdre[i], anagOrdre[j]] = [anagOrdre[j], anagOrdre[i]];
     }
-    const k = Math.min(tous.length - 1, Math.round(part * tous.length));
-    for (let i = 0; i < k; i++) { defsChoisies.delete(tous[i]); propositions.delete(tous[i]); anagCachees++; }
   }
-  return tous.length;
 }
-let anagFabriquees = 0, anagCachees = 0;
+
+// La difficulté se règle en cachant une part des anagrammes : ces mots-là ne
+// se devinent plus que par leurs croisements. L'ordre étant fixé pour la
+// grille, monter la difficulté cache de nouvelles anagrammes et la baisser
+// fait réapparaître les dernières cachées, sans toucher aux autres.
+function cacherAnagrammes(neuf) {
+  const part = +$('#difana').value || 0;
+  const n = anagOrdre.length;
+  const k = n ? Math.min(n - 1, Math.round(part * n)) : 0;
+  anagCachees = 0;
+  anagOrdre.forEach((cle, i) => {
+    const a = anagToutes.get(cle);
+    if (i < k) { defsChoisies.delete(cle); propositions.delete(cle); anagCachees++; return; }
+    if (neuf || !defsChoisies.has(cle)) defsChoisies.set(cle, a.texte);
+    if (a.autres) propositions.set(cle, a.autres);
+  });
+}
+
+function appliquerAnagrammes(g, ana, ordre) {
+  if (!g || !ana) { anagToutes.clear(); anagOrdre = []; return 0; }
+  defsChoisies.clear(); propositions.clear();
+  indexerAnagrammes(g, ana, ordre);
+  cacherAnagrammes(true);
+  return anagOrdre.length;
+}
 
 function afficherDefs(g) {
   if (modeJoueur) return afficherDefsJoueur(g);
@@ -2336,21 +2396,30 @@ function afficherDefs(g) {
         const d = document.createElement('div');
         d.className = 'def';
         d.dataset.cle = cle;
-        d.onclick = ev => { if (ev.target.tagName !== 'INPUT') eclairerMot(cle); };
+        d.onclick = ev => { if (ev.target.tagName !== 'TEXTAREA') eclairerMot(cle); };
         const b0 = document.createElement('b');
         b0.textContent = k === 0 ? e.n + '.' : '';
         const sp = document.createElement('span');
         sp.className = 'mot'; sp.textContent = mot;
         d.append(b0, sp);
-        const inp = document.createElement('input');
+        const inp = document.createElement('textarea');
+        inp.rows = 1;
         inp.value = defsChoisies.get(cle) || '';
         inp.placeholder = 'définition';
         if (modeJoueur) inp.readOnly = true;
-        inp.oninput = () => { defsChoisies.set(cle, inp.value); majDecor(); };
+        // une définition tient sur une ligne logique : Entrée valide au lieu
+        // d'aller à la ligne, et un retour collé devient une espace
+        inp.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); inp.blur(); } };
+        inp.oninput = () => {
+          if (/\n/.test(inp.value)) inp.value = inp.value.replace(/\s*\n\s*/g, ' ');
+          ajuster(inp);
+          defsChoisies.set(cle, inp.value); majDecor();
+        };
         inp.onfocus = () => d.scrollIntoView({ block: 'nearest' });
         inp.onblur = () => {
           // une anagramme est un mot en capitales : on ne la met pas en phrase
           if (typeCourant() !== 'anagramot') inp.value = formater(inp.value);
+          ajuster(inp);
           defsChoisies.set(cle, inp.value);
         };
         const sel = document.createElement('select');
@@ -2359,6 +2428,7 @@ function afficherDefs(g) {
         sel.onchange = () => {
           if (sel.value) {
             inp.value = anag ? sel.value : formater(sel.value);
+            ajuster(inp);
             defsChoisies.set(cle, inp.value); majDecor();
           }
         };
@@ -2385,7 +2455,7 @@ function afficherDefs(g) {
               const p = await navigator.permissions.query({ name: 'clipboard-read' });
               if (p.state === 'granted') {
                 const txt = (await navigator.clipboard.readText()).trim();
-                if (txt) { inp.value = formater(txt); defsChoisies.set(cle, inp.value); inp.focus(); return; }
+                if (txt) { inp.value = formater(txt); ajuster(inp); defsChoisies.set(cle, inp.value); inp.focus(); return; }
               }
             }
           } catch (err) { /* rien : on se rabat sur le collage manuel */ }
@@ -2406,11 +2476,116 @@ function afficherDefs(g) {
         if (anag) { bc.style.display = 'none'; b.style.display = 'none'; }
         d.append(bc, b, sel, inp);
         zone.appendChild(d);
+        ajuster(inp);
       });
     }
   }
 }
 
+// hauteur d'une zone de définition : juste ce qu'il faut pour tout son texte
+function ajuster(t) {
+  t.style.height = 'auto';
+  if (t.scrollHeight) t.style.height = (t.scrollHeight + 2) + 'px';   // 0 : zone masquée
+}
+// la largeur change avec l'écran : les lignes se replient autrement
+window.addEventListener('resize', () =>
+  document.querySelectorAll('#defs .def textarea').forEach(ajuster));
+
+
+// ---- dossier des grilles -----------------------------------------------------
+// Là où le navigateur sait ouvrir un dossier (Chrome, Edge… sur ordinateur, et
+// les navigateurs Android qui l'ont adopté), les grilles s'enregistrent dans un
+// dossier choisi une fois pour toutes, « Documents/mots croisés » par défaut.
+// Ailleurs, une page web ne peut écrire que dans Téléchargements.
+const SOUS_DOSSIER = 'mots croisés';
+let dossier = null;                         // handle du dossier retenu
+const dossierPossible = !!window.showDirectoryPicker;
+
+// le handle se conserve d'une session à l'autre dans IndexedDB
+function baseReglages() {
+  return new Promise((ok, ko) => {
+    const r = indexedDB.open('mc-cgexcel', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('reglages');
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => ko(r.error);
+  });
+}
+async function lireReglage(cle) {
+  const db = await baseReglages();
+  return new Promise(ok => {
+    const r = db.transaction('reglages').objectStore('reglages').get(cle);
+    r.onsuccess = () => ok(r.result); r.onerror = () => ok(undefined);
+  });
+}
+async function ecrireReglage(cle, v) {
+  const db = await baseReglages();
+  return new Promise(ok => {
+    const t = db.transaction('reglages', 'readwrite');
+    t.objectStore('reglages').put(v, cle);
+    t.oncomplete = () => ok(true); t.onerror = () => ok(false);
+  });
+}
+function majBoutonDossier() {
+  const b = $('#dossier');
+  if (!dossierPossible) {
+    b.textContent = 'Téléchargements';
+    b.title = 'Ce navigateur n\u2019enregistre que dans le dossier Téléchargements';
+  } else if (dossier) {
+    b.textContent = '\u2026/' + dossier.name;
+    b.title = 'Les grilles s\u2019enregistrent dans « ' + dossier.name + ' ». Cliquer pour changer.';
+  } else {
+    b.textContent = 'Documents/' + SOUS_DOSSIER;
+    b.title = 'Dossier proposé au premier enregistrement. Cliquer pour le choisir.';
+  }
+}
+// Le choix part de Documents ; si l'on retient Documents lui-même, on y crée
+// (ou retrouve) le sous-dossier « mots croisés ».
+async function choisirDossier() {
+  if (!dossierPossible) {
+    $('#etat').textContent = 'Ce navigateur ne permet pas de choisir un dossier : '
+      + 'les grilles vont dans Téléchargements.';
+    return false;
+  }
+  try {
+    let d = await window.showDirectoryPicker({ id: 'mc-grilles', mode: 'readwrite',
+      startIn: dossier || 'documents' });
+    if (/^(documents?|mes documents)$/i.test(d.name))
+      d = await d.getDirectoryHandle(SOUS_DOSSIER, { create: true });
+    dossier = d;
+    try { await ecrireReglage('dossier', d); } catch (e) { /* conservé pour la session */ }
+    majBoutonDossier();
+    $('#etat').textContent = 'Les grilles s\u2019enregistreront dans « ' + d.name + ' ».';
+    return true;
+  } catch (e) {
+    if (!(e && e.name === 'AbortError')) $('#etat').textContent = 'Dossier inaccessible : ' + e.message;
+    return false;
+  }
+}
+$('#dossier').onclick = ev => { ev.preventDefault(); choisirDossier(); };
+(async () => {
+  if (dossierPossible) try { dossier = (await lireReglage('dossier')) || null; } catch (e) { /* rien */ }
+  majBoutonDossier();
+})();
+
+// Écrit le fichier dans le dossier des grilles. Renvoie false quand ce n'est
+// pas possible, pour que l'appelant se rabatte sur l'enregistrement habituel.
+async function ecrireDansDossier(nom, texte) {
+  if (!dossierPossible) return false;
+  if (!dossier && !await choisirDossier()) return false;
+  try {
+    if (await dossier.queryPermission({ mode: 'readwrite' }) !== 'granted'
+        && await dossier.requestPermission({ mode: 'readwrite' }) !== 'granted') return false;
+    const f = await dossier.getFileHandle(nom, { create: true });
+    const w = await f.createWritable();
+    await w.write(texte); await w.close();
+    nomCourant = nom;
+    $('#etat').textContent = 'Enregistré : ' + dossier.name + '/' + nom;
+    return true;
+  } catch (e) {
+    $('#etat').textContent = 'Écriture impossible dans « ' + dossier.name + ' » : ' + e.message;
+    return false;
+  }
+}
 
 // Sur Android, un lien de téléchargement détaché du document est ignoré :
 // il faut l'insérer, cliquer, puis le retirer. On propose aussi le partage
@@ -2418,6 +2593,15 @@ function afficherDefs(g) {
 let poigneeFichier = null;    // handle du fichier choisi (navigateurs récents)
 
 async function enregistrerVers(nom, texte, demanderNom) {
+  if (dossierPossible) {
+    if (demanderNom) {
+      const saisi = prompt('Nom du fichier', nom);
+      if (saisi === null) { $('#etat').textContent = 'Enregistrement annulé.'; return; }
+      nom = saisi.trim() || nom;
+      if (!/\.json$/i.test(nom)) nom += '.json';
+    }
+    if (await ecrireDansDossier(nom, texte)) return;
+  }
   // Chrome/Edge de bureau : vraie boîte « Enregistrer sous », nom modifiable,
   // et réécriture silencieuse ensuite.
   if (window.showSaveFilePicker) {
@@ -2626,7 +2810,9 @@ function etatComplet() {
     dessin: etat ? Array.from(etat) : [],
     imposes: $('#imposes').value, theme: $('#theme').value,
     densite: $('#densite').value, niveau: $('#niveau').value,
-    definitions: Object.fromEntries(defsChoisies) };
+    definitions: Object.fromEntries(defsChoisies),
+    anagrammes: anagOrdre.length ? derniersAnagrammes : null,
+    anagOrdre: anagOrdre.length ? anagOrdre : null };
 }
 $('#sauver').onclick = () => {
   if (!nomCourant) nomCourant = nomDuJour(false);
@@ -2636,7 +2822,19 @@ $('#sauversous').onclick = () => {
   poigneeFichier = null;
   enregistrerVers(nomDuJour(true), JSON.stringify(etatComplet()), true);
 };
-$('#ouvrir').onclick = () => $('#fgrille').click();
+$('#ouvrir').onclick = async () => {
+  // le sélecteur s'ouvre directement dans le dossier des grilles
+  if (dossier && window.showOpenFilePicker) {
+    try {
+      const [h] = await window.showOpenFilePicker({ startIn: dossier,
+        types: [{ description: 'Grille CGExcel', accept: { 'application/json': ['.json'] } }] });
+      return chargerGrille(await h.getFile());
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+    }
+  }
+  $('#fgrille').click();
+};
 
 // ---- listes de mots : imposés et thème, enregistrées à part ----------------
 const listes = {
@@ -2716,7 +2914,11 @@ $('#thsauver').onclick = () => enregistrerListe('theme', false);
 $('#thsauversous').onclick = () => enregistrerListe('theme', true);
 $('#thouvrir').onclick = () => ouvrirListe('theme');
 $('#fgrille').onchange = async ev => {
-  const f = ev.target.files[0]; if (!f) return;
+  const f = ev.target.files[0];
+  ev.target.value = '';
+  if (f) await chargerGrille(f);
+};
+async function chargerGrille(f) {
   try {
     const o = JSON.parse(await f.text());
     if (!o || !o.nl || !o.nc) throw new Error('fichier illisible');
@@ -2742,6 +2944,11 @@ $('#fgrille').onchange = async ev => {
     props.clear();
     for (const [k, v] of Object.entries(o.props || {})) props.set(k, v);
     if (derniere) indexerMots(derniere);
+    // les définitions rechargées font foi ; les anagrammes conservées
+    // permettent seulement de changer la difficulté ensuite
+    derniersAnagrammes = o.anagrammes || null;
+    if (typeCourant() === 'anagramot') indexerAnagrammes(derniere, o.anagrammes, o.anagOrdre);
+    else indexerAnagrammes(null);
     derniereDensite = -1;
     imposesNorm = lignes('#imposes');
     dessiner(derniere);
@@ -2758,8 +2965,7 @@ $('#fgrille').onchange = async ev => {
     majBoutons();
     $('#etat').textContent = `Grille rechargée (${nl}×${nc}).`;
   } catch (e) { $('#etat').textContent = 'Ouverture impossible : ' + e.message; }
-  ev.target.value = '';
-};
+}
 
 // ---------- exploration longue ----------
 
@@ -3198,7 +3404,17 @@ try {
   if (d) { $('#dispo').value = d; document.body.classList.toggle('dispodroite', d === 'droite'); }
   const a = localStorage.getItem('mc-anim');
   if (a) $('#anim').value = a;
+  const da = localStorage.getItem('mc-difana');
+  if (da !== null && [...$('#difana').options].some(o => o.value === da)) $('#difana').value = da;
 } catch (e) { /* stockage indisponible */ }
+$('#difana').onchange = () => {
+  try { localStorage.setItem('mc-difana', $('#difana').value); } catch (e) { /* ignoré */ }
+  if (typeCourant() !== 'anagramot' || !derniere || !anagOrdre.length) return;
+  cacherAnagrammes(false);
+  if (modeJoueur || modeDef) afficherDefs(derniere);
+  majDecor();
+  $('#etat').textContent = `Anagrammes : ${anagCachees} cachée(s) sur ${anagOrdre.length}.`;
+};
 $('#anim').onchange = () => {
   try { localStorage.setItem('mc-anim', $('#anim').value); } catch (e) { /* ignoré */ }
   $('#etat').textContent = $('#anim').value === 'papillons'
@@ -3321,6 +3537,24 @@ async function tutoAttendreGrille(avant, n) {
   const limite = Date.now() + 90000;
   while (!tutoStop && Date.now() < limite) {
     if (!recherche && derniere && derniere !== avant) { await dodo(500); return true; }
+    // Quand une grille a déjà été jouée, « Nouvelle grille » lance une
+    // exploration qui cherche sans fin une grille plus aérée : dès que la
+    // première est là, on l'arrête pour jouer celle-ci.
+    if (recherche && exploration && derniere && derniere !== avant) {
+      await dodo(400);
+      if (tutoStop) return false;
+      tutoDire(n, 'La grille est là. La recherche en chercherait une plus aérée '
+        + 'sans fin : on l\u2019arrête pour jouer celle-ci.');
+      await tutoViser($('#go'));
+      if (tutoStop) return false;
+      await tutoTaper($('#go'), false);
+      // la recherche a pu finir d'elle-même entre-temps : ne pas en relancer une
+      if (!tutoStop && recherche) $('#go').click();
+      const t0 = Date.now();
+      while (!tutoStop && recherche && Date.now() - t0 < 10000) await dodo(150);
+      await dodo(400);
+      return !tutoStop;
+    }
     // une recherche qui s'arrête sans rien produire : inutile d'attendre la fin
     if (!recherche && Date.now() - limite > -88000 && derniere === avant) {
       tutoRate = 'le moteur n\u2019a pas trouvé de grille'; return false;
@@ -3386,7 +3620,7 @@ async function tutoCodes() {
 // ---------------------------------------------------------------------------
 async function tutoCroises() {
   tutoTotal = 7;
-  tutoPreparer('croises', 'generation', 7, 7);
+  tutoPreparer('croises', 'generation', 5, 5);    // petite grille : démonstration courte
   const avant = derniere;
   if (!await tutoEtape(1, 'On fabrique d’abord une grille de mots croisés.', $('#go'))) return;
   if (!await tutoAttendreGrille(avant, 2)) return;
@@ -3395,16 +3629,20 @@ async function tutoCroises() {
       + 'les définitions de la grille.', '#mode', 'definition')) return;
   await dodo(300);
 
-  if (!await tutoEtape(4, 'Ce bouton va chercher une définition pour chaque mot, '
-      + 'dans le Wiktionnaire. Patience, il interroge un mot après l’autre.',
-      $('#toutchercher'))) return;
+  // pas de temps de lecture ici : le texte reste affiché pendant la recherche
+  tutoDire(4, 'Ce bouton va chercher une définition pour chaque mot, '
+    + 'dans le Wiktionnaire. Patience, il interroge un mot après l’autre.');
+  await tutoViser($('#toutchercher'));
+  if (tutoStop) return;
+  await tutoTaper($('#toutchercher'));
+  if (tutoStop) return;
   // la recherche est un aller-retour réseau : on attend qu'elle rende la main
   const t0 = Date.now();
   while (!tutoStop && Date.now() - t0 < 60000 && $('#toutchercher').disabled) await dodo(300);
   await dodo(600);
   if (tutoStop) return;
 
-  const champ = document.querySelector('#defs .def input');
+  const champ = document.querySelector('#defs .def textarea');
   if (champ) {
     if (!await tutoSaisir(5, 'Une définition ne vous plaît pas ? Elle se récrit à la main, '
         + 'tout simplement.', champ, 'Ma définition à moi')) return;
