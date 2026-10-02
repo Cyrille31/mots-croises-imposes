@@ -212,18 +212,38 @@
 
   /* variante photographique : chaque éclat porte un morceau de l'écran, sur fond noir */
   #nuit { position:fixed; inset:0; z-index:100; background:#000; pointer-events:none;
-          transition:opacity 1s ease; }
+          transition:opacity 2s ease; }
   #nuit.fin { opacity:0; }
   #eclats { position:fixed; inset:0; z-index:102; pointer-events:none; overflow:hidden; }
   #eclats .eclat { position:absolute; will-change:transform;
        animation:envol var(--dur) cubic-bezier(.33,0,.5,1) var(--del) forwards; }
-  #eclats canvas { display:block; width:100%; height:100%;
+  #eclats .aile { position:relative; width:100%; height:100%;
        animation:battement var(--bat) ease-in-out var(--del) infinite; }
+  #eclats canvas { display:block; width:100%; height:100%; }
+  /* en prenant leur envol, les éclats se parent de reflets irisés : une
+     teinte qui colore la page comme une aile, et un éclat de lumière qui
+     glisse d'un bord à l'autre au rythme du vol */
+  #eclats .reflet { position:absolute; inset:0; opacity:0; mix-blend-mode:multiply;
+       background:linear-gradient(120deg, hsl(var(--h),95%,62%) 0%,
+         hsl(calc(var(--h) + 50),95%,66%) 35%, hsl(calc(var(--h) + 120),90%,64%) 65%,
+         hsl(calc(var(--h) + 200),95%,62%) 100%);
+       background-size:220% 220%;
+       animation:irise var(--dur) ease-in var(--del) forwards,
+                 chatoie calc(var(--bat) * 5) linear var(--del) infinite alternate; }
+  #eclats .lustre { position:absolute; inset:0; opacity:0; mix-blend-mode:screen;
+       background:linear-gradient(105deg, transparent 30%, rgba(255,255,255,.75) 48%,
+         hsla(calc(var(--h) + 90),100%,80%,.6) 55%, transparent 70%);
+       background-size:300% 100%;
+       animation:irise var(--dur) ease-in var(--del) forwards,
+                 lustre calc(var(--bat) * 4) ease-in-out var(--del) infinite; }
+  @keyframes irise { 0%, 14% { opacity:0; } 45% { opacity:.92; } 100% { opacity:.92; } }
+  @keyframes chatoie { from { background-position:0% 50%; } to { background-position:100% 50%; } }
+  @keyframes lustre { 0% { background-position:110% 0; } 100% { background-position:-10% 0; } }
   #vitre.dessus { z-index:103; }
   @media (prefers-reduced-motion:reduce) {
-    #eclats .eclat, #eclats canvas { animation-duration:.01s; }
+    #eclats .eclat, #eclats .aile, #eclats .reflet, #eclats .lustre { animation-duration:.01s; }
   }
-  #bravo.nuit { background:transparent; color:#fff; z-index:101; transition:opacity 1s ease; }
+  #bravo.nuit { background:transparent; color:#fff; z-index:101; transition:opacity 2s ease; }
   #bravo.nuit.fin { opacity:0; }
 
   #bravo { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
@@ -425,7 +445,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.11</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.12</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -460,8 +480,8 @@
           <select id="difana"></select></label>
         <label class="lr">Numéros (mots codés)
           <select id="numcodes">
-            <option value="normal" selected>normaux</option>
-            <option value="clair">plus clairs, plus petits</option>
+            <option value="normal">normaux</option>
+            <option value="clair" selected>plus clairs, plus petits</option>
             <option value="pale">très discrets</option>
           </select></label>
         <label class="lr">Animation de victoire
@@ -839,6 +859,10 @@
   puis va chercher automatiquement les définitions de tous les mots auprès du
   Wiktionnaire. Vous pouvez donc jouer sans passer par le mode auteur — le temps
   d'une recherche par mot, dont la progression s'affiche.</p>
+  <p>Pendant que vous regardez la première grille, la recherche continue d'en
+  chercher une plus aérée. Dès que vous touchez la grille, une aide, une lettre
+  ou une définition, elle s'arrête : la grille que vous examinez ne sera plus
+  remplacée.</p>
   <p>Ouvrez le fichier reçu et activez le mode joueur : la grille apparaît vide,
   avec les définitions en dessous, et chaque case blanche devient saisissable —
   la saisie avance toute seule vers la case suivante.</p>
@@ -934,8 +958,9 @@
 
   <h4>Numéros des mots codés</h4>
   <p>Le réglage <b>Numéros (mots codés)</b>, dans le menu ⋮, rend les petits
-  numéros des cases plus discrets : <i>plus clairs, plus petits</i>, ou
-  <i>très discrets</i>, pour laisser la place aux lettres posées. Il ne vaut que
+  numéros des cases plus ou moins discrets : <i>normaux</i>, <i>plus clairs,
+  plus petits</i> (le choix par défaut), ou <i>très discrets</i>, pour laisser
+  la place aux lettres posées. Il ne vaut que
   pour la grille à l'écran : la grille de correspondance et la feuille
   imprimée gardent des numéros bien lisibles. Le choix se retient d'une session
   à l'autre.</p>
@@ -945,8 +970,8 @@
   par défaut : l'écran est photographié puis se fend depuis le centre comme une
   vitre qui reçoit un choc, en un éventail de rayons coupés par des anneaux ;
   chaque éclat emporte son morceau de page et s'envole en battant des ailes,
-  laissant derrière lui un fond noir, puis l'écran redevient normal en une
-  seconde. <b>Confettis</b>
+  se parant en vol de reflets irisés comme des ailes de papillon, et laissant
+  derrière lui un fond noir ; puis l'écran redevient normal en deux secondes. <b>Confettis</b>
   reprend l'ancienne fête, qui tombe puis remonte en tourbillon. Ce choix se
   retient d'une session à l'autre, comme la disposition.</p>
 
@@ -1030,7 +1055,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.11, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.12, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -1773,7 +1798,9 @@ function chargerCapture() {
 
 // Photographie de l'écran : la vitre se fend, chaque éclat emporte son morceau
 // de page et s'envole en battant des ailes ; derrière, tout est noir, puis la
-// page revient en une seconde. Sans capture possible, on retombe sur la vitre.
+// page revient en deux secondes. Sans capture possible, on retombe sur la vitre.
+// teintes des ailes : du rouge au violet en passant par l'or et le turquoise
+const TEINTES = [8, 28, 44, 150, 190, 205, 265, 320, 345];
 let fete = false;
 async function feterEclats() {
   if (fete) return;
@@ -1866,7 +1893,19 @@ async function feterEclats() {
       e.style.setProperty('--dur', dur.toFixed(2) + 's');
       e.style.setProperty('--del', del.toFixed(2) + 's');
       e.style.setProperty('--bat', (0.26 + Math.random() * 0.22).toFixed(2) + 's');
-      e.appendChild(cv);
+      e.style.setProperty('--h', TEINTES[Math.floor(Math.random() * TEINTES.length)]);
+      // les reflets épousent la forme de l'éclat
+      const forme = 'polygon(' + qq.map(([x, y]) =>
+        (x - x0).toFixed(1) + 'px ' + (y - y0).toFixed(1) + 'px').join(',') + ')';
+      const aile = document.createElement('div');
+      aile.className = 'aile';
+      const reflet = document.createElement('div');
+      reflet.className = 'reflet';
+      const lustre = document.createElement('div');
+      lustre.className = 'lustre';
+      reflet.style.clipPath = lustre.style.clipPath = forme;
+      aile.append(cv, reflet, lustre);
+      e.appendChild(aile);
       zone.appendChild(e);
     }
 
@@ -1901,7 +1940,7 @@ async function feterEclats() {
       nuit.remove();
       b.classList.remove('on', 'nuit', 'fin');
       fete = false;
-    }, 1000);
+    }, 2000);
   }, fin * 1000 + 100);
 }
 
@@ -2079,7 +2118,7 @@ function lancer(affiner, mode) {
   const affinage = affiner;
   imposesNorm = lignes('#imposes');
   recherche = true; exploration = (mode === 'explorer');
-  explorePousse = false;
+  explorePousse = false; arretDemande = false;
   majBoutons();
   $('#etat').textContent = mode === 'explorer' ? 'Exploration…'
     : 'Recherche…';
@@ -2103,7 +2142,7 @@ function lancer(affiner, mode) {
       // on lui dit seulement où il en est et comment s'arrêter
       $('#etat').textContent = (modeJoueur && exploration && derniere)
         ? `Grille à ${(100 * derniereDensite).toFixed(1)} % de cases noires. `
-          + 'La recherche en cherche une plus aérée — cliquez Arrêter pour jouer celle-ci.'
+          + 'La recherche en cherche une plus aérée — touchez la grille ou cliquez Arrêter pour jouer celle-ci.'
         : m.texte;
       return;
     }
@@ -2115,6 +2154,9 @@ function lancer(affiner, mode) {
         chercherToutes(true).then(() => afficherDefs(derniere));
       return;
     }
+    // Une fois l'arrêt demandé, une grille d'exploration encore en route ne
+    // doit pas remplacer celle que le joueur a sous les yeux.
+    if (m.type === 'grille' && m.provisoire && arretDemande) return;
     if (!m.provisoire) { recherche = false; exploration = false; majBoutons(); }
     if (m.type === 'grille') {
       derniere = Int8Array.from(m.grille);
@@ -2158,7 +2200,7 @@ function lancer(affiner, mode) {
       if (modeJoueur) {
         $('#etat').textContent = `Grille ${nl}×${nc} `
           + `à ${(100 * m.densite).toFixed(1)} % de cases noires`
-          + (m.provisoire ? ' — la recherche continue, cliquez Arrêter pour jouer celle-ci.'
+          + (m.provisoire ? ' — la recherche continue ; touchez la grille ou cliquez Arrêter pour jouer celle-ci.'
                           : ' — à vous de jouer.');
       } else {
         const cx = m.croisements || [];
@@ -2200,12 +2242,27 @@ function lancer(affiner, mode) {
   });
 }
 
+let arretDemande = false;
 function arreterRecherche() {
   if (worker) worker.postMessage({ mode: 'stop' });
+  arretDemande = true;
   exploration = false;
   $('#etat').textContent = 'Arrêt demandé…';
   majBoutons();
 }
+// En mode joueur, dès que le joueur touche la grille, les aides, les lettres
+// ou les définitions, il a choisi sa grille : la recherche s'arrête aussitôt,
+// sans quoi une grille plus aérée viendrait remplacer celle qu'il examine.
+function jouerCelleCi(ev) {
+  if (!modeJoueur || !recherche || !exploration || !derniere || tutoEnCours) return;
+  const t = ev.target;
+  if (!(t instanceof Element)) return;
+  if (!t.closest('#grille, #colgauche, #legende, #defs')) return;
+  arreterRecherche();
+  $('#etat').textContent = 'Recherche arrêtée : vous jouez cette grille.';
+}
+document.addEventListener('pointerdown', jouerCelleCi, true);
+document.addEventListener('keydown', jouerCelleCi, true);
 // un seul bouton : il lance la recherche, puis l'arrête tant qu'elle tourne
 $('#go').onclick = () => {
   if (recherche) { arreterRecherche(); return; }
