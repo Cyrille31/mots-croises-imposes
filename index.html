@@ -130,6 +130,25 @@
            background:var(--bleu); color:#fff; width:auto; }
   button.sec { background:#fff; color:var(--bleu); border:1px solid #b9c6d8; }
   button:disabled { opacity:.45; }
+  /* retour visuel : le bouton s'allume dès l'appui, reste jaune pendant
+     l'opération, puis passe au vert (réussie) ou au rouge (annulée, échouée) */
+  button { transition:background-color .25s, border-color .25s, color .25s; }
+  button.appui { filter:brightness(.82); }
+  button.encours { background:#fff3c4 !important; border-color:#e0b84a !important;
+                   color:#6b4e00 !important; }
+  button.reussi { background:#d9f7d6 !important; border-color:#5aa55a !important;
+                  color:#1d5a1d !important; }
+  button.rate { background:#ffd6d6 !important; border-color:#d07070 !important;
+                color:#7a1f1f !important; }
+  /* liste des tailles : s'ouvre centrée sur la valeur en cours */
+  .cht { display:inline-block; cursor:pointer; }
+  .cht select { pointer-events:none; }      /* le clic va à la liste centrée */
+  #choixtaille { position:fixed; z-index:200; background:#fff; border:1px solid #b9c6d8;
+       border-radius:8px; box-shadow:0 6px 20px rgba(20,32,46,.25); overflow-y:auto;
+       overscroll-behavior:contain; padding:3px; display:flex; flex-direction:column; }
+  #choixtaille button { background:#fff; color:var(--bleu); padding:7px 16px; font-size:14px;
+       text-align:center; border-radius:5px; flex:none; }
+  #choixtaille button.cour { background:var(--bleu); color:#fff; font-weight:700; }
   #etat { font-size:11.5px; color:#6b7887; margin:5px 0; min-height:15px; }
   body.joueur #grille, body.joueur .c { touch-action:auto; }
   #grille { display:grid; gap:0; margin:6px auto; touch-action:auto;
@@ -397,7 +416,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.8</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.9</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -419,7 +438,8 @@
             <option value="anagramot">anagramots</option>
           </select></label>
         <label class="lr">Dimensions
-          <span class="dim"><select id="nl"></select> × <select id="nc"></select></span></label>
+          <span class="dim"><span class="cht"><select id="nl"></select></span> ×
+            <span class="cht"><select id="nc"></select></span></span></label>
         <label class="lr">Cases noires
           <select id="densite"></select></label>
         <label class="lr">Cases à l'impression
@@ -821,7 +841,8 @@
   vous félicite.</p>
 
   <h4>Les réglages</h4>
-  <p><b>Grille</b> — de 2 à 30 lignes et colonnes, 7×7 au démarrage. Le format confortable est
+  <p><b>Grille</b> — de 2 à 30 lignes et colonnes, 7×7 au démarrage. La liste des
+  tailles s'ouvre centrée sur la taille en cours. Le format confortable est
   12×12 à 15×15 ; en deçà de 11×11 les mots imposés manquent de place.</p>
   <p><b>Noires</b> — un point de départ, pas une limite. Le programme essaie
   cette valeur, puis descend tant qu'il trouve, ou monte s'il ne trouve pas, en
@@ -942,10 +963,19 @@
   Android notamment — le nom vous est demandé puis le fichier est téléchargé, le
   navigateur pouvant alors signaler qu'un fichier de même nom existe déjà.</p>
   <p><b>Enregistrer</b> conserve tout — grille, dessin, mots, réglages,
-  définitions, et la tentative en cours d'un joueur — sous le nom du jour, au
-  format <tt>grille-2026-09-12.json</tt>. <b>Enregistrer sous</b> crée un nouveau
-  nom en ajoutant un numéro si vous enregistrez plusieurs fois le même jour. <b>Exporter / Importer le
+  définitions, et la tentative en cours d'un joueur. Le nom dit le type, la
+  taille et le jour : <tt>mcr-5x7-2026-10-02.json</tt>, avec <tt>mcr</tt> pour
+  les mots croisés, <tt>mfl</tt> les fléchés, <tt>mcd</tt> les codés et
+  <tt>ana</tt> les anagramots. Une fois une grille enregistrée ou ouverte,
+  <b>Enregistrer</b> réécrit son fichier sans rien demander ; une nouvelle
+  grille repart d'un nom neuf. Si un fichier de ce nom existe déjà dans le
+  dossier des grilles, l'application demande s'il faut l'écraser ; sinon elle
+  ajoute un numéro (<tt>…-2026-10-02-2.json</tt>). <b>Enregistrer sous</b>
+  propose le premier nom libre et pose la même question. <b>Exporter / Importer le
   dessin</b> ne concerne que la silhouette.</p>
+  <p>Les boutons d'enregistrement montrent où en est l'opération : jaunes
+  pendant, puis verts si le fichier est parti, rouges s'il est annulé ou
+  impossible. Tout bouton s'assombrit un instant sous le doigt.</p>
 
   <p class="note">Aucune donnée ne quitte votre appareil, hormis les requêtes que
   vous déclenchez vous-même vers le Wiktionnaire. L'application fonctionne hors
@@ -975,7 +1005,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.8, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.9, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -2567,20 +2597,41 @@ $('#dossier').onclick = ev => { ev.preventDefault(); choisirDossier(); };
   majBoutonDossier();
 })();
 
-// Écrit le fichier dans le dossier des grilles. Renvoie false quand ce n'est
-// pas possible, pour que l'appelant se rabatte sur l'enregistrement habituel.
-async function ecrireDansDossier(nom, texte) {
+// existe-t-il déjà un fichier de ce nom dans le dossier des grilles ?
+async function existeDansDossier(nom) {
+  try { await dossier.getFileHandle(nom); return true; }
+  catch (e) { return !(e && e.name === 'NotFoundError'); }
+}
+// premier nom libre : racine.json, racine-2.json, racine-3.json…
+// (un numéro déjà présent est retiré, mais pas le jour d'une date)
+async function nomLibre(nom) {
+  const racine = nom.replace(/\.json$/i, '').replace(/(?<!\d{4}-\d{2})-\d+$/, '');
+  for (let k = 1; k < 1000; k++) {
+    const n = racine + (k > 1 ? '-' + k : '') + '.json';
+    if (!await existeDansDossier(n)) return n;
+  }
+  return racine + '-' + Date.now() + '.json';
+}
+
+// Écrit le fichier dans le dossier des grilles et renvoie le nom retenu, ou
+// false quand ce n'est pas possible : l'appelant se rabat alors sur
+// l'enregistrement habituel. Avec « verifier », un fichier existant n'est
+// écrasé qu'avec l'accord de l'utilisateur ; sinon on prend un nouveau numéro.
+async function ecrireDansDossier(nom, texte, verifier) {
   if (!dossierPossible) return false;
   if (!dossier && !await choisirDossier()) return false;
   try {
     if (await dossier.queryPermission({ mode: 'readwrite' }) !== 'granted'
         && await dossier.requestPermission({ mode: 'readwrite' }) !== 'granted') return false;
+    if (verifier && await existeDansDossier(nom)
+        && !confirm('« ' + nom + ' » existe déjà dans « ' + dossier.name + ' ».\n\n'
+                    + 'OK : l’écraser.\nAnnuler : enregistrer sous un nouveau numéro.'))
+      nom = await nomLibre(nom);
     const f = await dossier.getFileHandle(nom, { create: true });
     const w = await f.createWritable();
     await w.write(texte); await w.close();
-    nomCourant = nom;
     $('#etat').textContent = 'Enregistré : ' + dossier.name + '/' + nom;
-    return true;
+    return nom;
   } catch (e) {
     $('#etat').textContent = 'Écriture impossible dans « ' + dossier.name + ' » : ' + e.message;
     return false;
@@ -2592,21 +2643,25 @@ async function ecrireDansDossier(nom, texte) {
 // natif quand il accepte les fichiers.
 let poigneeFichier = null;    // handle du fichier choisi (navigateurs récents)
 
-async function enregistrerVers(nom, texte, demanderNom) {
+// Renvoie true si le fichier est parti, false si l'enregistrement est annulé
+// ou impossible. « verifier » : ne pas écraser sans demander.
+async function enregistrerVers(nom, texte, demanderNom, verifier) {
   if (dossierPossible) {
     if (demanderNom) {
-      const saisi = prompt('Nom du fichier', nom);
-      if (saisi === null) { $('#etat').textContent = 'Enregistrement annulé.'; return; }
-      nom = saisi.trim() || nom;
+      const propose = dossier ? await nomLibre(nom).catch(() => nom) : nom;
+      const saisi = prompt('Nom du fichier', propose);
+      if (saisi === null) { $('#etat').textContent = 'Enregistrement annulé.'; return false; }
+      nom = saisi.trim() || propose;
       if (!/\.json$/i.test(nom)) nom += '.json';
     }
-    if (await ecrireDansDossier(nom, texte)) return;
+    const ecrit = await ecrireDansDossier(nom, texte, verifier);
+    if (ecrit) { nommerGrille(ecrit); return true; }
   }
   // Chrome/Edge de bureau : vraie boîte « Enregistrer sous », nom modifiable,
   // et réécriture silencieuse ensuite.
   if (window.showSaveFilePicker) {
     try {
-      if (demanderNom || !poigneeFichier) {
+      if (demanderNom || verifier || !poigneeFichier) {
         poigneeFichier = await window.showSaveFilePicker({
           suggestedName: nom,
           types: [{ description: 'Grille CGExcel', accept: { 'application/json': ['.json'] } }]
@@ -2615,21 +2670,23 @@ async function enregistrerVers(nom, texte, demanderNom) {
       const w = await poigneeFichier.createWritable();
       await w.write(texte); await w.close();
       $('#etat').textContent = 'Enregistré : ' + poigneeFichier.name;
-      nomCourant = poigneeFichier.name;
-      return;
+      nommerGrille(poigneeFichier.name);
+      return true;
     } catch (e) {
-      if (e && e.name === 'AbortError') { $('#etat').textContent = 'Enregistrement annulé.'; return; }
+      if (e && e.name === 'AbortError') { $('#etat').textContent = 'Enregistrement annulé.'; return false; }
     }
   }
-  // ailleurs (Android…) : on demande le nom puis on télécharge
+  // ailleurs : on demande le nom puis on télécharge ; le navigateur numérote
+  // lui-même un fichier de même nom, sans jamais l'écraser
   if (demanderNom) {
     const saisi = prompt('Nom du fichier', nom);
-    if (saisi === null) { $('#etat').textContent = 'Enregistrement annulé.'; return; }
+    if (saisi === null) { $('#etat').textContent = 'Enregistrement annulé.'; return false; }
     nom = saisi.trim().replace(/\s+/g, '-') || nom;
     if (!/\.json$/i.test(nom)) nom += '.json';
-    nomCourant = nom;
   }
+  nommerGrille(nom);
   await telecharger(nom, texte);
+  return true;
 }
 
 async function telecharger(nom, texte) {
@@ -2783,20 +2840,40 @@ function imprimer(vierge) {
 $('#imprimer').onclick = () => imprimer(false);
 $('#imprvierge').onclick = () => imprimer(true);
 
+// Le bouton montre où en est l'opération : jaune pendant, puis vert ou rouge
+// une seconde et demie.
+async function avecRetour(bouton, action) {
+  bouton.classList.remove('reussi', 'rate');
+  bouton.classList.add('encours');
+  let ok = false;
+  try { ok = (await action()) !== false; }
+  catch (e) { $('#etat').textContent = 'Échec : ' + e.message; }
+  bouton.classList.remove('encours');
+  bouton.classList.add(ok ? 'reussi' : 'rate');
+  clearTimeout(bouton.__retour);
+  bouton.__retour = setTimeout(() => bouton.classList.remove('reussi', 'rate'), 1500);
+}
+// tout bouton s'assombrit un instant sous le doigt : l'appui est pris en compte
+document.addEventListener('click', ev => {
+  const b = ev.target instanceof Element && ev.target.closest('button');
+  if (!b || b.disabled) return;
+  b.classList.add('appui');
+  setTimeout(() => b.classList.remove('appui'), 220);
+}, true);
+
 // ---------- sauvegarde et reprise du mot croise en cours ----------
+// Le nom d'un fichier vaut pour une grille : une nouvelle grille repart d'un
+// nom neuf, sans quoi « Enregistrer » écraserait le fichier de la précédente.
 let nomCourant = null;
-function nomDuJour(nouveau) {
+let grilleNommee = null;          // la grille à laquelle nomCourant se rapporte
+function nommerGrille(nom) { nomCourant = nom; grilleNommee = derniere; }
+const SIGLES = { croises: 'mcr', fleches: 'mfl', codes: 'mcd', anagramot: 'ana' };
+// mcr-5x7-2026-10-02.json : type, taille, jour
+function nomDeBase() {
   const d = new Date();
   const jour = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
              + '-' + String(d.getDate()).padStart(2, '0');
-  let k = 1;
-  try {
-    const cle = 'mc-compteur-' + jour;
-    k = (+localStorage.getItem(cle) || 0) + (nouveau ? 1 : 0);
-    if (k < 1) k = 1;
-    localStorage.setItem(cle, String(k));
-  } catch (e) { /* stockage indisponible */ }
-  return 'grille-' + jour + (k > 1 ? '-' + k : '') + '.json';
+  return (SIGLES[typeCourant()] || 'grille') + '-' + nl + 'x' + nc + '-' + jour + '.json';
 }
 function etatComplet() {
   return { format: 'mots-croises-cgexcel', v: 4, nl, nc,
@@ -2814,14 +2891,18 @@ function etatComplet() {
     anagrammes: anagOrdre.length ? derniersAnagrammes : null,
     anagOrdre: anagOrdre.length ? anagOrdre : null };
 }
-$('#sauver').onclick = () => {
-  if (!nomCourant) nomCourant = nomDuJour(false);
-  enregistrerVers(nomCourant, JSON.stringify(etatComplet()), false);
-};
-$('#sauversous').onclick = () => {
+// « Enregistrer » réécrit sans rien demander le fichier de CETTE grille ;
+// pour une grille pas encore enregistrée, un fichier existant de même nom
+// n'est écrasé qu'avec l'accord de l'utilisateur.
+$('#sauver').onclick = ev => avecRetour(ev.currentTarget, () => {
+  const meme = !!nomCourant && grilleNommee === derniere;
+  if (!meme) poigneeFichier = null;
+  return enregistrerVers(meme ? nomCourant : nomDeBase(), JSON.stringify(etatComplet()), false, !meme);
+});
+$('#sauversous').onclick = ev => avecRetour(ev.currentTarget, () => {
   poigneeFichier = null;
-  enregistrerVers(nomDuJour(true), JSON.stringify(etatComplet()), true);
-};
+  return enregistrerVers(nomDeBase(), JSON.stringify(etatComplet()), true, true);
+});
 $('#ouvrir').onclick = async () => {
   // le sélecteur s'ouvre directement dans le dossier des grilles
   if (dossier && window.showOpenFilePicker) {
@@ -2852,7 +2933,7 @@ function nomListe(cle) {
 async function enregistrerListe(cle, demanderNom) {
   const L = listes[cle];
   const mots = $(L.sel).value.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
-  if (!mots.length) { $('#etat').textContent = L.titre + ' : la liste est vide.'; return; }
+  if (!mots.length) { $('#etat').textContent = L.titre + ' : la liste est vide.'; return false; }
   const texte = mots.join('\n') + '\n';
   let nom = L.nom || nomListe(cle);
   if (window.showSaveFilePicker) {
@@ -2865,14 +2946,14 @@ async function enregistrerListe(cle, demanderNom) {
       await w.write(texte); await w.close();
       L.nom = L.poignee.name;
       $('#etat').textContent = L.titre + ' : ' + mots.length + ' mots enregistrés dans ' + L.nom + '.';
-      return;
+      return true;
     } catch (e) {
-      if (e && e.name === 'AbortError') { $('#etat').textContent = 'Enregistrement annulé.'; return; }
+      if (e && e.name === 'AbortError') { $('#etat').textContent = 'Enregistrement annulé.'; return false; }
     }
   }
   if (demanderNom || !L.nom) {
     const saisi = prompt('Nom du fichier', nom);
-    if (saisi === null) { $('#etat').textContent = 'Enregistrement annulé.'; return; }
+    if (saisi === null) { $('#etat').textContent = 'Enregistrement annulé.'; return false; }
     nom = saisi.trim().replace(/\s+/g, '-') || nom;
     if (!/\.txt$/i.test(nom)) nom += '.txt';
     L.nom = nom;
@@ -2884,6 +2965,7 @@ async function enregistrerListe(cle, demanderNom) {
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
   $('#etat').textContent = L.titre + ' : ' + mots.length + ' mots enregistrés (' + nom + ').';
+  return true;
 }
 let listeCible = null;
 function ouvrirListe(cle) { listeCible = cle; $('#fliste').click(); }
@@ -2907,11 +2989,11 @@ $('#fliste').onchange = async ev => {
   } catch (e) { $('#etat').textContent = 'Lecture impossible : ' + e.message; }
   listeCible = null;
 };
-$('#impsauver').onclick = () => enregistrerListe('imposes', false);
-$('#impsauversous').onclick = () => enregistrerListe('imposes', true);
+$('#impsauver').onclick = ev => avecRetour(ev.currentTarget, () => enregistrerListe('imposes', false));
+$('#impsauversous').onclick = ev => avecRetour(ev.currentTarget, () => enregistrerListe('imposes', true));
 $('#impouvrir').onclick = () => ouvrirListe('imposes');
-$('#thsauver').onclick = () => enregistrerListe('theme', false);
-$('#thsauversous').onclick = () => enregistrerListe('theme', true);
+$('#thsauver').onclick = ev => avecRetour(ev.currentTarget, () => enregistrerListe('theme', false));
+$('#thsauversous').onclick = ev => avecRetour(ev.currentTarget, () => enregistrerListe('theme', true));
 $('#thouvrir').onclick = () => ouvrirListe('theme');
 $('#fgrille').onchange = async ev => {
   const f = ev.target.files[0];
@@ -2953,7 +3035,7 @@ async function chargerGrille(f) {
     imposesNorm = lignes('#imposes');
     dessiner(derniere);
     const actif = !!derniere;
-    nomCourant = f.name || null;
+    nomCourant = f.name || null; grilleNommee = derniere;
     if (o.joueur) changerMode('joueur');
     afficherLegende(derniere);       // après le basculement du mode
     majBoutons();
@@ -3316,6 +3398,64 @@ $('#type').onchange = () => {
             + 'Seuls les mots qui ont une anagramme entrent dans la grille.'
           : 'Mots croisés.'));
 };
+// Les listes natives des tailles s'ouvrent en haut, loin de la valeur en
+// cours : on les remplace par une liste qui s'ouvre centrée sur elle.
+function ouvrirChoixTaille(sel) {
+  fermerChoixTaille();
+  const liste = document.createElement('div');
+  liste.id = 'choixtaille';
+  let cour = null;
+  for (const o of sel.options) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = o.textContent;
+    if (o.value === sel.value) { b.className = 'cour'; cour = b; }
+    b.onclick = ev => {
+      ev.stopPropagation();
+      fermerChoixTaille();
+      if (sel.value !== o.value) {
+        sel.value = o.value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    };
+    liste.appendChild(b);
+  }
+  // posée dans le menu des réglages, elle ne le referme pas quand on y clique
+  (sel.closest('.pan') || document.body).appendChild(liste);
+  const r = sel.getBoundingClientRect();
+  const h = Math.min(window.innerHeight * 0.6, liste.scrollHeight);
+  liste.style.height = h + 'px';
+  liste.style.minWidth = Math.max(64, r.width) + 'px';
+  liste.style.left = Math.max(8, Math.min(r.left, window.innerWidth - liste.offsetWidth - 8)) + 'px';
+  // la valeur en cours se place au milieu de la liste, et la liste se cale
+  // pour que cette valeur tombe juste sur le menu ; près des bornes (2 ou 30)
+  // la liste ne peut plus défiler : c'est elle qui se décale
+  const borne = y => Math.max(8, Math.min(y, window.innerHeight - h - 8));
+  const centre = r.top + r.height / 2;
+  let haut = borne(centre - h / 2);
+  if (cour) {
+    const mi = cour.offsetTop + cour.offsetHeight / 2;
+    liste.scrollTop = mi - (centre - haut);
+    haut = borne(centre - (mi - liste.scrollTop));
+  }
+  liste.style.top = haut + 'px';
+  setTimeout(() => document.addEventListener('pointerdown', fermerHorsChoix, true), 0);
+}
+function fermerChoixTaille() {
+  const l = $('#choixtaille');
+  if (l) l.remove();
+  document.removeEventListener('pointerdown', fermerHorsChoix, true);
+}
+function fermerHorsChoix(ev) { if (!ev.target.closest('#choixtaille')) fermerChoixTaille(); }
+for (const id of ['#nl', '#nc']) {
+  const sel = $(id);
+  // la liste native ne reçoit pas le doigt (pointer-events) : c'est son
+  // enveloppe qui ouvre la nôtre ; au clavier, Entrée ou Espace
+  sel.parentElement.addEventListener('click', ev => { ev.preventDefault(); ouvrirChoixTaille(sel); });
+  sel.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ouvrirChoixTaille(sel); }
+  });
+}
+
 $('#nl').onchange = $('#nc').onchange = () => {
   const a = +$('#nl').value, b = +$('#nc').value;
   reporter(a, b); nl = a; nc = b; derniere = null; codeNum = null;
