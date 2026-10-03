@@ -14,6 +14,10 @@
 <style>
   :root { --bleu:#1a3a6b; --trait:#243447; --fond:#f7f8fa;
           --colg:156px; --puce:34px; }
+  /* agrandissement sur ordinateur : toute la page est zoomée de --z ; les
+     unités vw et vh, zoomées elles aussi, sont divisées par --z */
+  @media screen { html.zoompc { zoom:var(--z); } }
+  @media print { :root { --z:1 !important; } }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { margin:0; padding:7px 9px; font:13px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;
          background:var(--fond); color:#14202e; }
@@ -45,7 +49,7 @@
   #tutodoigt.tape { animation:pique .4s ease-out; }
   @keyframes pique { 45% { transform:translate(3px, 5px) scale(.94); } }
   /* la fenêtre suit le doigt et se pose juste en dessous de lui */
-  #tutobulle { position:absolute; left:0; top:0; width:min(300px, calc(100vw - 24px));
+  #tutobulle { position:absolute; left:0; top:0; width:min(300px, calc(100vw / var(--z, 1) - 24px));
        pointer-events:none; background:var(--bleu); color:#fff; border-radius:9px;
        padding:8px 11px; font-size:14px; line-height:1.5;
        box-shadow:0 6px 20px rgba(20,32,46,.35);
@@ -114,7 +118,7 @@
   details.menu { position:relative; }
   details.menu .pan { position:absolute; z-index:5; background:#fff; border:1px solid #b9c6d8;
       border-radius:8px; padding:5px; display:flex; flex-direction:column; gap:3px;
-      box-shadow:0 4px 14px rgba(20,32,46,.18); max-width:calc(100vw - 16px); }
+      box-shadow:0 4px 14px rgba(20,32,46,.18); max-width:calc(100vw / var(--z, 1) - 16px); }
   /* les menus de droite s'ouvrent vers la gauche : ils restent dans l'écran */
   #mimpr .pan, #menr .pan, #mdessin .pan { right:0; left:auto; }
   .c.defh { background-image:linear-gradient(to bottom, transparent 36%,
@@ -185,8 +189,7 @@
   #vitre .choc { fill:#fff; opacity:0; animation:flash .55s ease-out forwards; }
   @keyframes flash { 0% { opacity:.95; transform:scale(.2); }
                      100% { opacity:0; transform:scale(2.4); } }
-  #vitre .eclat { transform-box:fill-box; transform-origin:center;
-       animation:envol var(--dur) cubic-bezier(.33,0,.5,1) var(--del) forwards; }
+  #vitre .eclat { transform-box:fill-box; transform-origin:center; }
   #vitre .aile { transform-box:fill-box; transform-origin:center;
        animation:battement var(--bat) ease-in-out var(--del) infinite; }
   #vitre .aile polygon { fill:rgba(255,255,255,.62); stroke:rgba(126,154,189,.85);
@@ -199,14 +202,8 @@
     62%  { fill:hsla(var(--h), 85%, 66%, .92); stroke:hsla(var(--h), 70%, 42%, .9); }
     100% { fill:hsla(var(--h), 90%, 72%, 0); stroke:hsla(var(--h), 70%, 50%, 0); }
   }
-  @keyframes envol {
-    0%   { transform:translate(0,0) rotate(0deg); }
-    9%   { transform:translate(calc(var(--dx) * .04), calc(var(--dy) * .04)) rotate(2deg); }
-    26%  { transform:translate(calc(var(--dx) * .16), calc(var(--dy) * .10)) rotate(var(--r1)); }
-    100% { transform:translate(var(--dx), -112vh) rotate(var(--r2)); }
-  }
   @media (prefers-reduced-motion:reduce) {
-    #vitre .eclat, #vitre .aile, #vitre .aile polygon { animation-duration:.01s; }
+    #vitre .aile, #vitre .aile polygon { animation-duration:.01s; }
   }
   @media print { #vitre { display:none; } }
 
@@ -215,33 +212,28 @@
           transition:opacity 2s ease; }
   #nuit.fin { opacity:0; }
   #eclats { position:fixed; inset:0; z-index:102; pointer-events:none; overflow:hidden; }
-  #eclats .eclat { position:absolute; will-change:transform;
-       animation:envol var(--dur) cubic-bezier(.33,0,.5,1) var(--del) forwards; }
+  #eclats .eclat { position:absolute; will-change:transform; }
   #eclats .aile { position:relative; width:100%; height:100%;
        animation:battement var(--bat) ease-in-out var(--del) infinite; }
   #eclats canvas { display:block; width:100%; height:100%; }
   /* en prenant leur envol, les éclats se parent de reflets irisés : une
-     teinte qui colore la page comme une aile, et un éclat de lumière qui
-     glisse d'un bord à l'autre au rythme du vol */
-  #eclats .reflet { position:absolute; inset:0; opacity:0; mix-blend-mode:multiply;
-       background:linear-gradient(120deg, hsl(var(--h),95%,62%) 0%,
-         hsl(calc(var(--h) + 50),95%,66%) 35%, hsl(calc(var(--h) + 120),90%,64%) 65%,
-         hsl(calc(var(--h) + 200),95%,62%) 100%);
-       background-size:220% 220%;
-       animation:irise var(--dur) ease-in var(--del) forwards,
-                 chatoie calc(var(--bat) * 5) linear var(--del) infinite alternate; }
-  #eclats .lustre { position:absolute; inset:0; opacity:0; mix-blend-mode:screen;
-       background:linear-gradient(105deg, transparent 30%, rgba(255,255,255,.75) 48%,
-         hsla(calc(var(--h) + 90),100%,80%,.6) 55%, transparent 70%);
-       background-size:300% 100%;
-       animation:irise var(--dur) ease-in var(--del) forwards,
-                 lustre calc(var(--bat) * 4) ease-in-out var(--del) infinite; }
+     copie teintée de leur morceau de page apparaît en fondu, et un éclat de
+     lumière glisse d'un bord à l'autre au rythme du vol. Seules l'opacité et
+     les transformations sont animées : le navigateur n'a rien à repeindre. */
+  #eclats .reflet { position:absolute; inset:0; opacity:0; will-change:opacity;
+       animation:irise var(--dur) ease-in var(--del) forwards; }
+  #eclats .lustre { position:absolute; inset:0; opacity:0; overflow:hidden;
+       animation:irise var(--dur) ease-in var(--del) forwards; }
+  #eclats .lustre i { position:absolute; top:0; bottom:0; left:-100%; width:100%;
+       will-change:transform;
+       background:linear-gradient(105deg, transparent 15%, rgba(255,255,255,.55) 45%,
+         hsla(calc(var(--h) + 90),100%,85%,.45) 58%, transparent 85%);
+       animation:lustre calc(var(--bat) * 4) ease-in-out var(--del) infinite; }
   @keyframes irise { 0%, 14% { opacity:0; } 45% { opacity:.92; } 100% { opacity:.92; } }
-  @keyframes chatoie { from { background-position:0% 50%; } to { background-position:100% 50%; } }
-  @keyframes lustre { 0% { background-position:110% 0; } 100% { background-position:-10% 0; } }
+  @keyframes lustre { 0% { transform:translateX(0); } 100% { transform:translateX(200%); } }
   #vitre.dessus { z-index:103; }
   @media (prefers-reduced-motion:reduce) {
-    #eclats .eclat, #eclats .aile, #eclats .reflet, #eclats .lustre { animation-duration:.01s; }
+    #eclats .aile, #eclats .reflet, #eclats .lustre, #eclats .lustre i { animation-duration:.01s; }
   }
   #bravo.nuit { background:transparent; color:#fff; z-index:101; transition:opacity 2s ease; }
   #bravo.nuit.fin { opacity:0; }
@@ -255,10 +247,10 @@
           animation:tourbillon 4.2s cubic-bezier(.35,0,.55,1) forwards; }
   @keyframes tourbillon {
     0%   { transform:translate(0,0) rotate(0deg) scale(1); opacity:1; }
-    40%  { transform:translate(calc(var(--dx) * .12), 78vh) rotate(420deg) scale(1); opacity:1; }
-    58%  { transform:translate(calc(var(--dx) * .45), 62vh) rotate(760deg) scale(.92); opacity:1; }
-    78%  { transform:translate(calc(var(--dx) * .85), 18vh) rotate(1240deg) scale(.6); opacity:.9; }
-    100% { transform:translate(var(--dx), -130vh) rotate(2000deg) scale(.15); opacity:0; }
+    40%  { transform:translate(calc(var(--dx) * .12), calc(78vh / var(--z, 1))) rotate(420deg) scale(1); opacity:1; }
+    58%  { transform:translate(calc(var(--dx) * .45), calc(62vh / var(--z, 1))) rotate(760deg) scale(.92); opacity:1; }
+    78%  { transform:translate(calc(var(--dx) * .85), calc(18vh / var(--z, 1))) rotate(1240deg) scale(.6); opacity:.9; }
+    100% { transform:translate(var(--dx), calc(-130vh / var(--z, 1))) rotate(2000deg) scale(.15); opacity:0; }
   }
   @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.12); } }
   #bravo span { animation:pulse 1s ease-in-out infinite; display:inline-block; }
@@ -379,7 +371,7 @@
   details p { font-size:12px; margin:6px 0; }
   details h4 { font-size:12px; color:var(--bleu); margin:10px 0 2px; }
   .note { color:#6b7887; font-style:italic; }
-  #defs { margin:8px 0; max-height:34vh; overflow-y:auto; overscroll-behavior:contain;
+  #defs { margin:8px 0; max-height:calc(34vh / var(--z, 1)); overflow-y:auto; overscroll-behavior:contain;
           -webkit-overflow-scrolling:touch; touch-action:pan-y;
           border:1px solid #e2e7ee; border-radius:8px; padding:2px 8px; background:#fff; }
   @media (max-width:700px) { #defs { max-height:44vh; } }
@@ -387,7 +379,7 @@
      après la dernière définition permet de la remonter jusqu'à la voir */
   /* seulement quand il y a des définitions : en mots codés le bloc est vide et
      la marge masquerait la grille de correspondance */
-  body.joueur #defs:not(:empty)::after { content:''; display:block; height:30vh; }
+  body.joueur #defs:not(:empty)::after { content:''; display:block; height:calc(30vh / var(--z, 1)); }
   @media print { body.joueur #defs::after { display:none; } }
   #defil { position:sticky; top:0; background:var(--fond); z-index:2; padding:2px 0; }
   #defil #grille { position:static; max-width:none; margin:6px auto; }
@@ -445,7 +437,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.12</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.13</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -493,6 +485,16 @@
           <select id="dispo">
             <option value="gauche" selected>lettres à gauche</option>
             <option value="droite">lettres à droite</option>
+          </select></label>
+        <label class="lr" id="reglzoom">Agrandissement (ordinateur)
+          <select id="zoompc">
+            <option value="0">aucun</option>
+            <option value="20">+20 %</option>
+            <option value="40">+40 %</option>
+            <option value="55">+55 %</option>
+            <option value="70" selected>+70 %</option>
+            <option value="85">+85 %</option>
+            <option value="100">+100 %</option>
           </select></label>
         <label class="lr">Vocabulaire
           <select id="niveau">
@@ -973,7 +975,17 @@
   se parant en vol de reflets irisés comme des ailes de papillon, et laissant
   derrière lui un fond noir ; puis l'écran redevient normal en deux secondes. <b>Confettis</b>
   reprend l'ancienne fête, qui tombe puis remonte en tourbillon. Ce choix se
-  retient d'une session à l'autre, comme la disposition.</p>
+  retient d'une session à l'autre, comme la disposition. Le vol est calculé
+  d'avance, image par image, et confié à la carte graphique : il reste fluide
+  même sur une machine modeste.</p>
+
+  <h4>Agrandissement sur ordinateur</h4>
+  <p>Sur un ordinateur (souris ou pavé tactile), toute la page est affichée
+  plus grande : de <b>70 %</b> par défaut. Le réglage <b>Agrandissement
+  (ordinateur)</b>, dans le menu ⋮, va d'<i>aucun</i> à <i>+100 %</i> et se
+  retient d'une session à l'autre. Si la fenêtre est étroite, l'agrandissement
+  est réduit pour que la page garde au moins 720 pixels de large. Il ne
+  s'applique ni sur téléphone ni sur tablette, ni à l'impression.</p>
 
   <h4>Disposition</h4>
   <p>Le réglage <b>Disposition</b> place la colonne des aides et des lettres à
@@ -1055,7 +1067,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.12, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.13, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -1072,6 +1084,39 @@ window.onerror = (msg, src, l, c) => {
   if (e) e.textContent = 'Erreur page : ' + msg + ' (ligne ' + l + ')';
 };
 const $ = s => document.querySelector(s);
+
+// Agrandissement sur ordinateur : la page entière est zoomée (propriété CSS
+// zoom). Sous zoom, innerWidth, clientX et getBoundingClientRect comptent en
+// pixels d'écran, alors que les styles se posent en pixels de page : ces
+// petites fonctions ramènent tout en pixels de page.
+const echelle = () =>
+  parseFloat(document.documentElement.style.getPropertyValue('--z')) || 1;
+const vueL = () => window.innerWidth / echelle();
+const vueH = () => window.innerHeight / echelle();
+function cadre(el) {
+  const r = el.getBoundingClientRect(), z = echelle();
+  return { left: r.left / z, top: r.top / z, width: r.width / z, height: r.height / z };
+}
+// « ordinateur » : un pointeur précis qui survole (souris, pavé tactile)
+const surPC = window.matchMedia
+  ? window.matchMedia('(hover: hover) and (pointer: fine)') : { matches: false };
+function appliquerZoom() {
+  const h = document.documentElement;
+  const x = surPC.matches ? parseFloat($('#zoompc').value) || 0 : 0;
+  // la page garde au moins 720 pixels de large : au-delà, la mise en page
+  // (dont les seuils suivent la largeur réelle de la fenêtre) se tasserait
+  const z = Math.max(1, Math.min(1 + x / 100, window.innerWidth / 720));
+  const avant = echelle();
+  if (z > 1.001) { h.style.setProperty('--z', z.toFixed(3)); h.classList.add('zoompc'); }
+  else { h.style.removeProperty('--z'); h.classList.remove('zoompc'); }
+  return Math.abs(echelle() - avant) > 0.001;
+}
+$('#reglzoom').style.display = surPC.matches ? '' : 'none';
+try {
+  const v = localStorage.getItem('mc-zoompc');
+  if (v !== null && [...$('#zoompc').options].some(o => o.value === v)) $('#zoompc').value = v;
+} catch (e) { /* stockage indisponible */ }
+appliquerZoom();
 let cases = [];      // element DOM de chaque case, indexe par numero de case
 let codeNum = null;  // lettre -> numero, pour les mots codés
 const revelees = new Map();   // lettre -> couleur d'aide, pour les mots codés
@@ -1417,7 +1462,7 @@ function dessiner(g, tailleForcee) {
   // En mots codés il faut pouvoir lire le petit numéro : le plancher est plus haut.
   const plancher = typeCourant() === 'codes' ? 18 : 14;
   const pris = colonneUtile() ? LARG_COLG() + 8 : 0;
-  const dispo = Math.min(window.innerWidth - 24 - pris, 560);
+  const dispo = Math.min(vueL() - 24 - pris, 560);
   const taille = tailleForcee
     || Math.max(plancher, Math.min(30, Math.floor(dispo / (nc + 1))));
   const marge = Math.round(taille * 0.7);
@@ -1802,18 +1847,45 @@ function chargerCapture() {
 // teintes des ailes : du rouge au violet en passant par l'or et le turquoise
 const TEINTES = [8, 28, 44, 150, 190, 205, 265, 320, 345];
 let fete = false;
+
+// Vol d'un éclat : la trajectoire est calculée d'avance en une soixantaine
+// d'images clés reliées en ligne droite, sans à-coups. L'éclat fléchit d'abord
+// sous le choc, puis monte de plus en plus vite en se balançant de droite et
+// de gauche, comme un papillon. Seule la transformation est animée : le
+// navigateur la confie à la carte graphique.
+function envoler(el, o) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { el.style.opacity = 0; return; }
+  const N = 60, cles = [];
+  const phase = Math.random() * 2 * Math.PI, ondes = 1.2 + Math.random() * 1.3;
+  const ampl = 8 + Math.random() * 16, penche = 4 + Math.random() * 8;
+  const lisse = t => t * t * (3 - 2 * t);
+  for (let n = 0; n <= N; n++) {
+    const t = n / N;
+    const flechi = t < 0.4 ? Math.sin(Math.PI * t / 0.4) ** 2 : 0;
+    const tangue = lisse(Math.min(1, t / 0.35));          // le balancement s'installe
+    const onde = 2 * Math.PI * ondes * t + phase;
+    const x = o.dx * lisse(t) + ampl * tangue * (Math.sin(onde) - Math.sin(phase) * (1 - tangue));
+    const y = o.dy * flechi - o.haut * Math.pow(t, 2.1);
+    const r = o.r1 * flechi + o.r2 * Math.pow(t, 1.5) + penche * tangue * Math.cos(onde);
+    cles.push({ transform: `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(${r.toFixed(2)}deg)` });
+  }
+  el.animate(cles, { duration: o.dur * 1000, delay: o.del * 1000, easing: 'linear', fill: 'both' });
+}
 async function feterEclats() {
   if (fete) return;
   fete = true;
-  const W = window.innerWidth, H = window.innerHeight;
+  // sous agrandissement, la capture se fait en pixels de page, sans zoom,
+  // puis à l'échelle de l'écran
+  const z = echelle(), W = vueL(), H = vueH();
   let photo;
   try {
     const h2c = await chargerCapture();
     const fond = getComputedStyle(document.body).backgroundColor;
     photo = await h2c(document.body, {
-      x: window.scrollX, y: window.scrollY, width: W, height: H,
-      windowWidth: document.documentElement.clientWidth,
-      scale: Math.min(window.devicePixelRatio || 1, 2),
+      x: window.scrollX / z, y: window.scrollY / z, width: W, height: H,
+      scrollX: window.scrollX / z, scrollY: window.scrollY / z,
+      windowWidth: cadre(document.documentElement).width, windowHeight: H,
+      scale: Math.min(window.devicePixelRatio || 1, 2) * z,
       backgroundColor: fond && fond !== 'rgba(0, 0, 0, 0)' ? fond : '#fff',
       logging: false,
       // html2canvas ignore l'état fermé des <details> : on en écarte le contenu
@@ -1822,7 +1894,11 @@ async function feterEclats() {
         return !!d && d.tagName === 'DETAILS' && !d.open && el.tagName !== 'SUMMARY';
       },
       // … et numérote les <summary> comme des listes : on retire le marqueur
-      onclone: doc => doc.querySelectorAll('summary').forEach(m => { m.style.listStyle = 'none'; }),
+      onclone: doc => {
+        doc.querySelectorAll('summary').forEach(m => { m.style.listStyle = 'none'; });
+        doc.documentElement.classList.remove('zoompc');
+        doc.documentElement.style.removeProperty('--z');
+      },
     });
   } catch (e) {
     fete = false;
@@ -1879,6 +1955,20 @@ async function feterEclats() {
       ctx.closePath();
       ctx.clip();
       ctx.drawImage(photo, 0, 0, W, H);
+      // la teinte irisée est peinte une fois pour toutes sur une copie
+      const h = TEINTES[Math.floor(Math.random() * TEINTES.length)];
+      const cv2 = document.createElement('canvas');
+      cv2.width = cv.width; cv2.height = cv.height;
+      const c2 = cv2.getContext('2d');
+      c2.drawImage(cv, 0, 0);
+      c2.globalCompositeOperation = 'multiply';
+      const gr = c2.createLinearGradient(0, 0, cv2.width, cv2.height);
+      [[0, 62], [0.35, 66], [0.65, 64], [1, 62]].forEach(([p, l], n) =>
+        gr.addColorStop(p, `hsl(${h + [0, 50, 120, 200][n]},95%,${l}%)`));
+      c2.fillStyle = gr;
+      c2.fillRect(0, 0, cv2.width, cv2.height);
+      c2.globalCompositeOperation = 'destination-in';   // on garde la forme de l'éclat
+      c2.drawImage(cv, 0, 0);
 
       const e = document.createElement('div');
       e.className = 'eclat';
@@ -1886,27 +1976,27 @@ async function feterEclats() {
                                width: (x1 - x0) + 'px', height: (y1 - y0) + 'px' });
       const dur = 2.9 + Math.random() * 1.9, del = 0.35 + j * 0.13 + Math.random() * 0.4;
       fin = Math.max(fin, dur + del);
-      e.style.setProperty('--dx', Math.round((mx - cx) * 0.55 + (Math.random() - 0.5) * 90) + 'px');
-      e.style.setProperty('--dy', Math.round(14 + Math.random() * 26) + 'px');
-      e.style.setProperty('--r1', ((Math.random() - 0.5) * 26).toFixed(1) + 'deg');
-      e.style.setProperty('--r2', ((Math.random() - 0.5) * 150).toFixed(1) + 'deg');
       e.style.setProperty('--dur', dur.toFixed(2) + 's');
       e.style.setProperty('--del', del.toFixed(2) + 's');
       e.style.setProperty('--bat', (0.26 + Math.random() * 0.22).toFixed(2) + 's');
-      e.style.setProperty('--h', TEINTES[Math.floor(Math.random() * TEINTES.length)]);
-      // les reflets épousent la forme de l'éclat
+      e.style.setProperty('--h', h);
+      // l'éclat de lumière épouse la forme de l'éclat
       const forme = 'polygon(' + qq.map(([x, y]) =>
         (x - x0).toFixed(1) + 'px ' + (y - y0).toFixed(1) + 'px').join(',') + ')';
       const aile = document.createElement('div');
       aile.className = 'aile';
-      const reflet = document.createElement('div');
-      reflet.className = 'reflet';
+      cv2.className = 'reflet';
       const lustre = document.createElement('div');
       lustre.className = 'lustre';
-      reflet.style.clipPath = lustre.style.clipPath = forme;
-      aile.append(cv, reflet, lustre);
+      lustre.style.clipPath = forme;
+      lustre.appendChild(document.createElement('i'));
+      aile.append(cv, cv2, lustre);
       e.appendChild(aile);
       zone.appendChild(e);
+      envoler(e, { dx: (mx - cx) * 0.55 + (Math.random() - 0.5) * 90,
+                   dy: 14 + Math.random() * 26, haut: H * 1.12,
+                   r1: (Math.random() - 0.5) * 26, r2: (Math.random() - 0.5) * 150,
+                   dur, del });
     }
 
   // fissures et éclair du choc, par-dessus
@@ -1950,7 +2040,7 @@ async function feterEclats() {
 function feterPapillons() {
   const b = $('#bravo');
   b.classList.add('on');
-  const W = window.innerWidth, H = window.innerHeight;
+  const W = vueL(), H = vueH();
   const cx = W / 2, cy = H * 0.44;
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.id = 'vitre';
@@ -2000,13 +2090,9 @@ function feterPapillons() {
       const g = document.createElementNS(ns, 'g');
       g.setAttribute('class', 'eclat');
       const mx = q.reduce((a, p) => a + p[0], 0) / 4;
-      const ecart = (mx - cx) / W;                   // les éclats s'écartent du choc
-      g.style.setProperty('--dx', Math.round(ecart * W * 0.55 + (Math.random() - 0.5) * 90) + 'px');
-      g.style.setProperty('--dy', Math.round(14 + Math.random() * 26) + 'px');
-      g.style.setProperty('--r1', ((Math.random() - 0.5) * 26).toFixed(1) + 'deg');
-      g.style.setProperty('--r2', ((Math.random() - 0.5) * 150).toFixed(1) + 'deg');
-      g.style.setProperty('--dur', (2.9 + Math.random() * 1.9).toFixed(2) + 's');
-      g.style.setProperty('--del', (0.35 + j * 0.13 + Math.random() * 0.4).toFixed(2) + 's');
+      const dur = 2.9 + Math.random() * 1.9, del = 0.35 + j * 0.13 + Math.random() * 0.4;
+      g.style.setProperty('--dur', dur.toFixed(2) + 's');
+      g.style.setProperty('--del', del.toFixed(2) + 's');
       const aile = document.createElementNS(ns, 'g');
       aile.setAttribute('class', 'aile');
       aile.style.setProperty('--bat', (0.26 + Math.random() * 0.22).toFixed(2) + 's');
@@ -2016,6 +2102,11 @@ function feterPapillons() {
       const poly = document.createElementNS(ns, 'polygon');
       poly.setAttribute('points', q.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '));
       aile.appendChild(poly); g.appendChild(aile); svg.appendChild(g);
+      // les éclats s'écartent du choc
+      envoler(g, { dx: (mx - cx) * 0.55 + (Math.random() - 0.5) * 90,
+                   dy: 14 + Math.random() * 26, haut: H * 1.12,
+                   r1: (Math.random() - 0.5) * 26, r2: (Math.random() - 0.5) * 150,
+                   dur, del });
     }
 
   document.body.appendChild(svg);
@@ -2027,12 +2118,12 @@ function feterConfettis() {
   const b = $('#bravo');
   b.classList.add('on');
   const emo = ['🎉', '🎊', '🏆', '🥳', '🔷', '🟠', '🟣', '🔴', '🟢', '⭐'];
-  const centre = window.innerWidth / 2;
+  const centre = vueL() / 2;
   for (let k = 0; k < 46; k++) {
     const d = document.createElement('div');
     d.className = 'conf';
     d.textContent = emo[k % emo.length];
-    const x = Math.random() * (window.innerWidth - 40);
+    const x = Math.random() * (vueL() - 40);
     d.style.left = x + 'px';
     // tous convergent vers le centre en remontant : c'est le tourbillon
     d.style.setProperty('--dx', Math.round((centre - x) * 0.9) + 'px');
@@ -3506,15 +3597,15 @@ function ouvrirChoixTaille(sel) {
   }
   // posée dans le menu des réglages, elle ne le referme pas quand on y clique
   (sel.closest('.pan') || document.body).appendChild(liste);
-  const r = sel.getBoundingClientRect();
-  const h = Math.min(window.innerHeight * 0.6, liste.scrollHeight);
+  const r = cadre(sel);
+  const h = Math.min(vueH() * 0.6, liste.scrollHeight);
   liste.style.height = h + 'px';
   liste.style.minWidth = Math.max(64, r.width) + 'px';
-  liste.style.left = Math.max(8, Math.min(r.left, window.innerWidth - liste.offsetWidth - 8)) + 'px';
+  liste.style.left = Math.max(8, Math.min(r.left, vueL() - liste.offsetWidth - 8)) + 'px';
   // la valeur en cours se place au milieu de la liste, et la liste se cale
   // pour que cette valeur tombe juste sur le menu ; près des bornes (2 ou 30)
   // la liste ne peut plus défiler : c'est elle qui se décale
-  const borne = y => Math.max(8, Math.min(y, window.innerHeight - h - 8));
+  const borne = y => Math.max(8, Math.min(y, vueH() - h - 8));
   const centre = r.top + r.height / 2;
   let haut = borne(centre - h / 2);
   if (cour) {
@@ -3623,6 +3714,17 @@ function appliquerDispo() {
   dessiner(derniere);
 }
 $('#dispo').onchange = appliquerDispo;
+// agrandissement sur ordinateur : se retient, et suit la taille de la fenêtre
+$('#zoompc').onchange = () => {
+  try { localStorage.setItem('mc-zoompc', $('#zoompc').value); } catch (e) { /* ignoré */ }
+  appliquerZoom();
+  dessiner(derniere);
+};
+window.addEventListener('resize', () => { if (appliquerZoom()) dessiner(derniere); });
+if (surPC.addEventListener) surPC.addEventListener('change', () => {
+  $('#reglzoom').style.display = surPC.matches ? '' : 'none';
+  if (appliquerZoom()) dessiner(derniere);
+});
 // deux réglages de goût se retiennent d'une session à l'autre
 try {
   const d = localStorage.getItem('mc-dispo');
@@ -3680,13 +3782,13 @@ function tutoDire(n, texte) {
 
 // pose la petite fenêtre juste sous le doigt, sans sortir de l'écran
 function tutoPlacerBulle(x, y, r) {
-  const b = $('#tutobulle'), d = b.getBoundingClientRect();
+  const b = $('#tutobulle'), d = cadre(b);
   const marge = 10;
   let g = x - d.width / 2;
-  g = Math.max(marge, Math.min(g, window.innerWidth - d.width - marge));
+  g = Math.max(marge, Math.min(g, vueL() - d.width - marge));
   let h = y + r + 48;                       // sous le halo ET sous le doigt
-  if (h + d.height > window.innerHeight - marge) h = y - r - d.height - 14;
-  h = Math.max(marge, Math.min(h, window.innerHeight - d.height - marge));
+  if (h + d.height > vueH() - marge) h = y - r - d.height - 14;
+  h = Math.max(marge, Math.min(h, vueH() - d.height - marge));
   b.style.left = g + 'px'; b.style.top = h + 'px';
 }
 
@@ -3695,7 +3797,7 @@ async function tutoViser(el, rayon) {
   const doigt = $('#tutodoigt'), halo = $('#tutohalo');
   el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
   await dodo(420);
-  const b = el.getBoundingClientRect();
+  const b = cadre(el);
   const x = b.left + b.width / 2, y = b.top + b.height / 2;
   const r = rayon || Math.max(b.width, b.height) / 2 + 7;
   halo.style.width = halo.style.height = (2 * r) + 'px';
@@ -3711,7 +3813,7 @@ async function tutoViser(el, rayon) {
 async function tutoLire() {
   const t = $('#tutotxt');
   const lh = parseFloat(getComputedStyle($('#tutobulle')).lineHeight) || 20;
-  const lignes = Math.max(1, Math.round(t.getBoundingClientRect().height / lh));
+  const lignes = Math.max(1, Math.round(cadre(t).height / lh));
   await dodoAnnulable(1500 * lignes);
 }
 
@@ -3914,7 +4016,7 @@ async function tutoCroises() {
       if (tutoStop) return;
       const inp = cases[c] && cases[c].querySelector('input.js');
       if (!inp) continue;
-      const b = cases[c].getBoundingClientRect();
+      const b = cadre(cases[c]);
       const x = b.left + b.width / 2, y = b.top + b.height / 2;
       $('#tutodoigt').style.left = (x - 16) + 'px';
       $('#tutodoigt').style.top = (y - 4) + 'px';
@@ -3967,7 +4069,7 @@ async function tutoDessin() {
   if (!etat) etat = new Uint8Array(nl * nc);
   memoHisto();
   const halo = $('#tutohalo'), doigt = $('#tutodoigt');
-  const c0 = cases[0].getBoundingClientRect();
+  const c0 = cadre(cases[0]);
   halo.style.width = halo.style.height = (c0.width + 10) + 'px';
   for (let r = 0; r < nl && !tutoStop; r++) {
     const dehors = [];
@@ -3975,7 +4077,7 @@ async function tutoDessin() {
     if (!dehors.length) continue;
     for (const i of dehors) {
       if (tutoStop) break;
-      const b = cases[i].getBoundingClientRect();
+      const b = cadre(cases[i]);
       const x = b.left + b.width / 2, y = b.top + b.height / 2;
       halo.style.left = x + 'px'; halo.style.top = y + 'px';
       doigt.style.left = (x - 16) + 'px'; doigt.style.top = (y - 4) + 'px';
