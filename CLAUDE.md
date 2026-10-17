@@ -39,3 +39,9 @@ Auteur : Cyrille Gindre — marque CGExcel. Publiée sur GitHub Pages.
   d'emploi » (`<details id="notice">` dans `index.html`).
 - L'application doit continuer à fonctionner hors ligne : embarquer les
   bibliothèques dans le dépôt plutôt que de les charger depuis un CDN.
+
+## Git
+
+- Par défaut, commiter et pousser directement sur `main`, sans branche ni
+  pull request — sauf demande contraire de l'auteur.
+- Avant de pousser : tester dans Chromium (Playwright) les parties modifiées.
