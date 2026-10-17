@@ -279,6 +279,7 @@ self.onmessage = async (e) => {
       motsImposes: imposes.concat(injectes),
       motsThemes: theme,
       masque, noirsImposes,
+      lettresFixes: p.lettresFixes || null,
       densiteNoirs: densite,
       maxMots: p.maxMots || {},
       graine: p.graine ?? (Date.now() & 0x7fffffff),

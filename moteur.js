@@ -1,7 +1,7 @@
 // CGExcel - Generateur de mots croises francais - moteur v4 (JS)
 'use strict';
 
-const VERSION = '9.8';
+const VERSION = '9.9';
 const NOIR = -2, VIDE = -1;
 
 function normaliser(s) {
@@ -97,6 +97,13 @@ class Generateur {
       ? this.noirsImposes.reduce((a, x) => a + (x ? 1 : 0), 0) : 0;
     this.diag = { squelette: 0, motif: 0, plafondCourt: 0, vuCourt: 0, resolution: 0 };
     this.masque = opts.masque || null;        // 1 = case hors silhouette
+    // lettres posées à la main sur la grille : -1 = case libre, 0..25 = lettre
+    // qui doit rester à cette place (hors silhouette et noires imposées exclues)
+    this.lettresFixes = null;
+    if (opts.lettresFixes && opts.lettresFixes.some(v => v >= 0)) {
+      this.lettresFixes = Int8Array.from(opts.lettresFixes, (v, i) =>
+        (this.masque && this.masque[i]) || (this.noirsImposes && this.noirsImposes[i]) ? -1 : v);
+    }
     this.angles = opts.anglesBlancs ?? true;  // pas de noir dans les angles
     this.maxMots = opts.maxMots || {};        // ex. {2: 4, 3: 10}
     this.dedans = [];
@@ -298,6 +305,10 @@ class Generateur {
     const fixe = new Uint8Array(N);
     const idMot = new Int8Array(N).fill(-1);   // quel mot impose occupe la case
     if (this.noirsImposes) for (let i = 0; i < N; i++) if (this.noirsImposes[i]) fixe[i] = 1;
+    // les lettres posées à la main sont là avant les mots imposés, qui peuvent
+    // les croiser
+    if (this.lettresFixes) for (let i = 0; i < N; i++)
+      if (this.lettresFixes[i] >= 0) { lettres[i] = this.lettresFixes[i]; fixe[i] = 2; }
     let reste = budget, croixTotal = 0;
     const rec = (i) => {
       if (--reste <= 0) return false;
@@ -410,6 +421,24 @@ class Generateur {
       for (const i of p.bords) fixe[i] = 1;
     }
     return fixe;
+  }
+
+  // ajoute les lettres posées à la main à un squelette (idempotent)
+  poserFixes(res) {
+    const L = this.lettresFixes;
+    if (!L) return res;
+    if (!res.lettres) res.lettres = new Int8Array(L.length).fill(VIDE);
+    for (let i = 0; i < L.length; i++)
+      if (L[i] >= 0) { res.lettres[i] = L[i]; res.fixe[i] = 2; }
+    return res;
+  }
+
+  // la grille garde-t-elle chaque lettre posée à la main à sa place ?
+  respecte(g) {
+    const L = this.lettresFixes;
+    if (!L || !g) return true;
+    for (let i = 0; i < L.length; i++) if (L[i] >= 0 && g[i] !== L[i]) return false;
+    return true;
   }
 
   motif(fixe) {
@@ -812,7 +841,9 @@ class Generateur {
       const init = Int8Array.from(courant);
       init[i] = VIDE;
       const r = this.resoudre(motif, { n: 40000 }, init);
-      if (r.grille && r.poses === this.imposes.length) { courant = r.grille; gagne++; }
+      if (r.grille && r.poses === this.imposes.length && this.respecte(r.grille)) {
+        courant = r.grille; gagne++;
+      }
     }
     this.diag.polies = gagne;
     return courant;
@@ -866,7 +897,13 @@ class Generateur {
       const deja = new Set(segs.map(x => lire(x, courant)));
       if (this.theme.has(lire(s, courant))) continue;
       const cands = [];
-      for (const m of this.theme) if (m.length === L && !deja.has(m)) cands.push(m);
+      const LF = this.lettresFixes;
+      for (const m of this.theme) {
+        if (m.length !== L || deja.has(m)) continue;
+        // un mot du thème ne peut pas déloger une lettre posée à la main
+        if (LF && s.some((c, k) => LF[c] >= 0 && LF[c] !== m.charCodeAt(k) - 65)) continue;
+        cands.push(m);
+      }
       if (!cands.length) continue;
       for (let i = cands.length - 1; i > 0; i--) {
         const j = Math.floor(this.rnd() * (i + 1));[cands[i], cands[j]] = [cands[j], cands[i]];
@@ -877,10 +914,11 @@ class Generateur {
         s.forEach((c, k) => { init[c] = m.charCodeAt(k) - 65; });
         for (const c of s) for (const autre of parCase.get(c) || []) {
           if (autre === s) continue;
-          for (const d of autre) if (!s.includes(d)) init[d] = VIDE;
+          for (const d of autre)
+            if (!s.includes(d) && !(LF && LF[d] >= 0)) init[d] = VIDE;
         }
         const r = this.resoudre(motif, { n: 30000 }, init);
-        if (r.grille && r.poses === this.imposes.length
+        if (r.grille && r.poses === this.imposes.length && this.respecte(r.grille)
             && this.theme.has(lire(s, r.grille))) { courant = r.grille; gagne++; break; }
       }
     }
@@ -899,6 +937,7 @@ class Generateur {
         res = this.imposes.length ? this.squelette()
           : { fixe: new Uint8Array(this.nl * this.nc), lettres: null, liste: [] };
         if (!res) continue;
+        this.poserFixes(res);
         motif = null;
       }
       if (!motif) {
@@ -916,6 +955,8 @@ class Generateur {
       }
       this.diag.resolution++;
       const r = this.resoudre(motif, { n: budgetParEssai }, init);
+      // une grille qui aurait perdu une lettre posée à la main ne vaut rien
+      if (r.grille && !this.respecte(r.grille)) r.grille = null;
       if (r.grille) {
         if (r.poses > score) { meilleur = r; score = r.poses; }
         if (r.poses === this.imposes.length) {
