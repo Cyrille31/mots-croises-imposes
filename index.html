@@ -443,7 +443,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.14</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.15</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -858,7 +858,11 @@
   garde ensuite à leur place en complétant tout le reste. Il est accessible même
   sans grille : on écrit alors sur une grille vierge. Tapez une lettre pour la
   poser ; tapez « . », « # » ou une espace pour poser une case noire (utile pour
-  borner un mot) ; videz une case pour la libérer. Les cases posées ressortent
+  borner un mot) ; videz une case pour la libérer. La touche d'effacement
+  recule case par case en effaçant. Inutile de borner vous-même chaque mot :
+  à la génération, la case juste avant et juste après chaque suite d'au moins
+  deux lettres posées devient noire, pour que ANNE ne ressorte pas en ANNEE.
+  Un mot posé est admis même s'il manque au lexique (un prénom, un sigle…). Les cases posées ressortent
   <b style="background:#ffe6c7">en orange clair</b>, en mode édition comme en
   mode génération. Passez ensuite en mode génération et cliquez
   <b>Générer</b> : chaque nouvelle grille garde ces lettres et ces cases noires,
@@ -892,7 +896,9 @@
   cases noires et les lettres déjà écrites, puis passe à la ligne suivante. On
   écrit horizontalement par défaut ; un <b>double appui</b> sur la première case
   d'un mot fait écrire en vertical (un autre double appui revient à
-  l'horizontale). Le mot en cours de saisie est légèrement teinté.</p>
+  l'horizontale). Le mot en cours de saisie est légèrement teinté. La touche
+  d'effacement efface la lettre de la case, puis, dans une case vide, recule
+  d'une case en effaçant : on remonte ainsi le mot à l'envers.</p>
   <p>Les définitions sont présentées comme sur la feuille « à remplir » : deux
   blocs continus, <i>Horizontalement</i> et <i>Verticalement</i>, sans les mots
   de la solution ni les liens de recherche. Chaque définition reste cliquable.
@@ -946,8 +952,11 @@
   récupération ne peut donc pas être automatisée — et il ne serait pas correct de
   la forcer. Le bouton <b>coller</b> place le curseur dans le champ : il ne reste
   qu'à faire Ctrl+V.</p>
-  <p>Le bouton <b>Wiktionnaire</b> est le seul automatique : il extrait les
-  lignes de définition de l'article et les propose dans le menu. Utile pour
+  <p>Le bouton <b>Wiktionnaire</b> est le seul automatique. Il propose d'abord
+  les <b>synonymes</b> du mot relevés dans l'article — DEMEURE, LOGIS pour
+  MAISON, bien plus proches d'une définition de cruciverbiste — puis les lignes
+  de définition du dictionnaire. <b>Chercher les définitions</b> retient un
+  synonyme quand il en existe, une définition sinon. Utile pour
   dégrossir, mais « Habitation » n'est pas une bonne définition de MAISON. Les
   mots étant stockés sans accents, plusieurs entrées voisines peuvent apparaître
   (ÉTÉ, ÊTES…) ; le titre de l'article est alors indiqué entre crochets.</p>
@@ -1092,7 +1101,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.14, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.15, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -1496,6 +1505,31 @@ function lettreTapee(inp) {
   const k = inp.selectionStart || v.length;
   return v.charAt(k - 1) || v.slice(-1);
 }
+// Une case vide qui a le curseur contient un caractère invisible : sur
+// Android, la touche d'effacement ne signale rien dans un champ vraiment vide.
+const ZW = '\u200B';
+function garnir(inp) { if (!inp.value) inp.value = ZW; inp.select(); }
+function degarnir(inp) { if (inp.value === ZW) inp.value = ''; }
+function effacement(ev, inp) {
+  return ev && ev.inputType ? ev.inputType.startsWith('delete') : !inp.value;
+}
+// Effacer en arrière : la case précédente dans le sens de saisie reçoit le
+// curseur et perd sa lettre.
+function reculer(i, effacer) {
+  const N = nl * nc, V = sensSaisie === 'V';
+  const versCase = k => V ? (k % nl) * nc + ((k / nl) | 0) : k;
+  const pos = V ? (i % nc) * nl + ((i / nc) | 0) : i;
+  for (let k = pos - 1; k >= 0; k--) {
+    const j = versCase(k);
+    const e = champDe(j);
+    // une case noire posée à la main s'efface aussi ; les autres se sautent
+    if (!e || (cases[j].classList.contains('noir') && !cases[j].classList.contains('posee'))) continue;
+    effacer(j);
+    e.value = '';
+    e.focus();
+    return;
+  }
+}
 function champDe(i) { return cases[i] && cases[i].querySelector('input.js, input.ed'); }
 function toucherCase(i) {
   const t = Date.now();
@@ -1592,8 +1626,19 @@ function dessiner(g, tailleForcee) {
       const inp = document.createElement('input');
       inp.className = 'ed';
       inp.value = v >= 0 ? String.fromCharCode(65 + v) : '';
-      inp.onfocus = () => { caseSaisie = i; marquerMot(i); inp.select(); };
-      inp.oninput = () => {
+      inp.onfocus = () => { caseSaisie = i; marquerMot(i); garnir(inp); };
+      inp.onblur = () => degarnir(inp);
+      inp.oninput = ev => {
+        // sans grille, effacer recule case par case comme en mode joueur
+        if (!derniere && effacement(ev, inp)) {
+          const oter = j => { posees.delete(j); cases[j].classList.remove('posee', 'noir'); };
+          const avait = posees.has(i);
+          oter(i); inp.value = ZW;
+          if (!avait) reculer(i, oter);
+          majBoutons();
+          $('#etat').textContent = posees.size + ' case(s) posée(s).';
+          return;
+        }
         const brut = lettreTapee(inp);
         const t = norm(brut).slice(0, 1);
         // une lettre se pose ; « . », « # » ou une espace posent une case
@@ -1661,10 +1706,19 @@ function dessiner(g, tailleForcee) {
         inp.className = 'js';
         inp.value = saisies.get(i) || '';
         // la lettre déjà là est sélectionnée : la frappe la remplace
-        inp.onfocus = () => { cleActive = null; caseActive = i; caseSaisie = i; eclairer(i); marquerMot(i); inp.select(); };
-        inp.oninput = () => {
-          const w = norm(lettreTapee(inp)).slice(0, 1);
-          inp.value = w;
+        inp.onfocus = () => { cleActive = null; caseActive = i; caseSaisie = i; eclairer(i); marquerMot(i); garnir(inp); };
+        inp.onblur = () => degarnir(inp);
+        inp.oninput = ev => {
+          // effacer : la lettre de la case part ; dans une case déjà vide, on
+          // recule d'une case en effaçant
+          if (effacement(ev, inp)) {
+            const avait = saisies.delete(i);
+            inp.value = ZW;
+            if (!avait) reculer(i, j => saisies.delete(j));
+            return;
+          }
+          const w = norm(lettreTapee(inp)).replace(/[^A-Z]/g, '').slice(0, 1);
+          inp.value = w || ZW;
           if (w) saisies.set(i, w); else saisies.delete(i);
           verifierVictoire();
           // le curseur saute les cases déjà remplies et les cases noires
@@ -2327,6 +2381,37 @@ function allerGrille(k) {
 }
 $('#grprec').onclick = () => allerGrille(iGrille - 1);
 $('#grsuiv').onclick = () => allerGrille(iGrille + 1);
+// Un mot posé à la main s'arrête là où on l'a arrêté : la case juste avant et
+// juste après chaque suite d'au moins deux lettres posées devient noire, sans
+// quoi ANNE pourrait ressortir en ANNEE. Ces suites sont aussi relevées comme
+// mots : le moteur les accepte même absentes du lexique (un prénom, un sigle…).
+function bornesPosees() { return analyserPosees().bornes; }
+function analyserPosees() {
+  const out = new Set(), mots = [];
+  const lettre = i => posees.has(i) && posees.get(i) >= 0;
+  const hors = i => etat && etat[i] === 1;
+  for (const [n, m, idx] of [[nl, nc, (a, b) => a * nc + b],
+                             [nc, nl, (a, b) => b * nc + a]]) {
+    for (let a = 0; a < n; a++) {
+      let b = 0;
+      while (b < m) {
+        if (!lettre(idx(a, b))) { b++; continue; }
+        let f = b;
+        while (f + 1 < m && lettre(idx(a, f + 1))) f++;
+        if (f > b) {
+          if (b > 0 && !hors(idx(a, b - 1))) out.add(idx(a, b - 1));
+          if (f < m - 1 && !hors(idx(a, f + 1))) out.add(idx(a, f + 1));
+          let mot = '';
+          for (let k = b; k <= f; k++) mot += String.fromCharCode(65 + posees.get(idx(a, k)));
+          mots.push(mot);
+        }
+        b = f + 1;
+      }
+    }
+  }
+  return { bornes: out, mots };
+}
+
 function lancer(affiner, mode) {
   const affinage = affiner;
   imposesNorm = lignes('#imposes');
@@ -2441,9 +2526,13 @@ function lancer(affiner, mode) {
     imposes: imposesNorm,
     theme: lignes('#theme'),
     masque: etat ? Array.from(etat, v => v === 1 ? 1 : 0) : null,
-    noirsImposes: (etat && etat.some(v => v === 2)) || [...posees.values()].includes(-2)
-      ? Array.from({ length: nl * nc }, (_, i) =>
-          (etat && etat[i] === 2) || posees.get(i) === -2 ? 1 : 0) : null,
+    noirsImposes: (() => {
+      const bornes = bornesPosees();
+      return (etat && etat.some(v => v === 2)) || [...posees.values()].includes(-2) || bornes.size
+        ? Array.from({ length: nl * nc }, (_, i) =>
+            (etat && etat[i] === 2) || posees.get(i) === -2 || bornes.has(i) ? 1 : 0) : null;
+    })(),
+    motsPoses: analyserPosees().mots,
     lettresFixes: [...posees.values()].some(v => v >= 0)
       ? Array.from({ length: nl * nc }, (_, i) => posees.has(i) && posees.get(i) >= 0 ? posees.get(i) : -1)
       : null,
@@ -2566,6 +2655,29 @@ function nettoyerWiki(t) {
     .trim();
 }
 
+// Synonymes d'un article du Wiktionnaire : les lignes « * [[logis]] » des
+// sous-sections {{S|synonymes}} de la section française. Un synonyme fait une
+// définition de cruciverbiste bien plus juste que la définition du dictionnaire.
+function synonymesWiki(wt, mot) {
+  const out = [];
+  let dedans = false;
+  for (const ligne of wt.split('\n')) {
+    if (/^=+/.test(ligne)) { dedans = /\{\{S\|synonymes/i.test(ligne); continue; }
+    if (!dedans || !/^\*/.test(ligne)) continue;
+    // premier lien de la ligne : [[cible|texte]], [[cible]] ou {{lien|cible|fr}}
+    const m = ligne.match(/\[\[([^\]|#]+)(?:\|([^\]]+))?\]\]/)
+           || ligne.match(/\{\{lien\|([^|}]+)/);
+    if (!m) continue;
+    const t = String(m[2] || m[1]).trim();
+    if (t.length < 2 || t.length > 60 || /[:{}]/.test(t)) continue;
+    if (norm(t).replace(/[^A-Z]/g, '').includes(mot)) continue;   // pas le mot lui-même
+    if (!out.includes(t)) out.push(t);
+  }
+  return out;
+}
+
+// Propositions pour un mot : d'abord ses synonymes, puis, à défaut ou en
+// complément, les lignes de définition du Wiktionnaire.
 async function chercherDefs(mot) {
   const base = 'https://fr.wiktionary.org/w/api.php?format=json&origin=*&';
   const q = encodeURIComponent(mot.toLowerCase());
@@ -2574,7 +2686,7 @@ async function chercherDefs(mot) {
   const titres = (d.query && d.query.search || []).map(x => x.title)
     .filter(t => norm(t) === mot).slice(0, 3);
   if (!titres.length) return [];
-  const out = [];
+  const syn = [], defs = [];
   for (const titre of titres) {
     const r2 = await fetch(base + 'action=parse&prop=wikitext&page=' + encodeURIComponent(titre));
     const d2 = await r2.json();
@@ -2586,7 +2698,13 @@ async function chercherDefs(mot) {
       const j = wt.indexOf('\n== ', 3);
       if (j > 0) wt = wt.slice(0, j);
     }
+    for (const t of synonymesWiki(wt, mot)) {
+      const f = formater(t);
+      if (f && !syn.some(x => x.texte === f)) syn.push({ texte: f, source: 'synonyme' });
+      if (syn.length >= 12) break;
+    }
     for (const ligne of wt.split('\n')) {
+      if (defs.length >= 12) break;
       if (!/^#[^#*:]/.test(ligne)) continue;        // # = definition, #* = exemple
       const t = nettoyerWiki(ligne.replace(/^#\s*/, ''));
       if (t.length < 8) continue;
@@ -2595,12 +2713,10 @@ async function chercherDefs(mot) {
       court = court.replace(/[\s]*[([][^()\[\]]{0,40}[)\]][\s.]*$/, (m) =>
         norm(m).replace(/[^A-Z]/g, '') === mot ? '' : m).trim();
       const f = formater(court);
-      if (f && !out.some(x => x.texte === f)) out.push({ texte: f, source: titre });
-      if (out.length >= 12) break;
+      if (f && !defs.some(x => x.texte === f)) defs.push({ texte: f, source: titre });
     }
-    if (out.length >= 12) break;
   }
-  return out;
+  return syn.concat(defs);
 }
 
 // En mode joueur, les définitions sont présentées comme sur la feuille
@@ -3548,7 +3664,10 @@ async function chercherToutes(auto) {
       const props = await chercherDefs(t.mot);
       if (props.length) {
         propositions.set(t.cle, props);
-        defsChoisies.set(t.cle, props[Math.floor(Math.random() * props.length)].texte);
+        // un synonyme d'abord ; une définition du dictionnaire à défaut
+        const syn = props.filter(x => x.source === 'synonyme');
+        const choix = syn.length ? syn : props;
+        defsChoisies.set(t.cle, choix[Math.floor(Math.random() * choix.length)].texte);
         ok++;
       }
     } catch (e) { /* mot suivant */ }

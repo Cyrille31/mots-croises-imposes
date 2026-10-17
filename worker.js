@@ -231,6 +231,8 @@ self.onmessage = async (e) => {
     const imposes = p.imposes || [];
     const theme = p.theme || [];
     const plats = imposes.join(' ').split(/\s+/).filter(Boolean);
+    // mots écrits à la main en mode édition : admis même hors du lexique
+    const poses = (p.motsPoses || []).map(m => M.normaliser(m)).filter(Boolean);
     // mots imposes ET mots du theme sont proteges de la troncature du lexique
     // on ne reconstruit l'index que si les paramètres qui le déterminent changent
     const anagramot = p.type === 'anagramot';
@@ -251,13 +253,14 @@ self.onmessage = async (e) => {
       if (liste.length < 500) throw new Error('trop peu de mots ont une anagramme');
     }
     const cle = [p.lmax || 12, p.niveau || 20000, anagramot ? 'A' : '-',
-                 plats.slice().sort().join('|'), theme.slice().sort().join('|')].join('#');
+                 plats.slice().sort().join('|'), theme.slice().sort().join('|'),
+                 poses.slice().sort().join('|')].join('#');
     if (cle !== cleIndex) {
       self.postMessage({ type: 'info',
         texte: anagramot ? `Indexation (${liste.length} mots à anagramme)…`
                          : 'Indexation du lexique…' });
       cacheIndex = M.Index.depuisListe(liste, 2, p.lmax || 12,
-                                       plats.concat(theme), p.niveau || 20000);
+                                       plats.concat(theme, poses), p.niveau || 20000);
       cleIndex = cle;
     }
     const index = cacheIndex;
