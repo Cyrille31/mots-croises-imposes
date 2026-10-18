@@ -187,6 +187,15 @@
   .undef { cursor:pointer; padding:1px 2px; border-radius:3px; }
   .undef:hover { background:#f0f4f9; }
   .undef.vise { background:#fff6d5; }
+  .actdef { display:flex; flex-wrap:wrap; gap:4px; margin:3px 0 5px; padding:4px;
+            background:#f4f7fb; border:1px solid #d7e0eb; border-radius:6px; }
+  .actdef button { margin:0; padding:3px 7px; font-size:11.5px; }
+  .actdef .autres { display:flex; flex-direction:column; gap:3px; width:100%; }
+  .actdef .autres i { font-size:11.5px; color:#6b7887; }
+  .actdef .choixdef { text-align:left; white-space:normal; }
+  .actdef .perso { display:flex; gap:4px; }
+  .actdef .perso input { flex:1; min-width:0; padding:3px 6px; font:12px inherit;
+            border:1px solid #ccd3dc; border-radius:5px; }
   /* ---- victoire : la vitre se brise et les éclats s'envolent ---- */
   #vitre { position:fixed; inset:0; z-index:101; pointer-events:none; }
   #vitre .fissure { fill:none; stroke:#9fb4cd; stroke-width:1.1; opacity:0;
@@ -297,7 +306,8 @@
   #colgauche { display:flex; flex-direction:column; gap:4px; padding-top:24px;
                flex:0 0 auto; width:0; overflow:hidden; }
   body.avecaide #colgauche { width:var(--colg); overflow:visible; }
-  #colgauche button { font:12px inherit; padding:6px 8px; white-space:nowrap;
+  /* boutons d'aide compacts, sur deux lignes : la grille garde la place */
+  #colgauche button { font:11px/1.2 inherit; padding:4px 5px; white-space:normal;
                width:100%; }
   #defil { flex:0 1 auto; min-width:0; max-width:100%;
            overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
@@ -317,7 +327,7 @@
   .chip:active { background:#dbe7f5; }
   .chip.vide { grid-column:1 / -1; width:auto; height:26px; color:#8a96a4;
           letter-spacing:.2em; font-size:11px; }
-  @media (max-width:430px) { :root { --puce:30px; --colg:140px; } }
+  @media (max-width:430px) { :root { --puce:30px; } }
   .c.faux { background-color:#ffd2d2 !important; color:#8b1a1a; }
   #legende .c.vise { outline:2px solid #1a3a6b; outline-offset:-2px; }
   #legende .c span.pose { color:#16457e; font-weight:600; }
@@ -443,7 +453,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.15</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.16</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -465,8 +475,8 @@
             <option value="anagramot">anagramots</option>
           </select></label>
         <label class="lr">Dimensions
-          <span class="dim"><span class="cht"><select id="nl"></select></span> ×
-            <span class="cht"><select id="nc"></select></span></span></label>
+          <span class="dim">h : <span class="cht"><select id="nl" title="hauteur : nombre de lignes"></select></span>
+            l : <span class="cht"><select id="nc" title="largeur : nombre de colonnes"></select></span></span></label>
         <label class="lr">Cases noires
           <select id="densite"></select></label>
         <label class="lr">Cases à l'impression
@@ -907,13 +917,23 @@
   définitions jusqu'à les voir.</p>
   <p>Un second clic sur la même définition, ou un clic n'importe où hors de la
   grille et du bloc des définitions, éteint l'éclairage.</p>
+  <p>Un clic sur une définition fait apparaître deux boutons dessous.
+  <b>Aide ce mot</b> dévoile toutes les lettres du mot. <b>Autre déf.</b> propose
+  d'autres définitions du même mot — synonymes d'abord — et une zone pour écrire
+  la vôtre ; celle que vous choisissez remplace l'ancienne. Après une demande de
+  nouvelle grille, les définitions apparaissent au fur et à mesure qu'elles
+  arrivent du Wiktionnaire.</p>
+  <p>Les boutons d'aide de la colonne de gauche sont compacts, sur deux lignes,
+  pour laisser le plus de place possible à la grille : en mode joueur les cases
+  grandissent jusqu'à 42 pixels si l'écran le permet.</p>
   <p>Un clic dans une case met en évidence ses deux définitions, l'horizontale et
   la verticale. Inversement, un clic sur une définition colore les cases du mot
   correspondant. Quand la grille est entièrement juste, un petit feu d'artifice
   vous félicite.</p>
 
   <h4>Les réglages</h4>
-  <p><b>Grille</b> — de 2 à 30 lignes et colonnes, 7×7 au démarrage. La liste des
+  <p><b>Grille</b> — de 2 à 30 lignes et colonnes, 7×7 au démarrage : <i>h</i>
+  est la hauteur (nombre de lignes), <i>l</i> la largeur (nombre de colonnes). La liste des
   tailles s'ouvre centrée sur la taille en cours. Le format confortable est
   12×12 à 15×15 ; en deçà de 11×11 les mots imposés manquent de place.</p>
   <p><b>Noires</b> — un point de départ, pas une limite. Le programme essaie
@@ -1101,7 +1121,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.15, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.16, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -1486,7 +1506,10 @@ function afficherLegende(g) {
 
 // largeur réservée à la colonne de gauche : elle doit rester entièrement
 // visible, la grille se contentant de ce qui reste — quitte à défiler
-const LARG_COLG = () => window.innerWidth <= 430 ? 140 : 156;
+// En mots codés la colonne doit loger les quatre puces de lettres ; ailleurs
+// elle ne porte que des boutons d'aide, sur deux lignes : elle reste étroite.
+const LARG_COLG = () => typeCourant() === 'codes'
+  ? (window.innerWidth <= 430 ? 132 : 148) : 74;
 function colonneUtile() {
   return !!derniere && (typeCourant() === 'codes' || modeJoueur);
 }
@@ -1586,10 +1609,13 @@ function dessiner(g, tailleForcee) {
   // défile horizontalement plutôt que de devenir illisible ou de déborder.
   // En mots codés il faut pouvoir lire le petit numéro : le plancher est plus haut.
   const plancher = typeCourant() === 'codes' ? 18 : 14;
+  document.documentElement.style.setProperty('--colg', LARG_COLG() + 'px');
   const pris = colonneUtile() ? LARG_COLG() + 8 : 0;
   const dispo = Math.min(vueL() - 24 - pris, 560);
+  // en mode joueur on joue au doigt : des cases plus grandes si la place le permet
+  const plafond = modeJoueur ? 42 : 30;
   const taille = tailleForcee
-    || Math.max(plancher, Math.min(30, Math.floor(dispo / (nc + 1))));
+    || Math.max(plancher, Math.min(plafond, Math.floor(dispo / (nc + 1))));
   const marge = Math.round(taille * 0.7);
   boite.style.gridTemplateColumns = `${marge}px repeat(${nc}, ${taille}px)`;
   boite.style.border = 'none';
@@ -1924,6 +1950,7 @@ function eclairer(i) {
 function effacerEclairage() {
   document.querySelectorAll('.c.vise, .def.vise, .undef.vise')
     .forEach(e => e.classList.remove('vise'));
+  fermerActions();
   cleActive = null; clicPrec = -1;
 }
 function eclairerMot(cle) {
@@ -2719,6 +2746,90 @@ async function chercherDefs(mot) {
   return syn.concat(defs);
 }
 
+// ---- actions sur une définition, en mode joueur ------------------------------
+// Sous la définition touchée : « Aide ce mot » dévoile tout le mot ;
+// « Autre déf. » propose d'autres définitions, ou d'écrire la sienne.
+function cellulesDe(cle) {
+  if (!motsDeCase) return [];
+  for (const liste of motsDeCase.values())
+    for (const m of liste) if (m.cle === cle) return m.cells;
+  return [];
+}
+function fermerActions() { document.querySelectorAll('#defs .actdef').forEach(e => e.remove()); }
+function ouvrirActions(span, cle) {
+  fermerActions();
+  const bar = document.createElement('span');
+  bar.className = 'actdef';
+  const bAide = document.createElement('button');
+  bAide.className = 'sec'; bAide.textContent = 'Aide ce mot';
+  bAide.onclick = ev => { ev.stopPropagation(); aideMot(cle); };
+  const bAutre = document.createElement('button');
+  bAutre.className = 'sec'; bAutre.textContent = 'Autre déf.';
+  bAutre.onclick = ev => { ev.stopPropagation(); autresDefs(bar, span, cle); };
+  bar.append(bAide, bAutre);
+  span.after(bar);
+}
+function aideMot(cle) {
+  const cells = cellulesDe(cle);
+  if (!derniere || !cells.length) return;
+  for (const i of cells) {
+    const ch = String.fromCharCode(65 + derniere[i]);
+    saisies.set(i, ch);
+    const inp = cases[i] && cases[i].querySelector('input.js');
+    if (inp) inp.value = ch;
+    if (cases[i]) { cases[i].classList.add('revelee'); cases[i].style.background = PALETTE[0]; }
+  }
+  $('#etat').textContent = 'Mot dévoilé.';
+  verifierVictoire();
+}
+async function autresDefs(bar, span, cle) {
+  bar.querySelector('.autres') && bar.querySelector('.autres').remove();
+  const boite = document.createElement('span');
+  boite.className = 'autres';
+  bar.appendChild(boite);
+  const choisir = texte => {
+    texte = typeCourant() === 'anagramot' ? texte.trim() : formater(texte);
+    if (!texte) return;
+    defsChoisies.set(cle, texte);
+    span.textContent = texte;
+    fermerActions();
+    $('#etat').textContent = 'Définition remplacée.';
+  };
+  // d'abord les propositions déjà connues ; sinon on les demande au Wiktionnaire
+  let props = propositions.get(cle) || [];
+  if (props.length <= 1 && typeCourant() !== 'anagramot') {
+    boite.textContent = 'Recherche…';
+    const cells = cellulesDe(cle);
+    const mot = cells.map(i => String.fromCharCode(65 + derniere[i])).join('');
+    try { props = await chercherDefs(mot); propositions.set(cle, props); }
+    catch (e) { props = []; }
+    boite.textContent = '';
+  }
+  const actuelle = defsChoisies.get(cle);
+  const autres = props.filter(x => x.texte !== actuelle);
+  if (!autres.length) {
+    const r = document.createElement('i');
+    r.textContent = 'Pas d\u2019autre définition trouvée.';
+    boite.appendChild(r);
+  }
+  for (const pr of autres.slice(0, 8)) {
+    const b = document.createElement('button');
+    b.className = 'sec choixdef'; b.textContent = pr.texte;
+    b.onclick = ev => { ev.stopPropagation(); choisir(pr.texte); };
+    boite.appendChild(b);
+  }
+  const saisie = document.createElement('input');
+  saisie.placeholder = 'ou écrivez la vôtre';
+  const ok = document.createElement('button');
+  ok.className = 'sec'; ok.textContent = 'OK';
+  ok.onclick = ev => { ev.stopPropagation(); choisir(saisie.value); };
+  saisie.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); choisir(saisie.value); } };
+  const ligne = document.createElement('span');
+  ligne.className = 'perso';
+  ligne.append(saisie, ok);
+  boite.appendChild(ligne);
+}
+
 // En mode joueur, les définitions sont présentées comme sur la feuille
 // imprimée : deux blocs continus, chaque définition restant cliquable.
 function afficherDefsJoueur(g) {
@@ -2745,9 +2856,13 @@ function afficherDefsJoueur(g) {
         s.onclick = ev => {
           // un glissement de défilement ne doit pas colorer la définition
           if (depart && Math.hypot(ev.clientX - depart.x, ev.clientY - depart.y) > 8) return;
+          // mot déjà éclairé mais boutons refermés : on les rouvre seulement
+          const ouverte = s.nextElementSibling && s.nextElementSibling.classList.contains('actdef');
+          if (cleActive === cle && !ouverte) { ouvrirActions(s, cle); return; }
           document.querySelectorAll('.undef.vise').forEach(x => x.classList.remove('vise'));
           s.classList.add('vise');
           eclairerMot(cle);
+          if (cleActive === cle) ouvrirActions(s, cle); else fermerActions();
           s.scrollIntoView({ block: 'nearest' });
         };
         p.appendChild(s);
@@ -3655,7 +3770,11 @@ async function chercherToutes(auto) {
         if (!(defsChoisies.get(cle) || '').trim()) taches.push({ cle, mot });
       });
   let ok = 0;
+  // les définitions s'affichent au fur et à mesure qu'elles arrivent
+  if (modeJoueur || modeDef) afficherDefs(derniere);
+  const grilleCherchee = derniere;
   for (let i = 0; i < taches.length; i++) {
+    if (derniere !== grilleCherchee) break;          // une autre grille est arrivée
     const t = taches[i];
     b.textContent = `Recherche ${i + 1}/${taches.length}…`;
     if (auto) $('#etat').textContent =
@@ -3669,11 +3788,20 @@ async function chercherToutes(auto) {
         const choix = syn.length ? syn : props;
         defsChoisies.set(t.cle, choix[Math.floor(Math.random() * choix.length)].texte);
         ok++;
+        const el = document.querySelector(`#defs [data-cle="${t.cle}"]`);
+        if (el && el.classList.contains('undef')) el.textContent = defsChoisies.get(t.cle);
+        else if (el) {
+          const champ = el.querySelector('textarea'), sel = el.querySelector('select');
+          if (champ && !champ.value) { champ.value = defsChoisies.get(t.cle); ajuster(champ); }
+          if (sel) remplirSelect(sel, props);
+        }
       }
     } catch (e) { /* mot suivant */ }
   }
   b.textContent = libelle; b.disabled = false;
-  afficherDefs(derniere); dessiner(derniere); majDecor();
+  if (derniere !== grilleCherchee) return ok;
+  if (!modeJoueur) { afficherDefs(derniere); dessiner(derniere); }
+  majDecor();
   $('#etat').textContent = taches.length
     ? `${ok} définition(s) trouvée(s) sur ${taches.length} mots${auto ? '' : ' sans définition'}.`
     : 'Tous les mots ont déjà une définition.';
