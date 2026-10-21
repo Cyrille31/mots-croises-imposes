@@ -311,10 +311,9 @@
   /* boutons d'aide compacts, sur deux lignes : la grille garde la place */
   #colgauche button { font:11px/1.2 inherit; padding:4px 5px; white-space:normal;
                width:100%; }
-  /* sens de saisie : une grosse double flèche, le sens écrit dessous */
-  #sens { display:flex; flex-direction:column; align-items:center; gap:0; }
-  #sens .fl2 { font-size:22px; line-height:1; }
-  #sens small { font-size:10px; }
+  /* sens de saisie : une seule flèche à deux pointes, ↔ ou ↕ */
+  #sens { display:flex; justify-content:center; align-items:center; padding:2px 5px; }
+  #sens .fl2 { font-size:26px; line-height:1; font-weight:700; }
   /* la définition du mot en cours, juste au-dessus de la grille */
   #defcour { margin:4px auto 0; max-width:560px; padding:4px 8px; font-size:13px;
              background:#fff6d5; border:1px solid #ecd78a; border-radius:6px;
@@ -464,7 +463,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.18</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.19</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -621,8 +620,8 @@
 <div id="defcour" hidden></div>
 <div id="zone">
   <div id="colgauche">
-    <button id="sens" class="sec" style="display:none" title="Sens de saisie : horizontal ou vertical">
-      <span class="fl2">&#8646;</span><small>horizontal</small></button>
+    <button id="sens" class="sec" style="display:none" title="Sens de saisie : horizontal"
+            aria-label="Sens de saisie : horizontal"><span class="fl2">&#8596;</span></button>
     <button id="aide" class="sec" style="display:none">Aide</button>
     <button id="aidelettre" class="sec" style="display:none">Aide : cette lettre</button>
     <button id="test" class="sec" style="display:none">Aide : test</button>
@@ -897,7 +896,7 @@
   noire, tapez une lettre dans une case noire pour la rendre blanche. Les
   lettres tapées deviennent elles aussi des cases posées. Le contour rouge
   signale la case en cours de modification ; le curseur avance tout seul, dans
-  le sens montré par le bouton à double flèche à côté de la grille.</p>
+  le sens montré par le bouton à flèche (↔ ou ↕) à côté de la grille.</p>
   <p>Ces retouches ne sont pas contrôlées à la volée — c'est le but, vous pouvez
   vouloir un mot que le lexique ignore. Le bouton <b>Vérifier les mots</b>,
   visible dans ce mode, confronte toute la grille au lexique et liste les suites
@@ -911,15 +910,16 @@
   Wiktionnaire. Vous pouvez donc jouer sans passer par le mode auteur — le temps
   d'une recherche par mot, dont la progression s'affiche.</p>
   <p>Pendant que vous regardez la première grille, la recherche continue d'en
-  chercher une plus aérée. Dès que vous touchez la grille, une aide, une lettre
+  chercher une plus aérée ; ses définitions arrivent quand même, dès que la
+  grille reste deux secondes et demie sans être améliorée. Dès que vous touchez la grille, une aide, une lettre
   ou une définition, elle s'arrête : la grille que vous examinez ne sera plus
   remplacée.</p>
   <p>Ouvrez le fichier reçu et activez le mode joueur : la grille apparaît vide,
   avec les définitions en dessous, et chaque case blanche devient saisissable —
   la saisie avance toute seule vers la case suivante à remplir, en sautant les
   cases noires et les lettres déjà écrites, puis passe à la ligne suivante. On
-  écrit horizontalement par défaut. Le bouton à <b>double flèche</b>, à côté de
-  la grille (⇆ horizontal, ⇅ vertical), montre dans quel sens le mot sera pris
+  écrit horizontalement par défaut. Le bouton à <b>flèche</b>, à côté de
+  la grille (↔ horizontal, ↕ vertical), montre dans quel sens le mot sera pris
   quand on touche une case et dans quel sens avance la saisie ; un appui le fait
   basculer, sans fermer le clavier. Sur une lettre isolée dans un sens, l'autre
   sens est pris d'office. Le mot en cours de saisie est légèrement teinté, et
@@ -1152,7 +1152,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.18, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.19, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -1549,7 +1549,7 @@ function colonneUtile() {
 function tailleNum(cell) { return Math.max(10, Math.round(cell * 0.36)) + 'px'; }
 
 // ---- saisie au clavier : sens et avancée du curseur --------------------------
-// Par défaut on écrit horizontalement ; le bouton à double flèche, à côté de la
+// Par défaut on écrit horizontalement ; le bouton à flèche (↔ ou ↕), à côté de la
 // grille, fait passer en vertical et inversement.
 // La case ne garde qu'une lettre : celle qu'on vient de taper, où que soit le
 // curseur dans la case — taper sur une lettre déjà écrite la remplace.
@@ -1590,8 +1590,9 @@ function toucherCase(i) { marquerMot(i); }
 function majBoutonSens() {
   const b = $('#sens');
   if (!b) return;
-  b.querySelector('.fl2').innerHTML = sensSaisie === 'H' ? '&#8646;' : '&#8645;';
-  b.querySelector('small').textContent = sensSaisie === 'H' ? 'horizontal' : 'vertical';
+  b.querySelector('.fl2').innerHTML = sensSaisie === 'H' ? '&#8596;' : '&#8597;';
+  const t = 'Sens de saisie : ' + (sensSaisie === 'H' ? 'horizontal' : 'vertical');
+  b.title = t; b.setAttribute('aria-label', t);
 }
 function changerSens() {
   sensSaisie = sensSaisie === 'H' ? 'V' : 'H';
@@ -2577,12 +2578,14 @@ function lancer(affiner, mode) {
       majBoutons();
       if (modeJoueur) {
         // le joueur reçoit une grille vierge ; on lui prépare les définitions.
-        // Pendant une exploration on ne les cherche pas à chaque amélioration :
-        // ce serait des dizaines d'allers-retours réseau pour rien.
+        // Pendant une exploration, une grille qui reste 2,5 s sans être
+        // améliorée a ses définitions cherchées sans attendre l'arrêt : le
+        // joueur ne reste pas devant une liste vide. Si une meilleure grille
+        // arrive, la recherche en cours l'abandonne et repart pour elle.
         if (typeCourant() === 'codes') afficherLegende(derniere);
         else if (typeCourant() === 'anagramot') afficherDefs(derniere);
         else if (!m.provisoire) chercherToutes(true).then(() => afficherDefs(derniere));
-        else $('#defs').innerHTML = '';
+        else { afficherDefs(derniere); planifierDefs(); }
       }
       $('#vmot').textContent = m.version || '?';
       // En mode joueur le compte rendu ne doit nommer aucun mot : mots du
@@ -4060,7 +4063,7 @@ function changerMode(nouveau) {
   const txt = { generation: 'Mode génération.',
     definition: 'Mode définition : cliquez une case pour atteindre sa définition.',
     edition: 'Mode édition : écrivez des mots (« . » ou espace pour une case noire, '
-      + 'double flèche pour écrire en vertical) ; la génération les gardera à leur place.',
+      + 'flèche ↔ / ↕ pour écrire en vertical) ; la génération les gardera à leur place.',
     joueur: 'Mode joueur : remplissez la grille.' };
   $('#etat').textContent = txt[nouveau] || '';
 }
@@ -4086,7 +4089,26 @@ document.addEventListener('click', ev => {
     if (m.open && !m.contains(ev.target)) m.open = false;
   });
 }, true);
-async function chercherToutes(auto) {
+let minuteurDefs = null;
+function planifierDefs() {
+  clearTimeout(minuteurDefs);
+  const g = derniere;
+  minuteurDefs = setTimeout(() => {
+    if (derniere === g && modeJoueur && typeCourant() !== 'codes' && typeCourant() !== 'anagramot')
+      chercherToutes(true);
+  }, 2500);
+}
+// une seule recherche à la fois pour une même grille : un second appel
+// (fin de l'exploration, par exemple) reprend celle qui tourne déjà
+let defsEnCours = null;
+function chercherToutes(auto) {
+  if (defsEnCours && defsEnCours.g === derniere && derniere) return defsEnCours.p;
+  const g = derniere;
+  const pr = chercherToutes0(auto).finally(() => { if (defsEnCours && defsEnCours.g === g) defsEnCours = null; });
+  defsEnCours = { g, p: pr };
+  return pr;
+}
+async function chercherToutes0(auto) {
   if (!derniere) return 0;
   const b = $('#toutchercher');
   const libelle = b.textContent;
@@ -4099,7 +4121,7 @@ async function chercherToutes(auto) {
         const cle = sens + e.n + '.' + k;
         if (!(defsChoisies.get(cle) || '').trim()) taches.push({ cle, mot });
       });
-  let ok = 0;
+  let ok = 0, pannes = 0;
   // les définitions s'affichent au fur et à mesure qu'elles arrivent
   if (modeJoueur || modeDef) afficherDefs(derniere);
   const grilleCherchee = derniere;
@@ -4126,14 +4148,26 @@ async function chercherToutes(auto) {
           if (sel) remplirSelect(sel, props);
         }
       }
-    } catch (e) { /* mot suivant */ }
+    } catch (e) { pannes++; }      // réseau ou réponse illisible : mot suivant
   }
   b.textContent = libelle; b.disabled = false;
   if (derniere !== grilleCherchee) return ok;
+  // la ligne d'état est vite recouverte par l'exploration : on le dit aussi
+  // dans le cadre des définitions
+  if (pannes && !ok && modeJoueur) {
+    const n = document.createElement('p');
+    n.className = 'note';
+    n.textContent = 'Wiktionnaire injoignable : pas de définition pour l\u2019instant (réseau ?).';
+    $('#defs').prepend(n);
+  }
   if (!modeJoueur) { afficherDefs(derniere); dessiner(derniere); }
   majDecor();
   $('#etat').textContent = taches.length
-    ? `${ok} définition(s) trouvée(s) sur ${taches.length} mots${auto ? '' : ' sans définition'}.`
+    ? (pannes && !ok
+       ? 'Wiktionnaire injoignable : aucune définition n\u2019a pu être cherchée '
+         + '(pas de réseau ?). Réessayez avec « Chercher les définitions » ou une nouvelle grille.'
+       : `${ok} définition(s) trouvée(s) sur ${taches.length} mots${auto ? '' : ' sans définition'}`
+         + (pannes ? ` (${pannes} échec(s) réseau).` : '.'))
     : 'Tous les mots ont déjà une définition.';
   return ok;
 }
