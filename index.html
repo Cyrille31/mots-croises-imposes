@@ -193,6 +193,8 @@
   .actdef .autres { display:flex; flex-direction:column; gap:3px; width:100%; }
   .actdef .autres i { font-size:11.5px; color:#6b7887; }
   .actdef .choixdef { text-align:left; white-space:normal; }
+  .actdef .possibles { font-family:ui-monospace,monospace; font-size:12px;
+            letter-spacing:.04em; word-spacing:.3em; line-height:1.6; }
   .actdef .perso { display:flex; gap:4px; }
   .actdef .perso input { flex:1; min-width:0; padding:3px 6px; font:12px inherit;
             border:1px solid #ccd3dc; border-radius:5px; }
@@ -309,6 +311,15 @@
   /* boutons d'aide compacts, sur deux lignes : la grille garde la place */
   #colgauche button { font:11px/1.2 inherit; padding:4px 5px; white-space:normal;
                width:100%; }
+  /* sens de saisie : une grosse double flèche, le sens écrit dessous */
+  #sens { display:flex; flex-direction:column; align-items:center; gap:0; }
+  #sens .fl2 { font-size:22px; line-height:1; }
+  #sens small { font-size:10px; }
+  /* la définition du mot en cours, juste au-dessus de la grille */
+  #defcour { margin:4px auto 0; max-width:560px; padding:4px 8px; font-size:13px;
+             background:#fff6d5; border:1px solid #ecd78a; border-radius:6px;
+             color:#3d3410; min-height:1.4em; }
+  #defcour b { color:var(--bleu); margin-right:4px; }
   #defil { flex:0 1 auto; min-width:0; max-width:100%;
            overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
   #defil::-webkit-scrollbar { height:8px; }
@@ -453,7 +464,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.17</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.18</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -607,8 +618,11 @@
 <input type="file" id="fliste" style="display:none">
 <input type="file" id="fichier" style="display:none">
 <div id="etat">Prêt.</div>
+<div id="defcour" hidden></div>
 <div id="zone">
   <div id="colgauche">
+    <button id="sens" class="sec" style="display:none" title="Sens de saisie : horizontal ou vertical">
+      <span class="fl2">&#8646;</span><small>horizontal</small></button>
     <button id="aide" class="sec" style="display:none">Aide</button>
     <button id="aidelettre" class="sec" style="display:none">Aide : cette lettre</button>
     <button id="test" class="sec" style="display:none">Aide : test</button>
@@ -882,8 +896,8 @@
   lettre dans une case pour la remplacer, videz une case pour en faire une case
   noire, tapez une lettre dans une case noire pour la rendre blanche. Les
   lettres tapées deviennent elles aussi des cases posées. Le contour rouge
-  signale la case en cours de modification ; le curseur avance tout seul, et un
-  double appui sur une case fait écrire en vertical.</p>
+  signale la case en cours de modification ; le curseur avance tout seul, dans
+  le sens montré par le bouton à double flèche à côté de la grille.</p>
   <p>Ces retouches ne sont pas contrôlées à la volée — c'est le but, vous pouvez
   vouloir un mot que le lexique ignore. Le bouton <b>Vérifier les mots</b>,
   visible dans ce mode, confronte toute la grille au lexique et liste les suites
@@ -904,9 +918,13 @@
   avec les définitions en dessous, et chaque case blanche devient saisissable —
   la saisie avance toute seule vers la case suivante à remplir, en sautant les
   cases noires et les lettres déjà écrites, puis passe à la ligne suivante. On
-  écrit horizontalement par défaut ; un <b>double appui</b> sur la première case
-  d'un mot fait écrire en vertical (un autre double appui revient à
-  l'horizontale). Le mot en cours de saisie est légèrement teinté. La touche
+  écrit horizontalement par défaut. Le bouton à <b>double flèche</b>, à côté de
+  la grille (⇆ horizontal, ⇅ vertical), montre dans quel sens le mot sera pris
+  quand on touche une case et dans quel sens avance la saisie ; un appui le fait
+  basculer, sans fermer le clavier. Sur une lettre isolée dans un sens, l'autre
+  sens est pris d'office. Le mot en cours de saisie est légèrement teinté, et
+  sa seule définition est mise en évidence dans la liste et recopiée dans un
+  bandeau au-dessus de la grille. La touche
   d'effacement efface la lettre de la case, puis, dans une case vide, recule
   d'une case en effaçant : on remonte ainsi le mot à l'envers.</p>
   <p>Les définitions sont présentées comme sur la feuille « à remplir » : deux
@@ -917,8 +935,12 @@
   définitions jusqu'à les voir.</p>
   <p>Un second clic sur la même définition, ou un clic n'importe où hors de la
   grille et du bloc des définitions, éteint l'éclairage.</p>
-  <p>Un clic sur une définition fait apparaître deux boutons dessous.
-  <b>Aide ce mot</b> dévoile toutes les lettres du mot. <b>Autre déf.</b> propose
+  <p>Un clic sur une définition fait apparaître trois boutons dessous ; un clic
+  ailleurs les replie.
+  <b>Aide ce mot</b> liste les mots du lexique qui collent aux lettres déjà
+  posées (les cases vides valent n'importe quelle lettre) ; si aucun ne
+  convient, une de vos lettres est sans doute fausse. <b>Solution ce mot</b>
+  dévoile toutes les lettres du mot. <b>Autre déf.</b> propose
   d'autres définitions du même mot — synonymes d'abord — et une zone pour écrire
   la vôtre ; celle que vous choisissez remplace l'ancienne. Après une demande de
   nouvelle grille, les définitions apparaissent au fur et à mesure qu'elles
@@ -1130,7 +1152,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.17, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.18, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -1193,7 +1215,6 @@ const saisies = new Map();    // case -> lettre saisie par le joueur
 const posees = new Map();
 let sensSaisie = 'H';         // sens d'avancée du curseur : H ou V
 let caseSaisie = -1;          // case qui a le curseur (joueur ou édition)
-let tapPrec = { i: -1, t: 0 };
 let motsDeCase = null;        // case -> [{cle, cells}] pour l'eclairage croise
 let cleActive = null;         // definition mise en evidence
 let modeJoueur = true, modeDef = false, modeDessin = false, modeEdit = false;
@@ -1520,15 +1541,16 @@ function afficherLegende(g) {
 const LARG_COLG = () => typeCourant() === 'codes'
   ? (window.innerWidth <= 430 ? 132 : 148) : 74;
 function colonneUtile() {
-  return !!derniere && (typeCourant() === 'codes' || modeJoueur);
+  return (!!derniere && (typeCourant() === 'codes' || modeJoueur))
+      || (modeEdit && typeCourant() !== 'codes');
 }
 
 // le petit numéro en coin suit la taille de la case, avec un plancher lisible
 function tailleNum(cell) { return Math.max(10, Math.round(cell * 0.36)) + 'px'; }
 
 // ---- saisie au clavier : sens et avancée du curseur --------------------------
-// Par défaut on écrit horizontalement ; un double appui sur une case passe en
-// vertical (et un autre revient à l'horizontale).
+// Par défaut on écrit horizontalement ; le bouton à double flèche, à côté de la
+// grille, fait passer en vertical et inversement.
 // La case ne garde qu'une lettre : celle qu'on vient de taper, où que soit le
 // curseur dans la case — taper sur une lettre déjà écrite la remplace.
 function lettreTapee(inp) {
@@ -1563,20 +1585,22 @@ function reculer(i, effacer) {
   }
 }
 function champDe(i) { return cases[i] && cases[i].querySelector('input.js, input.ed'); }
-function toucherCase(i) {
-  const t = Date.now();
-  if (tapPrec.i === i && t - tapPrec.t < 450) {
-    sensSaisie = sensSaisie === 'H' ? 'V' : 'H';
-    $('#etat').textContent = sensSaisie === 'V'
-      ? 'Saisie verticale — double appui pour revenir à l\u2019horizontale.'
-      : 'Saisie horizontale — double appui pour passer en vertical.';
-    tapPrec = { i: -1, t: 0 };
-  } else {
-    if (i !== caseSaisie) sensSaisie = 'H';
-    tapPrec = { i, t };
-  }
-  marquerMot(i);
+function toucherCase(i) { marquerMot(i); }
+// Le bouton à côté de la grille montre le sens de saisie et le change.
+function majBoutonSens() {
+  const b = $('#sens');
+  if (!b) return;
+  b.querySelector('.fl2').innerHTML = sensSaisie === 'H' ? '&#8646;' : '&#8645;';
+  b.querySelector('small').textContent = sensSaisie === 'H' ? 'horizontal' : 'vertical';
 }
+function changerSens() {
+  sensSaisie = sensSaisie === 'H' ? 'V' : 'H';
+  majBoutonSens();
+  if (caseSaisie >= 0 && champDe(caseSaisie)) { champDe(caseSaisie).focus(); marquerMot(caseSaisie); }
+}
+// le bouton ne doit pas voler le curseur : le clavier du téléphone resterait fermé
+$('#sens').addEventListener('pointerdown', ev => ev.preventDefault());
+$('#sens').onclick = changerSens;
 // cases du mot qui passe par i dans le sens de saisie
 function motCourant(i) {
   const pas = sensSaisie === 'H' ? 1 : nc;
@@ -1591,8 +1615,37 @@ function motCourant(i) {
 function marquerMot(i) {
   document.querySelectorAll('#grille .c.motcour').forEach(e => e.classList.remove('motcour'));
   if (i < 0 || !cases[i] || !champDe(i)) return;
-  const mot = motCourant(i);
+  let mot = motCourant(i);
+  // pas de mot dans ce sens (lettre isolée) : on prend l'autre
+  if (mot.length < 2) {
+    sensSaisie = sensSaisie === 'H' ? 'V' : 'H';
+    const autre = motCourant(i);
+    if (autre.length > 1) { mot = autre; majBoutonSens(); }
+    else sensSaisie = sensSaisie === 'H' ? 'V' : 'H';
+  }
   if (mot.length > 1) for (const j of mot) cases[j].classList.add('motcour');
+  if (modeJoueur) montrerDefCourante(i);
+}
+// En mode joueur, seule la définition du mot en cours est mise en évidence,
+// amenée dans le cadre des définitions et recopiée au-dessus de la grille.
+function montrerDefCourante(i) {
+  const bandeau = $('#defcour');
+  document.querySelectorAll('#defs .undef.vise').forEach(e => e.classList.remove('vise'));
+  const m = motsDeCase && (motsDeCase.get(i) || []).find(x => x.cle[0] === sensSaisie);
+  if (!m) { bandeau.hidden = true; return; }
+  const el = document.querySelector(`#defs .undef[data-cle="${m.cle}"]`);
+  if (el) {
+    el.classList.add('vise');
+    // on fait défiler le seul cadre des définitions, pas la page
+    const z = $('#defs'), r = el.getBoundingClientRect(), rz = z.getBoundingClientRect();
+    if (r.top < rz.top || r.bottom > rz.bottom) z.scrollTop += r.top - rz.top - rz.height / 3;
+  }
+  const n = m.cle.slice(1).split('.')[0];
+  bandeau.innerHTML = '';
+  const b = document.createElement('b');
+  b.textContent = n + (m.cle[0] === 'H' ? ' horiz.' : ' vert.');
+  bandeau.append(b, document.createTextNode(defsChoisies.get(m.cle) || '…'));
+  bandeau.hidden = false;
 }
 // Case suivante à saisir dans le sens choisi : on parcourt la ligne (ou la
 // colonne) puis les suivantes, en sautant les cases noires et, si demandé,
@@ -1613,6 +1666,8 @@ function avancer(i, sauterRemplies) {
 
 function dessiner(g, tailleForcee) {
   const boite = $('#grille');
+  $('#defcour').hidden = true;          // la grille est refaite : plus de mot en cours
+  majBoutonSens();
   document.body.classList.toggle('avecaide', colonneUtile());
   // la grille occupe la place qui reste ; en deçà d'une taille lisible elle
   // défile horizontalement plutôt que de devenir illisible ou de déborder.
@@ -1741,7 +1796,7 @@ function dessiner(g, tailleForcee) {
         inp.className = 'js';
         inp.value = saisies.get(i) || '';
         // la lettre déjà là est sélectionnée : la frappe la remplace
-        inp.onfocus = () => { cleActive = null; caseActive = i; caseSaisie = i; eclairer(i); marquerMot(i); garnir(inp); };
+        inp.onfocus = () => { cleActive = null; caseActive = i; caseSaisie = i; marquerMot(i); garnir(inp); };
         inp.onblur = () => degarnir(inp);
         inp.oninput = ev => {
           // effacer : la lettre de la case part ; dans une case déjà vide, on
@@ -1979,7 +2034,8 @@ document.addEventListener('click', ev => {
   // nettoyage, prévu pour l'éclairage des définitions, l'effacerait à tort
   if (modeJoueur && typeCourant() === 'codes') return;
   if (ev.target.closest('#grille') || ev.target.closest('#defs')) return;
-  if (ev.target.closest('#legende') || ev.target.closest('#restantes')) return;
+  if (ev.target.closest('#legende') || ev.target.closest('#restantes')
+      || ev.target.closest('#colgauche')) return;
   if (document.querySelector('.c.vise, .def.vise, .undef.vise')) effacerEclairage();
 });
 // en mode définition : 1er clic = la définition horizontale, 2e = la verticale
@@ -2902,12 +2958,13 @@ async function wikitexteFr(titre) {
   const r = await fetch(base + 'action=parse&prop=wikitext&page=' + encodeURIComponent(titre));
   const d = await r.json();
   let wt = (d.parse && d.parse.wikitext && d.parse.wikitext['*']) || '';
+  // seule la section française compte : un article sans elle (un mot
+  // allemand homographe, par exemple) ne fournit rien
   const i = wt.indexOf('{{langue|fr}}');
-  if (i >= 0) {
-    wt = wt.slice(i);
-    const j = wt.indexOf('\n== ', 3);
-    if (j > 0) wt = wt.slice(0, j);
-  }
+  if (i < 0) return '';
+  wt = wt.slice(i);
+  const j = wt.indexOf('\n== ', 3);
+  if (j > 0) wt = wt.slice(0, j);
   return wt;
 }
 // lignes « # ''Pluriel de'' [[chat]] » : [{ lemme, traits }]
@@ -2937,7 +2994,7 @@ async function chercherDefs(mot) {
     const f = formater(t);
     if (f && syn.length < 12 && !syn.some(x => x.texte === f)) syn.push({ texte: f, source: 'synonyme' });
   };
-  const lireDefs = (wt, source) => {
+  const lireDefs = (wt, source, traits, formes) => {
     for (const ligne of wt.split('\n')) {
       if (defs.length >= 12) break;
       if (!/^#[^#*:]/.test(ligne)) continue;        // # = definition, #* = exemple
@@ -2947,6 +3004,12 @@ async function chercherDefs(mot) {
       let court = t.length > 220 ? t.slice(0, 217) + '…' : t;
       court = court.replace(/[\s]*[([][^()\[\]]{0,40}[)\]][\s.]*$/, (m) =>
         norm(m).replace(/[^A-Z]/g, '') === mot ? '' : m).trim();
+      // « Monter une seconde fois » devient « Monte une seconde fois » quand
+      // le mot de la grille est REMONTE : on conjugue le verbe de tête
+      if (traits && traits.cat === 'v') {
+        const conj = flechir(court.replace(/[.;]\s*$/, ''), traits, formes);
+        if (conj) court = conj;
+      }
       const f = formater(court);
       if (f && !defs.some(x => x.texte === f)) defs.push({ texte: f, source });
     }
@@ -2963,7 +3026,7 @@ async function chercherDefs(mot) {
           const f = flechir(t, traits, formes);
           if (f && norm(f).replace(/[^A-Z]/g, '') !== mot) ajouterSyn(f);
         }
-        lireDefs(wl, lemme);
+        lireDefs(wl, lemme, traits, formes);
       } catch (e) { /* lemme suivant */ }
     }
   }
@@ -2980,17 +3043,26 @@ function cellulesDe(cle) {
   return [];
 }
 function fermerActions() { document.querySelectorAll('#defs .actdef').forEach(e => e.remove()); }
+// tout clic hors des boutons d'une définition (et hors de la définition) les replie
+document.addEventListener('click', ev => {
+  const t = ev.target;
+  if (!(t instanceof Element) || t.closest('.actdef') || t.closest('.undef')) return;
+  fermerActions();
+});
 function ouvrirActions(span, cle) {
   fermerActions();
   const bar = document.createElement('span');
   bar.className = 'actdef';
   const bAide = document.createElement('button');
   bAide.className = 'sec'; bAide.textContent = 'Aide ce mot';
-  bAide.onclick = ev => { ev.stopPropagation(); aideMot(cle); };
+  bAide.onclick = ev => { ev.stopPropagation(); motsPossibles(bar, cle); };
+  const bSol = document.createElement('button');
+  bSol.className = 'sec'; bSol.textContent = 'Solution ce mot';
+  bSol.onclick = ev => { ev.stopPropagation(); aideMot(cle); };
   const bAutre = document.createElement('button');
   bAutre.className = 'sec'; bAutre.textContent = 'Autre déf.';
   bAutre.onclick = ev => { ev.stopPropagation(); autresDefs(bar, span, cle); };
-  bar.append(bAide, bAutre);
+  bar.append(bAide, bSol, bAutre);
   span.after(bar);
 }
 function aideMot(cle) {
@@ -3006,8 +3078,41 @@ function aideMot(cle) {
   $('#etat').textContent = 'Mot dévoilé.';
   verifierVictoire();
 }
+// « Aide ce mot » : les mots du lexique qui collent aux lettres déjà posées
+// par le joueur (les cases vides valent n'importe quelle lettre).
+async function motsPossibles(bar, cle) {
+  bar.querySelectorAll('.autres').forEach(e => e.remove());
+  const boite = document.createElement('span');
+  boite.className = 'autres';
+  bar.appendChild(boite);
+  const cells = cellulesDe(cle);
+  const motif = cells.map(i => saisies.get(i) || '.').join('');
+  boite.textContent = 'Recherche…';
+  const formes = await formesConnues();
+  const re = new RegExp('^' + motif + '$');
+  const vus = new Set(), liste = [];
+  for (const f of formes) {
+    if (f.length < cells.length - 1 || f.length > cells.length + 3) continue;
+    const n = norm(f);
+    if (n.length !== cells.length || vus.has(n) || !/^[A-Z]+$/.test(n) || !re.test(n)) continue;
+    vus.add(n); liste.push(n);
+    if (liste.length >= 40) break;
+  }
+  boite.textContent = '';
+  const t = document.createElement('i');
+  t.textContent = (motif.includes('.') ? 'Motif ' + motif.replace(/\./g, '·') + ' : ' : '')
+    + (liste.length ? liste.length + (liste.length >= 40 ? '+' : '') + ' mot(s) possible(s)'
+                    : 'aucun mot du lexique ne convient — une lettre est peut-être fausse');
+  boite.appendChild(t);
+  if (liste.length) {
+    const l = document.createElement('span');
+    l.className = 'possibles';
+    l.textContent = liste.join('  ');
+    boite.appendChild(l);
+  }
+}
 async function autresDefs(bar, span, cle) {
-  bar.querySelector('.autres') && bar.querySelector('.autres').remove();
+  bar.querySelectorAll('.autres').forEach(e => e.remove());
   const boite = document.createElement('span');
   boite.className = 'autres';
   bar.appendChild(boite);
@@ -3896,6 +4001,7 @@ function majBoutons() {
     '#toutchercher': { visible: mode === 'definition' && typeCourant() !== 'anagramot',
                        actif: !occupe },
     '#verifier':   { visible: mode === 'edition', actif: !occupe },
+    '#sens':       { visible: !codes && ((g && mode === 'joueur') || mode === 'edition') },
     '#aide':       { visible: g && (codes || mode === 'joueur'),
                      texte: codes ? 'Aide : une lettre' : 'Aide : cette case' },
     '#aidelettre': { visible: g && codes && mode === 'joueur' },
@@ -3954,7 +4060,7 @@ function changerMode(nouveau) {
   const txt = { generation: 'Mode génération.',
     definition: 'Mode définition : cliquez une case pour atteindre sa définition.',
     edition: 'Mode édition : écrivez des mots (« . » ou espace pour une case noire, '
-      + 'double appui pour écrire en vertical) ; la génération les gardera à leur place.',
+      + 'double flèche pour écrire en vertical) ; la génération les gardera à leur place.',
     joueur: 'Mode joueur : remplissez la grille.' };
   $('#etat').textContent = txt[nouveau] || '';
 }
