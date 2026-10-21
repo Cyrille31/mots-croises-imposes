@@ -467,7 +467,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.20</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.21</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -1163,7 +1163,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.20, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.21, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -2969,19 +2969,50 @@ function flechir(syn, tr, formes) {
 }
 
 // section française d'un article
-async function wikitexteFr(titre) {
-  const base = 'https://fr.wiktionary.org/w/api.php?format=json&origin=*&';
-  const r = await fetch(base + 'action=parse&prop=wikitext&page=' + encodeURIComponent(titre));
-  const d = await r.json();
-  let wt = (d.parse && d.parse.wikitext && d.parse.wikitext['*']) || '';
-  // seule la section française compte : un article sans elle (un mot
-  // allemand homographe, par exemple) ne fournit rien
-  const i = wt.indexOf('{{langue|fr}}');
+// Appel à l'API du Wiktionnaire. Un refus passager (trop de requêtes, serveur
+// occupé, réseau qui hoquette) est retenté deux fois après une pause ; la
+// raison d'un échec définitif est gardée pour être affichée.
+let erreurWiki = '';
+async function appelWiki(params) {
+  const url = 'https://fr.wiktionary.org/w/api.php?format=json&formatversion=2&origin=*&' + params;
+  let raison = '';
+  for (let essai = 0; essai < 3; essai++) {
+    if (essai) await new Promise(r => setTimeout(r, essai === 1 ? 1500 : 4000));
+    const ctrl = new AbortController();
+    const minuteur = setTimeout(() => ctrl.abort(), 12000);
+    try {
+      const r = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(minuteur);
+      if (r.status === 429 || r.status >= 500) { raison = 'HTTP ' + r.status; continue; }
+      if (!r.ok) { raison = 'HTTP ' + r.status; break; }
+      const d = await r.json();
+      if (d.error) { raison = d.error.code + ' — ' + (d.error.info || ''); break; }
+      return d;
+    } catch (e) {
+      clearTimeout(minuteur);
+      raison = e.name === 'AbortError' ? 'pas de réponse en 12 s' : (e.message || String(e));
+    }
+  }
+  erreurWiki = raison;
+  throw new Error(raison);
+}
+// seule la section française compte : un article sans elle (un mot allemand
+// homographe, par exemple) ne fournit rien
+function sectionFr(wt) {
+  const i = (wt || '').indexOf('{{langue|fr}}');
   if (i < 0) return '';
   wt = wt.slice(i);
   const j = wt.indexOf('\n== ', 3);
-  if (j > 0) wt = wt.slice(0, j);
-  return wt;
+  return j > 0 ? wt.slice(0, j) : wt;
+}
+const contenuPage = pg => (pg && pg.revisions && pg.revisions[0]
+  && (pg.revisions[0].slots ? pg.revisions[0].slots.main.content : pg.revisions[0].content)) || '';
+// texte d'un article dont on connaît le titre exact (requête légère, en cache)
+async function wikitexteFr(titre) {
+  const d = await appelWiki('action=query&prop=revisions&rvprop=content&rvslots=main&redirects=1&titles='
+                            + encodeURIComponent(titre));
+  const pg = d.query && d.query.pages && d.query.pages[0];
+  return pg && !pg.missing ? sectionFr(contenuPage(pg)) : '';
 }
 // lignes « # ''Pluriel de'' [[chat]] » : [{ lemme, traits }]
 function flexionsWiki(wt) {
@@ -2998,13 +3029,14 @@ function flexionsWiki(wt) {
 // Propositions pour un mot : d'abord ses synonymes — mis à la même forme
 // quand le mot est conjugué ou accordé —, puis les lignes de définition.
 async function chercherDefs(mot) {
-  const base = 'https://fr.wiktionary.org/w/api.php?format=json&origin=*&';
-  const q = encodeURIComponent(mot.toLowerCase());
-  const rep = await fetch(base + 'action=query&list=search&srlimit=8&srnamespace=0&srsearch=' + q);
-  const d = await rep.json();
-  const titres = (d.query && d.query.search || []).map(x => x.title)
-    .filter(t => norm(t) === mot).slice(0, 3);
-  if (!titres.length) return [];
+  // une seule requête : la recherche du mot (accents compris) et le texte des
+  // articles trouvés
+  const d = await appelWiki('action=query&generator=search&gsrnamespace=0&gsrlimit=8&gsrsearch='
+    + encodeURIComponent(mot.toLowerCase()) + '&prop=revisions&rvprop=content&rvslots=main');
+  const pages = ((d.query && d.query.pages) || [])
+    .filter(pg => norm(pg.title) === mot)
+    .sort((a, b) => (a.index || 0) - (b.index || 0)).slice(0, 3);
+  if (!pages.length) return [];
   const syn = [], defs = [];
   const ajouterSyn = t => {
     const f = formater(t);
@@ -3030,8 +3062,8 @@ async function chercherDefs(mot) {
       if (f && !defs.some(x => x.texte === f)) defs.push({ texte: f, source });
     }
   };
-  for (const titre of titres) {
-    const wt = await wikitexteFr(titre);
+  for (const pg of pages) {
+    const titre = pg.title, wt = sectionFr(contenuPage(pg));
     for (const t of synonymesWiki(wt, mot)) ajouterSyn(t);
     lireDefs(wt, titre);
     // forme fléchie : synonymes du lemme, mis à la même forme
@@ -4214,6 +4246,8 @@ async function chercherToutes0(auto) {
         }
       }
     } catch (e) { pannes++; }      // réseau ou réponse illisible : mot suivant
+    // un léger répit entre deux mots ménage le serveur (et évite ses refus)
+    await new Promise(r => setTimeout(r, 120));
   }
   b.textContent = libelle; b.disabled = false;
   if (derniere !== grilleCherchee) return ok;
@@ -4222,15 +4256,17 @@ async function chercherToutes0(auto) {
   if (pannes && !ok && modeJoueur) {
     const n = document.createElement('p');
     n.className = 'note';
-    n.textContent = 'Wiktionnaire injoignable : pas de définition pour l\u2019instant (réseau ?).';
+    n.textContent = 'Wiktionnaire injoignable : pas de définition pour l\u2019instant ('
+      + (erreurWiki || 'raison inconnue') + ').';
     $('#defs').prepend(n);
   }
   if (!modeJoueur) { afficherDefs(derniere); dessiner(derniere); }
   majDecor();
   $('#etat').textContent = taches.length
     ? (pannes && !ok
-       ? 'Wiktionnaire injoignable : aucune définition n\u2019a pu être cherchée '
-         + '(pas de réseau ?). Réessayez avec « Chercher les définitions » ou une nouvelle grille.'
+       ? 'Wiktionnaire injoignable : aucune définition n\u2019a pu être cherchée ('
+         + (erreurWiki || 'raison inconnue') + '). Réessayez avec « Chercher les '
+         + 'définitions » ou une nouvelle grille.'
        : `${ok} définition(s) trouvée(s) sur ${taches.length} mots${auto ? '' : ' sans définition'}`
          + (pannes ? ` (${pannes} échec(s) réseau).` : '.'))
     : 'Tous les mots ont déjà une définition.';
