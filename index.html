@@ -193,8 +193,9 @@
   .actdef .autres { display:flex; flex-direction:column; gap:3px; width:100%; }
   .actdef .autres i { font-size:11.5px; color:#6b7887; }
   .actdef .choixdef { text-align:left; white-space:normal; }
-  .actdef .possibles { font-family:ui-monospace,monospace; font-size:12px;
-            letter-spacing:.04em; word-spacing:.3em; line-height:1.6; }
+  .actdef .possibles { display:flex; flex-wrap:wrap; gap:3px; }
+  .actdef .motposs { font-family:ui-monospace,monospace; font-size:12px;
+            letter-spacing:.04em; padding:2px 5px; }
   .actdef .perso { display:flex; gap:4px; }
   .actdef .perso input { flex:1; min-width:0; padding:3px 6px; font:12px inherit;
             border:1px solid #ccd3dc; border-radius:5px; }
@@ -312,13 +313,16 @@
   #colgauche button { font:11px/1.2 inherit; padding:4px 5px; white-space:normal;
                width:100%; }
   /* sens de saisie : une seule flèche à deux pointes, ↔ ou ↕ */
-  #sens { display:flex; justify-content:center; align-items:center; padding:2px 5px; }
-  #sens .fl2 { font-size:26px; line-height:1; font-weight:700; }
+  #sens { display:flex; justify-content:center; align-items:center; padding:4px 5px; }
+  #sens .fl2 { display:block; transition:transform .15s; }
+  #sens.vert .fl2 { transform:rotate(90deg); }
   /* la définition du mot en cours, juste au-dessus de la grille */
   #defcour { margin:4px auto 0; max-width:560px; padding:4px 8px; font-size:13px;
              background:#fff6d5; border:1px solid #ecd78a; border-radius:6px;
              color:#3d3410; min-height:1.4em; }
   #defcour b { color:var(--bleu); margin-right:4px; }
+  #panmot { max-width:560px; margin:4px auto 0; }
+  #panmot[hidden] { display:none; }
   #defil { flex:0 1 auto; min-width:0; max-width:100%;
            overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; }
   #defil::-webkit-scrollbar { height:8px; }
@@ -463,7 +467,7 @@
   </svg>
   <div>
     <h1><span id="titre">Mots croisés</span> <small>CGExcel</small></h1>
-    <p class="sous">version <span id="vapp">10.19</span> — © 2026 Cyrille Gindre</p>
+    <p class="sous">version <span id="vapp">10.20</span> — © 2026 Cyrille Gindre</p>
   </div>
   <div class="hdroite">
     <details class="menu" id="mtuto"><summary class="rond large" title="Démonstrations animées">Tuto</summary>
@@ -618,11 +622,15 @@
 <input type="file" id="fichier" style="display:none">
 <div id="etat">Prêt.</div>
 <div id="defcour" hidden></div>
+<div id="panmot" class="actdef" hidden></div>
 <div id="zone">
   <div id="colgauche">
     <button id="sens" class="sec" style="display:none" title="Sens de saisie : horizontal"
-            aria-label="Sens de saisie : horizontal"><span class="fl2">&#8596;</span></button>
+            aria-label="Sens de saisie : horizontal"><svg class="fl2" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 12h18M7.5 7.5 3 12l4.5 4.5M16.5 7.5 21 12l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button id="aide" class="sec" style="display:none">Aide</button>
+    <button id="aidemot" class="sec" style="display:none">Aide ce mot</button>
+    <button id="solmot" class="sec" style="display:none">Solution ce mot</button>
+    <button id="autredef" class="sec" style="display:none">Autre déf.</button>
     <button id="aidelettre" class="sec" style="display:none">Aide : cette lettre</button>
     <button id="test" class="sec" style="display:none">Aide : test</button>
     <div id="restantes"></div>
@@ -935,8 +943,11 @@
   définitions jusqu'à les voir.</p>
   <p>Un second clic sur la même définition, ou un clic n'importe où hors de la
   grille et du bloc des définitions, éteint l'éclairage.</p>
-  <p>Un clic sur une définition fait apparaître trois boutons dessous ; un clic
-  ailleurs les replie.
+  <p>Toucher une définition amène le curseur sur la première case vide de son
+  mot, dans son sens. Sous <b>Aide : cette case</b>, trois boutons agissent sur
+  le mot en cours, celui dont la définition est dans le bandeau ; dans la liste
+  d'<b>Aide ce mot</b>, toucher un mot l'écrit dans la grille. Leurs
+  réponses s'affichent juste sous ce bandeau, et un clic ailleurs les replie.
   <b>Aide ce mot</b> liste les mots du lexique qui collent aux lettres déjà
   posées (les cases vides valent n'importe quelle lettre) ; si aucun ne
   convient, une de vos lettres est sans doute fausse. <b>Solution ce mot</b>
@@ -1152,7 +1163,7 @@
 </p>
 
 <footer>
-  Mots croisés CGExcel — interface 10.19, moteur <span id="vmot">?</span><br>
+  Mots croisés CGExcel — interface 10.20, moteur <span id="vmot">?</span><br>
   © 2026 Cyrille Gindre — logiciel libre, licence MIT + BAL 1.0.<br>
   <span class="balpied">En échange, une seule chose vous est demandée, sur
   l'honneur : faire une bonne action chaque jour. Aider un voisin, sourire à un
@@ -1590,7 +1601,7 @@ function toucherCase(i) { marquerMot(i); }
 function majBoutonSens() {
   const b = $('#sens');
   if (!b) return;
-  b.querySelector('.fl2').innerHTML = sensSaisie === 'H' ? '&#8596;' : '&#8597;';
+  b.classList.toggle('vert', sensSaisie === 'V');
   const t = 'Sens de saisie : ' + (sensSaisie === 'H' ? 'horizontal' : 'vertical');
   b.title = t; b.setAttribute('aria-label', t);
 }
@@ -1641,6 +1652,8 @@ function montrerDefCourante(i) {
     const z = $('#defs'), r = el.getBoundingClientRect(), rz = z.getBoundingClientRect();
     if (r.top < rz.top || r.bottom > rz.bottom) z.scrollTop += r.top - rz.top - rz.height / 3;
   }
+  const pan = $('#panmot');
+  if (!pan.hidden && pan.dataset.cle !== m.cle) fermerActions();
   const n = m.cle.slice(1).split('.')[0];
   bandeau.innerHTML = '';
   const b = document.createElement('b');
@@ -3045,13 +3058,49 @@ function cellulesDe(cle) {
     for (const m of liste) if (m.cle === cle) return m.cells;
   return [];
 }
-function fermerActions() { document.querySelectorAll('#defs .actdef').forEach(e => e.remove()); }
+function fermerActions() {
+  document.querySelectorAll('#defs .actdef').forEach(e => e.remove());
+  const pan = $('#panmot');
+  if (pan) { pan.hidden = true; pan.innerHTML = ''; delete pan.dataset.cle; }
+}
 // tout clic hors des boutons d'une définition (et hors de la définition) les replie
 document.addEventListener('click', ev => {
   const t = ev.target;
-  if (!(t instanceof Element) || t.closest('.actdef') || t.closest('.undef')) return;
+  if (!(t instanceof Element) || t.closest('.actdef') || t.closest('.undef')
+      || t.closest('#colgauche') || t.closest('#grille')) return;
   fermerActions();
 });
+// mot en cours : celui de la case qui a le curseur, dans le sens de saisie
+function cleCourante() {
+  const m = motsDeCase && caseSaisie >= 0
+    && (motsDeCase.get(caseSaisie) || []).find(x => x.cle[0] === sensSaisie);
+  return m ? m.cle : null;
+}
+function allerAuMot(cle) {
+  const cells = cellulesDe(cle);
+  if (!cells.length) return;
+  sensSaisie = cle[0]; majBoutonSens();
+  const j = cells.find(i => !saisies.has(i)) ?? cells[0];
+  const e = champDe(j);
+  if (e) e.focus(); else { caseSaisie = j; marquerMot(j); }
+}
+function panneauMot() {
+  const cle = cleCourante();
+  if (!cle) { $('#etat').textContent = 'Touchez d\u2019abord une case ou une définition.'; return null; }
+  const pan = $('#panmot');
+  pan.innerHTML = ''; pan.hidden = false; pan.dataset.cle = cle;
+  return { pan, cle };
+}
+$('#aidemot').onclick = () => { const r = panneauMot(); if (r) motsPossibles(r.pan, r.cle); };
+$('#solmot').onclick = () => { const c = cleCourante(); fermerActions(); if (c) aideMot(c); };
+$('#autredef').onclick = () => {
+  const r = panneauMot();
+  if (r) autresDefs(r.pan, document.querySelector(`#defs .undef[data-cle="${r.cle}"]`), r.cle);
+};
+// ces boutons ne prennent pas le curseur : le clavier reste ouvert
+for (const id of ['#aidemot', '#solmot'])
+  $(id).addEventListener('pointerdown', ev => ev.preventDefault());
+
 function ouvrirActions(span, cle) {
   fermerActions();
   const bar = document.createElement('span');
@@ -3083,6 +3132,17 @@ function aideMot(cle) {
 }
 // « Aide ce mot » : les mots du lexique qui collent aux lettres déjà posées
 // par le joueur (les cases vides valent n'importe quelle lettre).
+function ecrireMot(cle, mot) {
+  const cells = cellulesDe(cle);
+  cells.forEach((i, k) => {
+    saisies.set(i, mot[k]);
+    const inp = cases[i] && cases[i].querySelector('input.js');
+    if (inp) inp.value = mot[k];
+  });
+  fermerActions();
+  $('#etat').textContent = mot + ' écrit dans la grille.';
+  verifierVictoire();
+}
 async function motsPossibles(bar, cle) {
   bar.querySelectorAll('.autres').forEach(e => e.remove());
   const boite = document.createElement('span');
@@ -3108,9 +3168,15 @@ async function motsPossibles(bar, cle) {
                     : 'aucun mot du lexique ne convient — une lettre est peut-être fausse');
   boite.appendChild(t);
   if (liste.length) {
+    // toucher un mot l'écrit dans la grille, à la place des lettres du mot
     const l = document.createElement('span');
     l.className = 'possibles';
-    l.textContent = liste.join('  ');
+    for (const mot of liste) {
+      const b = document.createElement('button');
+      b.className = 'motposs'; b.textContent = mot;
+      b.onclick = ev => { ev.stopPropagation(); ecrireMot(cle, mot); };
+      l.appendChild(b);
+    }
     boite.appendChild(l);
   }
 }
@@ -3123,8 +3189,9 @@ async function autresDefs(bar, span, cle) {
     texte = typeCourant() === 'anagramot' ? texte.trim() : formater(texte);
     if (!texte) return;
     defsChoisies.set(cle, texte);
-    span.textContent = texte;
+    if (span) span.textContent = texte;
     fermerActions();
+    if (caseSaisie >= 0) montrerDefCourante(caseSaisie);
     $('#etat').textContent = 'Définition remplacée.';
   };
   // d'abord les propositions déjà connues ; sinon on les demande au Wiktionnaire
@@ -3188,14 +3255,9 @@ function afficherDefsJoueur(g) {
         s.onclick = ev => {
           // un glissement de défilement ne doit pas colorer la définition
           if (depart && Math.hypot(ev.clientX - depart.x, ev.clientY - depart.y) > 8) return;
-          // mot déjà éclairé mais boutons refermés : on les rouvre seulement
-          const ouverte = s.nextElementSibling && s.nextElementSibling.classList.contains('actdef');
-          if (cleActive === cle && !ouverte) { ouvrirActions(s, cle); return; }
-          document.querySelectorAll('.undef.vise').forEach(x => x.classList.remove('vise'));
-          s.classList.add('vise');
-          eclairerMot(cle);
-          if (cleActive === cle) ouvrirActions(s, cle); else fermerActions();
-          s.scrollIntoView({ block: 'nearest' });
+          // la définition touchée devient le mot en cours : le curseur va à sa
+          // première case vide, dans son sens
+          allerAuMot(cle);
         };
         p.appendChild(s);
         if (k < e.mots.length - 1) p.appendChild(document.createTextNode(' ; '));
@@ -4005,6 +4067,9 @@ function majBoutons() {
                        actif: !occupe },
     '#verifier':   { visible: mode === 'edition', actif: !occupe },
     '#sens':       { visible: !codes && ((g && mode === 'joueur') || mode === 'edition') },
+    '#aidemot':    { visible: g && !codes && mode === 'joueur' },
+    '#solmot':     { visible: g && !codes && mode === 'joueur' },
+    '#autredef':   { visible: g && !codes && mode === 'joueur' },
     '#aide':       { visible: g && (codes || mode === 'joueur'),
                      texte: codes ? 'Aide : une lettre' : 'Aide : cette case' },
     '#aidelettre': { visible: g && codes && mode === 'joueur' },
